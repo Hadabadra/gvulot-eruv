@@ -77,6 +77,7 @@
   }
   const fmtPhone = p => {
     const d = p.replace(/\D/g, '');
+    if (/[a-z@()]/i.test(p) || d[0] !== '0') return p;
     if (d.length === 10) return d.slice(0, 3) + '-' + d.slice(3);
     if (d.length === 9) return d.slice(0, 2) + '-' + d.slice(2);
     return p;
@@ -143,7 +144,8 @@
     let title, count, html;
     if (sec === 'hosp') {
       title = 'בתי חולים'; count = HOSPITALS.length;
-      html = HOSPITALS.map(h => `<button class="rail-item${state.view === 'hosp' && state.hosp === h.id ? ' on' : ''}" data-hosp="${h.id}"><span class="name">${esc(h.name)}</span><span class="badge">${esc(h.city)}</span></button>`).join('');
+      const hb = h => `<button class="rail-item${state.view === 'hosp' && state.hosp === h.id ? ' on' : ''}" data-hosp="${h.id}"><span class="name">${esc(h.name)}</span><span class="badge">${esc(h.city)}</span></button>`;
+      html = HOSPITALS.filter(h => !h.abroad).map(hb).join('') + `<div class="rail-head"><span>חו"ל</span><span class="count">${HOSPITALS.filter(h => h.abroad).length}</span></div>` + HOSPITALS.filter(h => h.abroad).map(hb).join('');
     } else if (sec === 'abroad') {
       title = 'ארצות'; count = cs.length;
       html = cs.map(c => `<button class="rail-item${state.view === 'abroad' && state.abroadC === c[0] ? ' on' : ''}" data-abroad="${esc(c[0])}"><span class="name">${esc(c[1])}</span><span class="badge">${X.abroad.filter(a => a.c === c[0]).length}</span></button>`).join('');
@@ -342,7 +344,22 @@
     { id: 'sheba', name: 'תל השומר (שיבא)', city: 'רמת גן', doc: 'derech-ab', contacts: [],
       techum: 'דין התחום לבית החולים תל השומר מבואר בחוברת "דרך התחומין א–ב" (חלק א, "בירור דיני התחום לערי גוש דן ובתי החולים").' },
     { id: 'wolfson', name: 'וולפסון', city: 'חולון', doc: 'derech-ab', contacts: [],
-      techum: 'דין התחום לעיר חולון ולבית החולים וולפסון, והתקנה ע"י עירוב תחומין במקום המשותף לשתי הערים, מבוארים בחוברת "דרך התחומין א–ב".' }
+      techum: 'דין התחום לעיר חולון ולבית החולים וולפסון, והתקנה ע"י עירוב תחומין במקום המשותף לשתי הערים, מבוארים בחוברת "דרך התחומין א–ב".' },
+    // חו"ל — רק מעמוד רשמי של בית החולים
+    { id: 'mskcc', name: 'Memorial Sloan Kettering', city: 'ניו יורק', abroad: true,
+      src: 'https://www.mskcc.org/sites/default/files/node/19442/documents/jewish.pdf', srcName: 'עלון למטופלים יהודים, אתר MSK',
+      contacts: [
+        { role: 'בקשת ביקור רב / ביקור חולים של קהילת קהילת ישורון (שלוחה פנימית)', phone: 'ext. 5982' },
+        { role: 'מצב עירוב מנהטן (הקו שמופיע בעלון)', phone: '(212) 874-6100 ext 3' }],
+      eruv: 'לפי העלון: מעלית שבת בגוש המעליות M, כניסה ברחוב 67 עם דלתות מכניות פתוחה תמיד, וחדר אירוח לשבת (C-172). את מצב העירוב יש לבדוק בקו של עירוב מנהטן.' },
+    { id: 'maimonides', name: 'Maimonides Medical Center', city: 'ברוקלין', abroad: true,
+      src: 'https://maimo.org/?p=5550', srcName: 'עמוד הרבנות, אתר Maimonides',
+      contacts: [{ role: 'מנהל הרבנות', name: 'Rabbi Benzion Leser', email: 'chaplain@maimo.org', note: 'הטלפון בעמוד מופיע בשתי צורות שונות, ולכן לא הוכנס' }],
+      eruv: 'בעמוד הרשמי לא מוזכר עירוב. יש בית כנסת בבית החולים עם תפילות שבת.' },
+    { id: 'sinai-baltimore', name: 'Sinai Hospital', city: 'בולטימור', abroad: true,
+      src: 'https://www.lifebridgehealth.org/news/sinai-hospital-expands-resources-sabbath-observant-jewish-patients-and-families', srcName: 'הודעה באתר LifeBridge Health',
+      contacts: [{ role: 'רב בית החולים', name: 'Rabbi Jeffrey Orkin', note: 'לא פורסם טלפון ישיר' }, { role: 'מוקד LifeBridge Health', phone: '410-601-9355' }],
+      eruv: 'לפי ההודעה: שלוש מעליות שבת, חדר ביקור חולים עם אוכל כשר, וכניסת שבת לבניין Blaustein עם ליווי לחדר המיון לפי בקשה. בעמוד לא מפורט עירוב.' }
   ];
   // ארגונים — רק פרטים מהאתר הרשמי של הארגון
   const ORGS = [
@@ -385,7 +402,9 @@
   function hospsView() {
     return `<div class="wrap">
       <div class="hero"><div class="grow"><h2>בתי חולים בשבת</h2><p>רב בית החולים, שירותי הדת, העירוב במתחם ותחום שבת — רק ממקורות רשמיים.</p></div></div>
-      <div class="row-links">${HOSPITALS.map(h => `<button class="btn tonal" data-hosp="${h.id}">${ICON.map} ${esc(h.name)} · ${esc(h.city)}</button>`).join('')}</div>
+      <div class="row-links">${HOSPITALS.filter(h => !h.abroad).map(h => `<button class="btn tonal" data-hosp="${h.id}">${ICON.map} ${esc(h.name)} · ${esc(h.city)}</button>`).join('')}</div>
+      <div class="section-title">בתי חולים בחו"ל</div>
+      <div class="row-links">${HOSPITALS.filter(h => h.abroad).map(h => `<button class="btn tonal" data-hosp="${h.id}">${ICON.map} ${esc(h.name)} · ${esc(h.city)}</button>`).join('')}</div>
       <div class="section-title">ארגונים</div>
       <div class="contacts">${ORGS.map(o => `<div class="contact"><div class="who"><b>${esc(o.name)}</b><small>${esc(o.what)}</small><small>מקור: ${esc(o.src)}</small></div>
         ${telChip(o.phone)}<button class="chip" data-url="${esc(o.url)}">${ICON.link}אתר</button></div>`).join('')}</div>
@@ -783,9 +802,9 @@
     'עדכון מתוך התוסף בזמן ריצה — אחרי שאוצריא תפתח את הכתובות (בקשה הוכנה)',
     'סיווג רמות עירוב (חצר / שכונתי / עירוני) — רק עם מקור מהמוקד',
     'קווי עירוב חדים (וקטור/SVG) מעל מפת רחובות, משכבת העירוב של GovMap — מחייב הרצה מישראל',
-    'עירובין נוספים בחו"ל, ושירותי דת בבתי חולים בחו"ל — רק ממקור רשמי',
+    'עירובין נוספים בחו"ל, ועוד בתי חולים בחו"ל — רק ממקור רשמי',
     'תחום שבת לבתי חולים נוספים (שערי צדק, הדסה, לניאדו ועוד) — רק ממקור מוסמך',
-    'ממשק באנגלית (כפתורים וכותרות)',
+    'תרגום מלא לאנגלית (כעת רק ממשק, ערים ובתי חולים)',
     'בדיקה אם המיקום שלי בתוך העירוב עצמו (כעת מזוהה רק העיר הקרובה)',
     'מפות לשכונות חסרות (פרדס כץ, קרית הרצוג ועוד) — פנייה למוקד העירוב',
     'מראי מקום לפי עיר בתוך חוברות "דרך התחומין" (קפיצה לעמוד העיר)'
@@ -821,7 +840,7 @@
   // ── יומן שינויים ותגובות ─────────────────────────────────────
   const REPO = 'https://github.com/Hadabadra/gvulot-eruv';
   const CHANGELOG = [
-    ['0.5.0', ['ניווט ראשי בסרגל הצד: ישראל / חו"ל / בתי חולים', 'בתי חולים: נוספו שערי צדק, הדסה עין כרם, מעיני הישועה, לניאדו, בילינסון ושניידר — רב בית החולים, העוזר ושירותי הדת, רק מהאתר הרשמי של בית החולים ועם קישור למקור', 'עירוב במתחם ותחום שבת לפי מה שכתוב במקור הרשמי (בילינסון ושניידר: בתוך התחום מבני ברק ומגבעת שמואל)', 'ארגונים: מוקד העירוב ועזר מציון', 'קישורים לעמודי שירותי הדת של בתי חולים נוספים', 'עדכון אוטומטי שבועי מהמקורות במאגר, עם גרסה חדשה כשמשהו משתנה']],
+    ['0.5.0', ['ניווט ראשי בסרגל הצד: ישראל / חו"ל / בתי חולים', 'בתי חולים: נוספו שערי צדק, הדסה עין כרם, מעיני הישועה, לניאדו, בילינסון ושניידר — רב בית החולים, העוזר ושירותי הדת, רק מהאתר הרשמי של בית החולים ועם קישור למקור', 'עירוב במתחם ותחום שבת לפי מה שכתוב במקור הרשמי (בילינסון ושניידר: בתוך התחום מבני ברק ומגבעת שמואל)', 'ארגונים: מוקד העירוב ועזר מציון', 'קישורים לעמודי שירותי הדת של בתי חולים נוספים', 'עדכון אוטומטי שבועי מהמקורות במאגר, עם גרסה חדשה כשמשהו משתנה', 'בתי חולים בחו"ל: Memorial Sloan Kettering, Maimonides, Sinai (בולטימור) — מהאתר הרשמי', 'ממשק בסיסי באנגלית (כפתור EN בסרגל העליון): כפתורים, כותרות, ערים ובתי חולים']],
     ['0.4.0', ['חוברת רציפה: כל העמודים בגלילה אחת, ולא רק עמוד אחר עמוד', 'בדף עיר נפתח רק החלק שלה בחוברת (למשל מודיעין עילית/קרית ספר — חלק ב\' של דרך התחומין)', 'חו"ל: נוספו מונסי, רוקלנד, שני מקורות ללייקווד ו-Eruv Finder', 'חו"ל: הוסר הקישור של מיניאפוליס (darcheinoammn.org) לבקשת משתמש מחו"ל, כי אינו מקור חרדי']],
     ['0.3.5', ['תיקון: שגיאת Stack Overflow בהתקנה']],
     ['0.3.4', ['תיקון: החוברות לא נפתחו באוצריא (Missing PDF)']],

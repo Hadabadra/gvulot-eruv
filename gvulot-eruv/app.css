@@ -448,3 +448,6 @@ mark { background: var(--color-primary-container); color: var(--color-on-primary
 .bk-page{margin:0;width:min(100%,60em);background:var(--color-surface-container-lowest);box-shadow:0 .1em .5em var(--color-shadow-soft);cursor:zoom-in;position:relative}
 .bk-page img{width:100%;height:100%;display:block}
 .bk-page figcaption{position:absolute;bottom:.3em;inset-inline-start:.5em;font-size:.8em;opacity:.6}
+
+.lang-btn { font: inherit; font-size: .78em; font-weight: 700; letter-spacing: .03em; }
+html[lang=en] p, html[lang=en] .techum-empty > div, html[lang=en] .who, html[lang=en] .fine, html[lang=en] .hero p { unicode-bidi: plaintext; }
