@@ -427,3 +427,6 @@ mark { background: var(--color-primary-container); color: var(--color-on-primary
   background: var(--color-inverse-surface); color: var(--color-on-inverse-surface); }
 .thumb.on { border-color: var(--color-primary); }
 .switch { display: inline-flex; align-items: center; gap: .5em; cursor: pointer; }
+.rail-item .tag { font-size: .7em; padding: 0 .45em; border-radius: var(--radius-pill); background: var(--color-tertiary-container); color: var(--color-on-tertiary-container); }
+.rail-head + .rail-item, .rail-list .rail-head { margin-top: .6em; }
+.viewer.loading .stage::after { content: "טוען את העמוד…"; position: absolute; inset: 0; display: grid; place-items: center; color: var(--color-on-surface-variant); }

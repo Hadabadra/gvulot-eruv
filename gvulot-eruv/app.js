@@ -135,10 +135,15 @@
       const on = !state.q.trim() && state.view === 'city' && state.city === c;
       return `<button class="rail-item${on ? ' on' : ''}" data-city="${esc(c)}">
         ${state.favs.includes(c) ? `<span class="star">${ICON.star}</span>` : ''}
-        <span class="name">${esc(c)}</span><span class="badge">${n.maps.length || ''}</span></button>`;
+        <span class="name">${esc(c)}</span>${docsOfCity(c).length ? '<span class="tag" title="יש מאמר תחום שבת">תחום</span>' : ''}<span class="badge">${n.maps.length || ''}</span></button>`;
     };
     const favs = state.favs.filter(c => byCity.has(c));
-    $('#cityList').innerHTML = (favs.length ? favs.map(item).join('') + '<div class="rail-sep"></div>' : '') + D.cities.map(item).join('');
+    const hosp = HOSPITALS.map(h => `<button class="rail-item${state.view === 'hosp' && state.hosp === h.id ? ' on' : ''}" data-hosp="${h.id}"><span class="name">${esc(h.name)}</span><span class="badge">${esc(h.city)}</span></button>`).join('');
+    const cs = [...new Map(X.abroad.map(a => [a.c, a.ch])).entries()].sort((a, b) => a[1].localeCompare(b[1], 'he'));
+    const ab = cs.map(c => `<button class="rail-item${state.view === 'abroad' && state.abroadC === c[0] ? ' on' : ''}" data-abroad="${esc(c[0])}"><span class="name">${esc(c[1])}</span><span class="badge">${X.abroad.filter(a => a.c === c[0]).length}</span></button>`).join('');
+    $('#cityList').innerHTML = (favs.length ? favs.map(item).join('') + '<div class="rail-sep"></div>' : '') + D.cities.map(item).join('')
+      + `<div class="rail-head"><span>בתי חולים</span><span class="count">${HOSPITALS.length}</span></div>` + hosp
+      + `<div class="rail-head"><span>חו"ל</span><span class="count">${cs.length}</span></div>` + ab;
   }
 
   // ── מסכים ───────────────────────────────────────────────────
@@ -148,11 +153,11 @@
     if (state.q.trim()) { $('#crumb').textContent = 'חיפוש'; main.innerHTML = searchView(); }
     else if (state.view === 'city') { $('#crumb').textContent = state.city; main.innerHTML = cityView(state.city); }
     else if (state.view === 'docs') { $('#crumb').textContent = 'תחום שבת וחוברות'; main.innerHTML = docsView(); }
+    else if (state.view === 'hosp') { const h = HOSPITALS.find(x => x.id === state.hosp); $('#crumb').textContent = h ? h.name : 'בית חולים'; main.innerHTML = hospView(h); }
     else if (state.view === 'abroad') { $('#crumb').textContent = 'עירובין בחו"ל'; main.innerHTML = abroadView(); }
     else { $('#crumb').textContent = 'כל הארץ'; main.innerHTML = homeView(); }
     main.scrollTop = 0;
     $('#btnDocs').classList.toggle('on', state.view === 'docs' && !state.q.trim());
-    $('#btnAbroad').classList.toggle('on', state.view === 'abroad' && !state.q.trim());
     saveView();
   }
   // מצב הכרטיסייה לשחזור אחרי פינוי (מ-0.9.99; בגרסאות קודמות הקריאה פשוט נכשלת)
@@ -264,6 +269,28 @@
       <div class="doc-grid">${ds.map(docCardHTML).join('')}</div>
       <p class="fine">מאמרי התחומין של מוקד העירוב. החישוב תלוי בשיטות שונות — לשאלה למעשה יש לפנות לרב או למוקד.</p>`;
   }
+  // בתי חולים: מה שמבואר בחוברות המוקד; ללא מספרי טלפון שלא אומתו
+  const HOSPITALS = [
+    { id: 'ichilov', name: 'איכילוב', city: 'תל אביב', doc: 'derech-ab', from: 'בני ברק',
+      techum: 'ההליכה בשבת מבני ברק לאיכילוב, ומתי צריך עירוב תחומין, מבוארות בחוברת "דרך התחומין א–ב" (פרק "בענין ההליכה מבני ברק לתל אביב ולבית החולים איכילוב").' },
+    { id: 'sheba', name: 'תל השומר (שיבא)', city: 'רמת גן', doc: 'derech-ab', from: 'בני ברק',
+      techum: 'דין התחום לבית החולים תל השומר מבואר בחוברת "דרך התחומין א–ב" (חלק א, "בירור דיני התחום לערי גוש דן ובתי החולים").' },
+    { id: 'wolfson', name: 'וולפסון', city: 'חולון', doc: 'derech-ab', from: 'בת ים',
+      techum: 'דין התחום לעיר חולון ולבית החולים וולפסון, והתקנה ע"י עירוב תחומין במקום המשותף לשתי הערים, מבוארים בחוברת "דרך התחומין א–ב".' }
+  ];
+  const HOSP_EZER = 'בחוברת "דרך התחומין" מוזכר שאגודת עזר מציון מניחה עירוב תחומין ציבורי (ומבואר שם איזה מזון מניחים). לפני שבת יש לברר אם העירוב הונח ולמי הוא מועיל.';
+  function hospView(h) {
+    if (!h) return homeView();
+    return `<div class="wrap">
+      <div class="hero"><div class="grow"><h2>${esc(h.name)}</h2><p>${esc(h.city)} · מידע לשבת</p></div></div>
+      <div class="section-title">עירוב בתוך המתחם</div>
+      <div class="techum-empty">${ICON.map}<div>בבתי החולים יש יחידת <b>שירותי דת</b> שאחראית על העירוב במתחם, על חדרי שבת ועל מעלית שבת.
+        לפני שבת יש לפנות אליה ולוודא שהעירוב תקין. למקרים מיוחדים: מוקד העירוב <button class="chip" data-phone="${esc(D.source.phone)}">${ICON.phone}${esc(D.source.phone)}</button></div></div>
+      <div class="section-title">תחום שבת ועירוב תחומין</div>
+      <div class="techum-empty">${ICON.book}<div>${esc(h.techum)}<br>${esc(HOSP_EZER)}</div></div>
+      <div class="doc-grid">${docCardHTML(docById.get(h.doc))}</div>
+      <p class="fine">התוסף אינו פוסק הלכה. לשאלה למעשה יש לפנות לרב או למוקד העירוב.</p></div>`;
+  }
   function docsView() {
     const tech = DOCS.filter(d => d.kind === 'techum'), books = DOCS.filter(d => d.kind === 'booklet');
     const groups = [...new Set(X.library.map(b => b.g))];
@@ -275,8 +302,8 @@
       ${tech.map(d => summaryHTML(d.summary, d.title)).join('')}
       <div class="doc-grid">${tech.map(docCardHTML).join('')}</div>
       <div class="section-title">בתי חולים</div>
-      <div class="techum-empty">${ICON.book}<div>ההליכה בשבת מבני ברק לבית החולים <b>איכילוב</b> ול<b>תל השומר</b>, והנחת עירוב תחומין לשם,
-        מבוארות בחוברת "דרך התחומין א–ב". בבתי החולים עצמם יש יחידת שירותי דת (עירוב במתחם, חדרי שבת, מעלית שבת) — לפנות אליה לפני שבת.</div></div>
+      <div class="row-links">${HOSPITALS.map(h => `<button class="btn tonal" data-hosp="${h.id}">${ICON.map} ${esc(h.name)} · ${esc(h.city)}</button>`).join('')}</div>
+      <p class="fine">${esc(HOSP_EZER)}</p>
       <div class="section-title">ספריית העירובין של המוקד</div>
       <p class="fine">${X.library.length} ספרים וחוברות להורדה מאתר מוקד העירוב (נפתחים בדפדפן).</p>
       ${groups.map(g => `<h3 class="info-h">${esc(g)}</h3><div class="lib">${X.library.filter(b => b.g === g).map(b =>
@@ -373,27 +400,31 @@
       `<button class="thumb${i + 1 === page ? ' on' : ''}" data-doc-page="${i + 1}" title="עמוד ${i + 1}"><img src="${pageSrc(d, i + 1, true)}" alt="" loading="lazy"><span>${i + 1}</span></button>`).join('')}</div>
       <button class="btn text" data-url="${esc(d.url)}">המקור באתר מוקד העירוב</button>`;
     const cached = pageCache.get(id + ':' + page);
-    openMap(null, { id: 'doc-' + id + '-' + page, city: 'עמוד ' + page, title: d.title, w, h, src: cached || pageSrc(d, page, true), thumb: pageSrc(d, page, true),
+    openMap(null, { id: 'doc-' + id + '-' + page, city: 'עמוד ' + page, title: d.title, w, h, src: cached || BLANK, thumb: pageSrc(d, page, true),
       sub: 'מוקד העירוב · עמוד ' + page + ' מתוך ' + d.pages, side });
     $('#vTitle').textContent = d.title;
     $('#vPage').value = page; $('#vPage').max = d.pages; $('#vPages').textContent = '/ ' + d.pages;
     $('#vPrev').disabled = page <= 1; $('#vNext').disabled = page >= d.pages;
     const on = $('#vSidePanel .thumb.on'); if (on) on.scrollIntoView({ block: 'nearest' });
     state.docPages[id] = page; clearTimeout(V.dpT); V.dpT = setTimeout(() => savePref('docPages'), 800);
+    $('#viewer').classList.toggle('loading', !cached);
     if (!cached) renderPage(d, page, PW).then(u => {
-      if (u && V.doc && V.doc.id === id && V.page === page && !$('#viewer').hidden) { img.onload = null; img.src = u; }
-    }).catch(() => toast('לא ניתן להציג את העמוד'));
+      if (u && V.doc && V.doc.id === id && V.page === page && !$('#viewer').hidden) { img.onload = null; img.src = u; $('#viewer').classList.remove('loading'); }
+    }).catch(e => { $('#viewer').classList.remove('loading'); toast('לא ניתן להציג את ה-PDF: ' + ((e && e.message) || e)); });
     if (page < d.pages) setTimeout(() => renderPage(d, page + 1, PW).catch(() => {}), 600); // העמוד הבא מראש
   }
   // הצגת ה-PDF המקורי (pdf.js, ארוז בתוסף) — עמוד מצויר ל-canvas ונשמר כתמונה; שומרים בזיכרון עד 12 עמודים
   let pdfLib = null;
+  const BLANK = 'data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==';
   const pdfDocs = new Map(), pageCache = new Map(), pending = new Map();
   async function getPdf(d) {
+    // כמו בצופה PDF+OCR: הבנייה הרגילה (לא מודול) של pdf.js ו-worker בנתיב יחסי
     if (!pdfLib) {
-      pdfLib = await import('./pdfjs/pdf.min.mjs');
-      pdfLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs/pdf.worker.min.mjs', location.href).href;
+      pdfLib = window.pdfjsLib; if (!pdfLib) throw new Error('pdf.js missing');
+      pdfLib.GlobalWorkerOptions.workerSrc = './pdfjs/pdf.worker.min.js';
     }
-    if (!pdfDocs.has(d.id)) pdfDocs.set(d.id, pdfLib.getDocument({ url: new URL('docs/' + d.id + '.pdf', location.href).href, isEvalSupported: false }).promise);
+    if (!pdfDocs.has(d.id)) pdfDocs.set(d.id, pdfLib.getDocument({ url: new URL('docs/' + d.id + '.pdf', document.baseURI).href, isEvalSupported: false, enableXfa: false,
+      standardFontDataUrl: new URL('pdfjs/standard_fonts/', document.baseURI).href }).promise);
     return pdfDocs.get(d.id);
   }
   function renderPage(d, p, PW) {
@@ -644,6 +675,7 @@
   // ── יומן שינויים ותגובות ─────────────────────────────────────
   const REPO = 'https://github.com/Hadabadra/gvulot-eruv';
   const CHANGELOG = [
+    ['0.3.3', ['החוברות כ-PDF בקורא של צופה PDF+OCR — חדות בכל הגדלה', 'סרגל הצד: ערים (עם סימון תחום), בתי חולים וחו"ל', 'בתי חולים: עירוב במתחם ותחום שבת, עזר מציון', 'מפות 2000 פיקסלים כדי לעמוד ב-50MB']],
     ['0.3.2', ['תיאור התוסף קוצר ל-150 תווים כנדרש בחנות']],
     ['0.3.1', ['החוברות כקובצי PDF מקוריים בתוך התוסף, חדות בכל הגדלה', 'גודל התוסף ירד לכ-41MB (מגבלת החנות 50MB)']],
     ['0.3.0', ['תחום שבת: מאמרי התחומין של מוקד העירוב לשש ערים, ותקציר "מותר / ע"י עירוב תחומין / אסור"', 'החוברות "דרך התחומין" (גוש דן ובתי החולים איכילוב ותל השומר, ירושלים) ו"המדריך לנופש" בתוך התוסף, עם דפדוף ושמירת העמוד האחרון', 'ספריית העירובין של המוקד — 42 ספרים וחוברות', 'עירובין בחו"ל — 339 מקומות ב־27 ארצות', 'מפות חדות יותר (2400 פיקסלים)', 'כפתור בסרגל העיון וקיצור מקשים Ctrl+Alt+E', 'חיפוש גם בחוברות, בספרייה ובחו"ל']],
@@ -661,7 +693,7 @@
     if (r.success) { $('#fbText').value = ''; toast(r.data === 'queued' ? 'התגובה תישלח כשיהיה חיבור' : 'התגובה נשלחה, תודה!'); }
     else toast('השליחה זמינה בתוך אוצריא');
   }
-  const VERSION = '0.3.2';
+  const VERSION = '0.3.3';
 
   // ── אודות ───────────────────────────────────────────────────
   function openHalacha() {
@@ -706,11 +738,12 @@
 
   // ── אירועים כלליים ─────────────────────────────────────────
   document.addEventListener('click', e => {
-    const t = e.target.closest('[data-open-map],[data-city],[data-phone],[data-fav],[data-url],[data-add-map],[data-del-map],[data-src],[data-doc],[data-view],[data-abroad],[data-toggle-toolbar]');
+    const t = e.target.closest('[data-open-map],[data-city],[data-phone],[data-fav],[data-url],[data-add-map],[data-del-map],[data-src],[data-doc],[data-view],[data-abroad],[data-hosp],[data-toggle-toolbar]');
     if (!t) return;
     if (t.dataset.doc) { $('#infoScrim').hidden = true; openDoc(t.dataset.doc); }
     else if (t.dataset.view) goView(t.dataset.view);
-    else if (t.dataset.abroad) { state.abroadC = t.dataset.abroad; render(); }
+    else if (t.dataset.abroad) { state.abroadC = t.dataset.abroad; state.view = 'abroad'; state.q = ''; $('#q').value = ''; render(); }
+    else if (t.dataset.hosp) { state.hosp = t.dataset.hosp; state.view = 'hosp'; state.q = ''; $('#q').value = ''; render(); }
     else if (t.dataset.toggleToolbar !== undefined) toggleToolbar();
     else if (t.dataset.addMap !== undefined) addOwnMap(t.dataset.addMap);
     else if (t.dataset.delMap) delOwnMap(t.dataset.delMap);
@@ -729,7 +762,6 @@
   });
   $('#btnHome').onclick = goHome;
   $('#btnDocs').onclick = () => goView('docs');
-  $('#btnAbroad').onclick = () => goView('abroad');
   $('#btnInfo').onclick = openInfo;
   $('#btnHal').onclick = openHalacha;
   $('#btnLoc').onclick = locateMe;

@@ -7,7 +7,7 @@ from PIL import Image
 
 PLUG = sys.argv[1]
 os.makedirs(f"{PLUG}/maps", exist_ok=True)
-MAX, Q, TH = 2400, 50, 420
+MAX, Q, TH = 2000, 52, 420
 
 ALIAS = {"גני תקווה": "גני תקוה", "פתח תקווה": "פתח תקוה", "קריית אתא": "קרית אתא",
          "קרית יערים": "קריית יערים - טלזסטון", "לוד": "לוד - אחיסמך"}
