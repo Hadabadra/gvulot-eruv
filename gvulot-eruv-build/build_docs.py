@@ -40,7 +40,7 @@ def main(out):
         if not os.path.exists(pdf):
             print("חסר", pdf, file=sys.stderr); continue
         dst = os.path.join(out, "docs", did); shutil.rmtree(dst, ignore_errors=True); os.makedirs(dst)
-        if os.path.exists(dst + ".pdf"): os.remove(dst + ".pdf")
+        [os.remove(x) for x in (dst + ".pdf", dst + ".pdf.js") if os.path.exists(x)]
         tmp = tempfile.mkdtemp()
         subprocess.run(["pdftoppm", "-r", "30", "-png", pdf, f"{tmp}/p"], check=True)
         pages = sorted(glob.glob(f"{tmp}/p-*.png"))
@@ -50,7 +50,10 @@ def main(out):
             dims.append([1000, round(1000 * im.height / im.width)])
             im.thumbnail((TW, TW * 2), Image.LANCZOS)
             im.save(f"{dst}/{i:03d}.t.webp", "WEBP", quality=45, method=6)
-        shutil.copyfile(pdf, os.path.join(out, "docs", did + ".pdf"))
+        # באוצריא pdf.js לא יכול לקרוא קובץ file:// (MissingPDFException), ולכן ה-PDF נארז כ-base64 בקובץ js שנטען בתג script
+        import base64
+        with open(os.path.join(out, "docs", did + ".pdf.js"), "w") as f:
+            f.write("(window.ERUV_PDF=window.ERUV_PDF||{})[" + json.dumps(did) + "]=\"" + base64.b64encode(open(pdf, "rb").read()).decode() + "\";\n")
         shutil.rmtree(tmp)
         res.append({"id": did, "title": title, "kind": kind, "cities": cities, "url": url,
                     "pages": len(pages), "dims": dims, **({"summary": SUMMARY[did]} if did in SUMMARY else {})})

@@ -1,5 +1,8 @@
 # גבולות עירוב — תיעוד טכני ותכנית
 
+## 0.3.4 — תיקון
+- באוצריא pdf.js נכשל ב-`MissingPDFException` כשנותנים לו `url` של file://. לכן ה-PDF נארז כ-base64 ב-`docs/<id>.pdf.js`, נטען בתג `<script>`, ומועבר כ-`{data}`. זה כלל לכל תוסף שמציג PDF ארוז.
+
 ## מצב (22/10/2026, 08:10) — 0.3.3
 - חוברות: PDF מקורי + `pdfjs/pdf.min.js` (pdf.js 3.x **classic**, מועתק מ-Hadabadra/pdf-viewer vendor/, עם standard_fonts). ב-0.3.1 נוסה `import()` של pdf.min.mjs (4.x) — **לא עובד באוצריא**, אל תחזרו לזה.
 - חלופה שנבדקה: דפי תמונה ב-1300px, 4 גווני אפור, WebP lossless (כ-23MB, קריא). לא נבחרה, כי המשתמשת העדיפה PDF. שתיהן יחד לא נכנסות ב-50MB.

@@ -423,9 +423,18 @@
       pdfLib = window.pdfjsLib; if (!pdfLib) throw new Error('pdf.js missing');
       pdfLib.GlobalWorkerOptions.workerSrc = './pdfjs/pdf.worker.min.js';
     }
-    if (!pdfDocs.has(d.id)) pdfDocs.set(d.id, pdfLib.getDocument({ url: new URL('docs/' + d.id + '.pdf', document.baseURI).href, isEvalSupported: false, enableXfa: false,
-      standardFontDataUrl: new URL('pdfjs/standard_fonts/', document.baseURI).href }).promise);
+    if (!pdfDocs.has(d.id)) pdfDocs.set(d.id, loadPdfData(d.id).then(data => pdfLib.getDocument({ data, isEvalSupported: false, enableXfa: false,
+      standardFontDataUrl: new URL('pdfjs/standard_fonts/', document.baseURI).href }).promise));
     return pdfDocs.get(d.id);
+  }
+  // ה-PDF ארוז כ-base64 ב-docs/<id>.pdf.js ונטען בתג script (fetch של file:// חסום באוצריא)
+  function loadPdfData(id) {
+    return new Promise((res, rej) => {
+      const done = () => { const b = (window.ERUV_PDF || {})[id]; if (!b) return rej(new Error('הקובץ חסר')); const bin = atob(b); const u = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); delete window.ERUV_PDF[id]; res(u); };
+      if ((window.ERUV_PDF || {})[id]) return done();
+      const sc = document.createElement('script'); sc.src = 'docs/' + id + '.pdf.js'; sc.onload = done; sc.onerror = () => rej(new Error('הקובץ חסר')); document.head.appendChild(sc);
+    });
   }
   function renderPage(d, p, PW) {
     const key = d.id + ':' + p;
@@ -675,6 +684,7 @@
   // ── יומן שינויים ותגובות ─────────────────────────────────────
   const REPO = 'https://github.com/Hadabadra/gvulot-eruv';
   const CHANGELOG = [
+    ['0.3.4', ['תיקון: החוברות לא נפתחו באוצריא (Missing PDF)']],
     ['0.3.3', ['החוברות כ-PDF בקורא של צופה PDF+OCR — חדות בכל הגדלה', 'סרגל הצד: ערים (עם סימון תחום), בתי חולים וחו"ל', 'בתי חולים: עירוב במתחם ותחום שבת, עזר מציון', 'מפות 2000 פיקסלים כדי לעמוד ב-50MB']],
     ['0.3.2', ['תיאור התוסף קוצר ל-150 תווים כנדרש בחנות']],
     ['0.3.1', ['החוברות כקובצי PDF מקוריים בתוך התוסף, חדות בכל הגדלה', 'גודל התוסף ירד לכ-41MB (מגבלת החנות 50MB)']],
@@ -693,7 +703,7 @@
     if (r.success) { $('#fbText').value = ''; toast(r.data === 'queued' ? 'התגובה תישלח כשיהיה חיבור' : 'התגובה נשלחה, תודה!'); }
     else toast('השליחה זמינה בתוך אוצריא');
   }
-  const VERSION = '0.3.3';
+  const VERSION = '0.3.4';
 
   // ── אודות ───────────────────────────────────────────────────
   function openHalacha() {
