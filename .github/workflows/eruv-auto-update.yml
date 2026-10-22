@@ -1,0 +1,53 @@
+name: גבולות עירוב — עדכון שבועי מהמקורות
+
+# כל יום רביעי: סורק מחדש את hiruv.com וויקיפדיה (gvulot-eruv-build/auto_update.py).
+# אם משהו השתנה — בונה את הנתונים, מעלה גרסת patch, דוחף ל-main ומוציא Release.
+# (דחיפה עם GITHUB_TOKEN לא מפעילה את eruv-release.yml, ולכן האריזה וה-Release נעשים כאן.)
+on:
+  schedule:
+    - cron: "17 6 * * 3"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: eruv-auto-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pillow
+      - name: Scrape & compare
+        id: upd
+        working-directory: gvulot-eruv-build
+        run: python3 auto_update.py ../gvulot-eruv
+      - name: Commit
+        if: steps.upd.outputs.changed == 'true' || steps.upd.outputs.changed == 'baseline'
+        run: |
+          git config user.name "Claude"
+          git config user.email "noreply@anthropic.com"
+          git add -A gvulot-eruv gvulot-eruv-build/sources.lock.json README.md
+          if git diff --cached --quiet; then echo "אין שינוי"; exit 0; fi
+          msg="עדכון אוטומטי מהמקורות"
+          [ "${{ steps.upd.outputs.changed }}" = baseline ] && msg="עדכון אוטומטי: מצב בסיס של המקורות"
+          git commit -m "$msg ${{ steps.upd.outputs.version }}"
+          git push
+      - name: Pack & release
+        if: steps.upd.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          v="${{ steps.upd.outputs.version }}"; tag="gvulot-eruv-v$v"; file="gvulot-eruv-$v.otzplugin"
+          python3 gvulot-eruv-build/pack.py gvulot-eruv "$file"
+          size=$(stat -c %s "$file"); echo "size=$size"
+          if [ "$size" -gt 52428800 ]; then echo "::error::החבילה מעל 50MB — לא מוציאים גרסה"; exit 1; fi
+          awk -v h="## מה חדש ב-$v" 'index($0,h)==1{f=1;next} /^## /{if(f)exit} f' README.md > notes.md
+          printf '\n### התקנה\nבאוצריא: כלים ← תוספים ← התקן תוסף חדש, ובחירת הקובץ.\n' >> notes.md
+          gh release create "$tag" "$file" --target "$(git rev-parse HEAD)" --title "גבולות עירוב $v" --notes-file notes.md --prerelease

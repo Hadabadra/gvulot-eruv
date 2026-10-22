@@ -31,7 +31,7 @@
   }
 
   // ── מצב ושמירה ──────────────────────────────────────────────
-  const state = { view: 'home', city: null, q: '', favs: [], recent: [], docPages: {}, abroadC: '', settings: { toolbar: true } };
+  const state = { sec: 'il', view: 'home', city: null, q: '', favs: [], recent: [], docPages: {}, abroadC: '', settings: { toolbar: true } };
   async function loadPrefs() {
     for (const k of ['favs', 'recent']) {
       const r = await call('storage.get', { key: k });
@@ -128,8 +128,10 @@
   }
 
   // ── סרגל הערים ──────────────────────────────────────────────
+  function secOf(v) { return v === 'abroad' ? 'abroad' : (v === 'hosp' || v === 'hosps') ? 'hosp' : 'il'; }
   function renderRail() {
-    $('#cityCount').textContent = D.cities.length;
+    const sec = state.q.trim() ? state.sec : secOf(state.view); state.sec = sec;
+    document.querySelectorAll('.sec').forEach(b => { const on = b.dataset.sec === sec; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
     const item = c => {
       const n = byCity.get(c);
       const on = !state.q.trim() && state.view === 'city' && state.city === c;
@@ -137,13 +139,25 @@
         ${state.favs.includes(c) ? `<span class="star">${ICON.star}</span>` : ''}
         <span class="name">${esc(c)}</span>${docsOfCity(c).length ? '<span class="tag" title="יש מאמר תחום שבת">תחום</span>' : ''}<span class="badge">${n.maps.length || ''}</span></button>`;
     };
-    const favs = state.favs.filter(c => byCity.has(c));
-    const hosp = HOSPITALS.map(h => `<button class="rail-item${state.view === 'hosp' && state.hosp === h.id ? ' on' : ''}" data-hosp="${h.id}"><span class="name">${esc(h.name)}</span><span class="badge">${esc(h.city)}</span></button>`).join('');
     const cs = [...new Map(X.abroad.map(a => [a.c, a.ch])).entries()].sort((a, b) => a[1].localeCompare(b[1], 'he'));
-    const ab = cs.map(c => `<button class="rail-item${state.view === 'abroad' && state.abroadC === c[0] ? ' on' : ''}" data-abroad="${esc(c[0])}"><span class="name">${esc(c[1])}</span><span class="badge">${X.abroad.filter(a => a.c === c[0]).length}</span></button>`).join('');
-    $('#cityList').innerHTML = (favs.length ? favs.map(item).join('') + '<div class="rail-sep"></div>' : '') + D.cities.map(item).join('')
-      + `<div class="rail-head"><span>בתי חולים</span><span class="count">${HOSPITALS.length}</span></div>` + hosp
-      + `<div class="rail-head"><span>חו"ל</span><span class="count">${cs.length}</span></div>` + ab;
+    let title, count, html;
+    if (sec === 'hosp') {
+      title = 'בתי חולים'; count = HOSPITALS.length;
+      html = HOSPITALS.map(h => `<button class="rail-item${state.view === 'hosp' && state.hosp === h.id ? ' on' : ''}" data-hosp="${h.id}"><span class="name">${esc(h.name)}</span><span class="badge">${esc(h.city)}</span></button>`).join('');
+    } else if (sec === 'abroad') {
+      title = 'ארצות'; count = cs.length;
+      html = cs.map(c => `<button class="rail-item${state.view === 'abroad' && state.abroadC === c[0] ? ' on' : ''}" data-abroad="${esc(c[0])}"><span class="name">${esc(c[1])}</span><span class="badge">${X.abroad.filter(a => a.c === c[0]).length}</span></button>`).join('');
+    } else {
+      title = 'ערים'; count = D.cities.length;
+      const favs = state.favs.filter(c => byCity.has(c));
+      html = (favs.length ? favs.map(item).join('') + '<div class="rail-sep"></div>' : '') + D.cities.map(item).join('');
+    }
+    $('#railTitle').textContent = title; $('#cityCount').textContent = count; $('#cityList').innerHTML = html;
+  }
+  function goSec(sec) {
+    if (sec === 'abroad') goView('abroad');
+    else if (sec === 'hosp') goView('hosps');
+    else goHome();
   }
 
   // ── מסכים ───────────────────────────────────────────────────
@@ -154,6 +168,7 @@
     else if (state.view === 'city') { $('#crumb').textContent = state.city; main.innerHTML = cityView(state.city); }
     else if (state.view === 'docs') { $('#crumb').textContent = 'תחום שבת וחוברות'; main.innerHTML = docsView(); }
     else if (state.view === 'hosp') { const h = HOSPITALS.find(x => x.id === state.hosp); $('#crumb').textContent = h ? h.name : 'בית חולים'; main.innerHTML = hospView(h); }
+    else if (state.view === 'hosps') { $('#crumb').textContent = 'בתי חולים'; main.innerHTML = hospsView(); }
     else if (state.view === 'abroad') { $('#crumb').textContent = 'עירובין בחו"ל'; main.innerHTML = abroadView(); }
     else { $('#crumb').textContent = 'כל הארץ'; main.innerHTML = homeView(); }
     main.scrollTop = 0;
@@ -187,7 +202,8 @@
       <div class="city-grid">${D.cities.map(card).join('')}</div>
       ${DOCS.length ? `<div class="section-title">תחום שבת וחוברות</div><div class="doc-grid">${DOCS.filter(d => d.kind === 'booklet').map(docCardHTML).join('')}</div>
         <div class="row-links"><button class="btn text" data-view="docs">${ICON.book} כל מאמרי התחום והספרייה</button>
-        <button class="btn text" data-view="abroad">${ICON.globe} עירובין בחו"ל</button></div>` : ''}
+        <button class="btn text" data-view="abroad">${ICON.globe} עירובין בחו"ל</button>
+        <button class="btn text" data-view="hosps">${ICON.map} בתי חולים</button></div>` : ''}
       ${sourceCard()}</div>`;
   }
 
@@ -271,27 +287,111 @@
       <div class="doc-grid">${ds.map(d => docCardHTML(d, c)).join('')}</div>
       <p class="fine">מאמרי התחומין של מוקד העירוב. החישוב תלוי בשיטות שונות — לשאלה למעשה יש לפנות לרב או למוקד.</p>`;
   }
-  // בתי חולים: מה שמבואר בחוברות המוקד; ללא מספרי טלפון שלא אומתו
+  // בתי חולים. כל טלפון ושם כאן מועתק מעמוד רשמי של בית החולים (src), ונבדק ב-22.10.2026.
+  // אין להוסיף מספר שלא הופיע במקור רשמי. eruv/techum — רק מה שכתוב במקור; בלי מקור לתחום מוצגת הפנייה למוקד.
   const HOSPITALS = [
-    { id: 'ichilov', name: 'איכילוב', city: 'תל אביב', doc: 'derech-ab', from: 'בני ברק',
+    { id: 'shaare-zedek', name: 'שערי צדק', city: 'ירושלים',
+      src: 'https://www.szmc.org.il/media/bnlhwz3j/%D7%A9%D7%99%D7%A8%D7%95%D7%AA%D7%99-%D7%93%D7%AA.pdf', srcName: 'עלון המחלקה לשירותי דת, אתר שערי צדק',
+      contacts: [
+        { role: 'רב בית החולים', name: 'הרה"ג משה פלג', phone: '02-6666483' },
+        { role: 'ראש שירותי הדת', name: 'הרב אברהם גולדשמידט', phone: '052-7680550' },
+        { role: 'המחלקה לשירותי דת (אפשר להשאיר הודעה)', phone: '02-6555015', email: 'yosefsp@szmc.org.il' }],
+      eruv: 'לפי עלון שירותי הדת: בית החולים בתוך מפת העירוב של ירושלים שבאישור הבד"ץ, ומחובר גם לעירוב השכונתי של בית וגן. יש עירוב חצרות.' },
+    { id: 'hadassah', name: 'הדסה עין כרם', city: 'ירושלים',
+      src: 'https://he.hadassah.org.il/patient-information/religious-services/', srcName: 'עמוד שירותי דת, אתר הדסה',
+      contacts: [
+        { role: 'רב המרכזים הרפואיים', name: 'הרב משה קליין', phone: '02-6778597', phone2: '054-5203908' },
+        { role: 'עוזר הרב', name: 'הרב יעקב רוזנשטיין', phone: '050-4116058' },
+        { role: 'קו מידע לשירותי דת (בכל שעה)', phone: '02-6777699' }],
+      eruv: 'לפי אתר הדסה: סביב קמפוס עין כרם שלושה עירובין — של רבנות ירושלים, של בד"ץ העדה החרדית, ועירוב "מהודר" של ועד העירוב השכונתי לפי שיטת הגרי"ש אלישיב. העירובין נבדקים מדי שבוע. על הר הצופים לא נמצא פירוט בעמוד — לברר בקו המידע.' },
+    { id: 'mayanei', name: 'מעיני הישועה', city: 'בני ברק',
+      src: 'https://woman.mymc.co.il/the-rav-office-a-response-to-your-medical-halachic-questions/', srcName: 'עמוד לשכת הרב, אתר מעיני הישועה',
+      contacts: [
+        { role: 'רב המרכז הרפואי', name: 'הרה"ג יוסף ברוך הופנר', note: 'לא פורסם טלפון ישיר' },
+        { role: 'מוקד המידע של בית החולים', phone: '03-5771111' }],
+      eruv: 'לא נמצא באתר בית החולים פירוט על העירוב. לברר בלשכת הרב או מול האחראי על עירוב בני ברק (בדף העיר).' },
+    { id: 'laniado', name: 'לניאדו', city: 'נתניה',
+      src: 'https://www.laniado.org.il/en/religious-services-at-laniado-hospital/', srcName: 'עמוד שירותי דת, אתר לניאדו',
+      contacts: [
+        { role: 'רב', name: 'הרב מרדכי לוינשטיין', phone: '053-3104918' },
+        { role: 'רב', name: 'הרב הלל דויטש', phone: '054-8421490' },
+        { role: 'ראש הקשר הדתי', name: 'הרב הלל קסמן', phone: '058-7624668', email: 'rabanim@laniado.org.il' }],
+      eruv: 'לפי אתר בית החולים: בית החולים בתוך עירוב קהילה קדושה צאנז.' },
+    { id: 'beilinson', name: 'בילינסון (רבין)', city: 'פתח תקוה',
+      src: 'https://hospitals.clalit.co.il/rabin/he/departments-and-clinics/administrative-units/Documents/13007_%D7%91%D7%9C%D7%99%D7%A0%D7%A1%D7%95%D7%9F.pdf', srcName: 'עלון דת וכשרות, אתר כללית',
+      contacts: [
+        { role: 'רב בית החולים', name: 'הרב ישראל בבצ\'יק', phone: '050-4193544', phone2: '03-9376043' },
+        { role: 'משגיח שבת', name: 'ר\' שמואל חרמץ', phone: '054-6367703' },
+        { role: 'מחלקת דת וכשרות, הנהלת כללית', phone: '03-6923275' },
+        { role: 'בירורים על העירוב הפנימי', phone: '050-4142100', note: 'בערבים 22:45–23:15, ובערב שבת 13:30 עד כניסת השבת' }],
+      eruv: 'לפי העלון: עירוב חצרות סביב בית החולים, באישור הרב הראשי של כללית, רבני קהילות ועירובים שכונתיים. מפת העירוב הפנימי בתוקף רק עם תעודת כשרות עדכנית מוועד העירובין השכונתיים בני ברק.',
+      techum: 'לפי העלון: בית החולים בתוך תחום שבת, ואפשר להגיע אליו מבני ברק ומגבעת שמואל.' },
+    { id: 'schneider', name: 'שניידר', city: 'פתח תקוה',
+      src: 'https://www.schneider.org.il/?CategoryID=839&ArticleID=2457', srcName: 'עמוד שירותי הדת היהודית וכשרות, אתר שניידר',
+      contacts: [
+        { role: 'רב בית החולים ומשגיח הכשרות', name: 'הרב אשר לוי', phone: '03-9253971', phone2: '050-4205574' },
+        { role: 'משגיח שבתות וחגים (שאלות בערב שבת וערב חג)', name: 'הרב דניאל שהרבני', phone: '054-8473654' },
+        { role: 'מחלקת דת וכשרות, הנהלת כללית', phone: '03-6923275' }],
+      eruv: 'לפי אתר בית החולים: עירוב חצרות מהודר סביב בית החולים, בפיקוח הרב הראשי של כללית ורבני הקהילות והעירובים השכונתיים.',
+      techum: 'לפי אתר בית החולים: המרכז בתוך תחום שבת, ואפשר להגיע אליו מפתח תקוה והסביבה, מבני ברק ומגבעת שמואל.' },
+    { id: 'ichilov', name: 'איכילוב', city: 'תל אביב', doc: 'derech-ab',
+      src: 'https://www.tasmc.org.il/service-info/service-info/religion-services/', srcName: 'עמוד שירותי דת, אתר איכילוב',
+      contacts: [{ role: 'רב בית החולים', name: 'הרב אברהם רזניקוב', note: 'לא פורסם טלפון ישיר' }],
+      eruv: 'לפי אתר בית החולים: עירוב חצרות שהוקם עם בית הדין של הרב ניסים קרליץ, בנפרד מהעירוב של רבנות תל אביב.',
       techum: 'ההליכה בשבת מבני ברק לאיכילוב, ומתי צריך עירוב תחומין, מבוארות בחוברת "דרך התחומין א–ב" (פרק "בענין ההליכה מבני ברק לתל אביב ולבית החולים איכילוב").' },
-    { id: 'sheba', name: 'תל השומר (שיבא)', city: 'רמת גן', doc: 'derech-ab', from: 'בני ברק',
+    { id: 'sheba', name: 'תל השומר (שיבא)', city: 'רמת גן', doc: 'derech-ab', contacts: [],
       techum: 'דין התחום לבית החולים תל השומר מבואר בחוברת "דרך התחומין א–ב" (חלק א, "בירור דיני התחום לערי גוש דן ובתי החולים").' },
-    { id: 'wolfson', name: 'וולפסון', city: 'חולון', doc: 'derech-ab', from: 'בת ים',
+    { id: 'wolfson', name: 'וולפסון', city: 'חולון', doc: 'derech-ab', contacts: [],
       techum: 'דין התחום לעיר חולון ולבית החולים וולפסון, והתקנה ע"י עירוב תחומין במקום המשותף לשתי הערים, מבוארים בחוברת "דרך התחומין א–ב".' }
   ];
+  // ארגונים — רק פרטים מהאתר הרשמי של הארגון
+  const ORGS = [
+    { name: 'מוקד העירוב', what: 'מענה הלכתי בענייני עירוב, מפות ואחראים', phone: '054-8483320', url: 'http://hiruv.com', src: 'אתר מוקד העירוב' },
+    { name: 'עזר מציון — סניף ראשי', what: 'בחוברת "דרך התחומין" מוזכר שהאגודה מניחה עירוב תחומין ציבורי', phone: '03-6144444', url: 'https://www.ami.org.il/', src: 'אתר עזר מציון' }
+  ];
+  // מקורות רשמיים נוספים: עמודי שירותי דת של בתי חולים שעוד לא פורטו כאן (קישור בלבד)
+  const MORE_SOURCES = [
+    ['סורוקה — מחלקת דת וכשרות', 'https://hospitals.clalit.co.il/soroka/he/patients-info/Pages/religious-service.aspx'],
+    ['העמק — שירותי דת וכשרות', 'https://hospitals.clalit.co.il/emek/he/aboutus/Pages/religious_and_kosher_services.aspx'],
+    ['גהה — שירותי דת וכשרות', 'https://hospitals.clalit.co.il/geha/he/patient/Pages/religion.aspx'],
+    ['קפלן — שירותי דת', 'https://hospitals.clalit.co.il/kaplan/he/gen_info/Pages/rav.aspx'],
+    ['לוינשטיין — דת וכשרות', 'https://hospitals.clalit.co.il/loewenstein/he/customer_info/Pages/religion_and_kashrut.aspx'],
+    ['רמב"ם — שירותי דת', 'https://www.rambam.org.il/?catid=%7B767f81cc-1bcc-4f10-95b8-0e667d0bd203%7D'],
+    ['הלל יפה — שירותי דת', 'https://hymc.org.il/?CategoryID=276&ArticleID=3799'],
+    ['רעות — שירותי דת', 'https://www.reuth-mc.org.il/%D7%A9%D7%99%D7%A8%D7%95%D7%AA%D7%99-%D7%93%D7%AA/']
+  ];
   const HOSP_EZER = 'בחוברת "דרך התחומין" מוזכר שאגודת עזר מציון מניחה עירוב תחומין ציבורי (ומבואר שם איזה מזון מניחים). לפני שבת יש לברר אם העירוב הונח ולמי הוא מועיל.';
+  const telChip = p => `<button class="chip" data-phone="${esc(p)}">${ICON.phone}${esc(p)}</button>`;
+  function contactHTML(c) {
+    return `<div class="contact"><div class="who"><b>${esc(c.name || c.role)}</b>${c.name ? `<small>${esc(c.role)}</small>` : ''}${c.note ? `<small>${esc(c.note)}</small>` : ''}</div>
+      ${c.phone ? telChip(c.phone) : ''}${c.phone2 ? telChip(c.phone2) : ''}${c.email ? `<button class="chip" data-phone="${esc(c.email)}" title="העתקה">${ICON.link}${esc(c.email)}</button>` : ''}</div>`;
+  }
   function hospView(h) {
-    if (!h) return homeView();
+    if (!h) return hospsView();
+    const doc = h.doc && docById.get(h.doc);
     return `<div class="wrap">
       <div class="hero"><div class="grow"><h2>${esc(h.name)}</h2><p>${esc(h.city)} · מידע לשבת</p></div></div>
+      <div class="section-title">רב בית החולים ושירותי הדת</div>
+      ${h.contacts.length ? `<div class="contacts">${h.contacts.map(contactHTML).join('')}</div>`
+        : `<div class="techum-empty">${ICON.phone}<div>עדיין לא נמצאו טלפונים ממקור רשמי של בית החולים. לבירור: מוקד העירוב ${telChip(D.source.phone)}</div></div>`}
       <div class="section-title">עירוב בתוך המתחם</div>
-      <div class="techum-empty">${ICON.map}<div>בבתי החולים יש יחידת <b>שירותי דת</b> שאחראית על העירוב במתחם, על חדרי שבת ועל מעלית שבת.
-        לפני שבת יש לפנות אליה ולוודא שהעירוב תקין. למקרים מיוחדים: מוקד העירוב <button class="chip" data-phone="${esc(D.source.phone)}">${ICON.phone}${esc(D.source.phone)}</button></div></div>
+      <div class="techum-empty">${ICON.map}<div>${esc(h.eruv || 'בבתי החולים יש יחידת שירותי דת שאחראית על העירוב במתחם. לפני שבת יש לפנות אליה ולוודא שהעירוב תקין.')}</div></div>
       <div class="section-title">תחום שבת ועירוב תחומין</div>
-      <div class="techum-empty">${ICON.book}<div>${esc(h.techum)}<br>${esc(HOSP_EZER)}</div></div>
-      <div class="doc-grid">${docCardHTML(docById.get(h.doc))}</div>
-      <p class="fine">התוסף אינו פוסק הלכה. לשאלה למעשה יש לפנות לרב או למוקד העירוב.</p></div>`;
+      <div class="techum-empty">${ICON.book}<div>${esc(h.techum || 'לא נמצא מקור מוסמך לתחום השבת של בית חולים זה. לשאלה: מוקד העירוב או רב בית החולים.')}${doc ? '<br>' + esc(HOSP_EZER) : ''}</div></div>
+      ${doc ? `<div class="doc-grid">${docCardHTML(doc)}</div>` : ''}
+      ${h.src ? `<p class="fine">מקור: <button class="btn text" data-url="${esc(h.src)}">${esc(h.srcName)}</button> · נבדק בחשוון תשפ"ז. מספרים עשויים להשתנות.</p>` : ''}
+      <p class="fine">התוסף אינו פוסק הלכה. לשאלה למעשה יש לפנות לרב בית החולים או למוקד העירוב.</p></div>`;
+  }
+  function hospsView() {
+    return `<div class="wrap">
+      <div class="hero"><div class="grow"><h2>בתי חולים בשבת</h2><p>רב בית החולים, שירותי הדת, העירוב במתחם ותחום שבת — רק ממקורות רשמיים.</p></div></div>
+      <div class="row-links">${HOSPITALS.map(h => `<button class="btn tonal" data-hosp="${h.id}">${ICON.map} ${esc(h.name)} · ${esc(h.city)}</button>`).join('')}</div>
+      <div class="section-title">ארגונים</div>
+      <div class="contacts">${ORGS.map(o => `<div class="contact"><div class="who"><b>${esc(o.name)}</b><small>${esc(o.what)}</small><small>מקור: ${esc(o.src)}</small></div>
+        ${telChip(o.phone)}<button class="chip" data-url="${esc(o.url)}">${ICON.link}אתר</button></div>`).join('')}</div>
+      <div class="section-title">בתי חולים נוספים — עמודי שירותי הדת הרשמיים</div>
+      <div class="lib">${MORE_SOURCES.map(x => `<button class="chip" data-url="${esc(x[1])}">${ICON.link}${esc(x[0])}</button>`).join('')}</div>
+      <p class="fine">${esc(HOSP_EZER)}</p></div>`;
   }
   function docsView() {
     const tech = DOCS.filter(d => d.kind === 'techum'), books = DOCS.filter(d => d.kind === 'booklet');
@@ -680,12 +780,15 @@
     ['גמרא — מסכת עירובין', 'עירובין', 'ב א']
   ];
   const OPEN_TASKS = [
-    'קווי עירוב חדים (וקטור/SVG) מעל מפת רחובות, משכבת העירוב של GovMap',
+    'עדכון מתוך התוסף בזמן ריצה — אחרי שאוצריא תפתח את הכתובות (בקשה הוכנה)',
+    'סיווג רמות עירוב (חצר / שכונתי / עירוני) — רק עם מקור מהמוקד',
+    'קווי עירוב חדים (וקטור/SVG) מעל מפת רחובות, משכבת העירוב של GovMap — מחייב הרצה מישראל',
+    'עירובין נוספים בחו"ל, ושירותי דת בבתי חולים בחו"ל — רק ממקור רשמי',
+    'תחום שבת לבתי חולים נוספים (שערי צדק, הדסה, לניאדו ועוד) — רק ממקור מוסמך',
+    'ממשק באנגלית (כפתורים וכותרות)',
     'בדיקה אם המיקום שלי בתוך העירוב עצמו (כעת מזוהה רק העיר הקרובה)',
     'מפות לשכונות חסרות (פרדס כץ, קרית הרצוג ועוד) — פנייה למוקד העירוב',
-    'מפות עירוב בחו"ל (בכפוף לאישור eruv.org או האתרים המקומיים)',
-    'מראי מקום לפי עיר בתוך חוברות "דרך התחומין" (קפיצה לעמוד העיר)',
-    'ארגוני חסד ובתי אירוח ליד בתי חולים — אחרי אימות'
+    'מראי מקום לפי עיר בתוך חוברות "דרך התחומין" (קפיצה לעמוד העיר)'
   ];
 
   // ── זיהוי מיקום: גשר "אחת שאלתי" (כמו בכיוון תפילה), ואם אין — מיקום הדפדפן; העיר הקרובה נפתחת ──
@@ -718,6 +821,7 @@
   // ── יומן שינויים ותגובות ─────────────────────────────────────
   const REPO = 'https://github.com/Hadabadra/gvulot-eruv';
   const CHANGELOG = [
+    ['0.5.0', ['ניווט ראשי בסרגל הצד: ישראל / חו"ל / בתי חולים', 'בתי חולים: נוספו שערי צדק, הדסה עין כרם, מעיני הישועה, לניאדו, בילינסון ושניידר — רב בית החולים, העוזר ושירותי הדת, רק מהאתר הרשמי של בית החולים ועם קישור למקור', 'עירוב במתחם ותחום שבת לפי מה שכתוב במקור הרשמי (בילינסון ושניידר: בתוך התחום מבני ברק ומגבעת שמואל)', 'ארגונים: מוקד העירוב ועזר מציון', 'קישורים לעמודי שירותי הדת של בתי חולים נוספים', 'עדכון אוטומטי שבועי מהמקורות במאגר, עם גרסה חדשה כשמשהו משתנה']],
     ['0.4.0', ['חוברת רציפה: כל העמודים בגלילה אחת, ולא רק עמוד אחר עמוד', 'בדף עיר נפתח רק החלק שלה בחוברת (למשל מודיעין עילית/קרית ספר — חלק ב\' של דרך התחומין)', 'חו"ל: נוספו מונסי, רוקלנד, שני מקורות ללייקווד ו-Eruv Finder', 'חו"ל: הוסר הקישור של מיניאפוליס (darcheinoammn.org) לבקשת משתמש מחו"ל, כי אינו מקור חרדי']],
     ['0.3.5', ['תיקון: שגיאת Stack Overflow בהתקנה']],
     ['0.3.4', ['תיקון: החוברות לא נפתחו באוצריא (Missing PDF)']],
@@ -739,7 +843,7 @@
     if (r.success) { $('#fbText').value = ''; toast(r.data === 'queued' ? 'התגובה תישלח כשיהיה חיבור' : 'התגובה נשלחה, תודה!'); }
     else toast('השליחה זמינה בתוך אוצריא');
   }
-  const VERSION = '0.4.0';
+  const VERSION = '0.5.0';
 
   // ── אודות ───────────────────────────────────────────────────
   function openHalacha() {
@@ -763,7 +867,7 @@
         <div class="level done"><span class="dot">1</span><div><b>מפות ואחראים</b>${D.maps.length} מפות ו־${D.areas.length} אחראים, בלי צורך באינטרנט.</div></div>
         <div class="level"><span class="dot">2</span><div><b>קווי עירוב על מפת רחובות</b>המרת המפות לקווים מדויקים, עם הגדלה עד רמת הבית.</div></div>
         <div class="level"><span class="dot">3</span><div><b>בדיקת כתובת</b>הקלדת כתובת, וסימון אם היא בתוך העירוב ובאיזה עירוב.</div></div>
-        <div class="level"><span class="dot">4</span><div><b>עדכונים מהמוקד</b>משיכת שינויים ממוקד העירוב כשהאינטרנט זמין.</div></div>
+        <div class="level"><span class="dot">4</span><div><b>עדכונים מהמוקד</b>כבר עכשיו: גרסה חדשה בכל שבוע שבו המקורות השתנו. בהמשך: משיכה מתוך התוסף, כשאוצריא תאפשר.</div></div>
       </div>
       <p>קיצורי מקשים: <b>/</b> חיפוש · במציג: <b>+ / -</b> הגדלה, <b>0</b> התאמה, <b>R</b> סיבוב, <b>PageUp/PageDown</b> דפדוף בחוברת, <b>Esc</b> סגירה.
       בספר פתוח: <b>Ctrl+Alt+E</b> פותח את התוסף (אפשר לשנות בהגדרות → קיצורי מקשים).</p>
@@ -784,9 +888,10 @@
 
   // ── אירועים כלליים ─────────────────────────────────────────
   document.addEventListener('click', e => {
-    const t = e.target.closest('[data-open-map],[data-city],[data-phone],[data-fav],[data-url],[data-add-map],[data-del-map],[data-src],[data-doc],[data-view],[data-abroad],[data-hosp],[data-toggle-toolbar]');
+    const t = e.target.closest('[data-open-map],[data-city],[data-phone],[data-fav],[data-url],[data-add-map],[data-del-map],[data-src],[data-doc],[data-view],[data-abroad],[data-hosp],[data-sec],[data-toggle-toolbar]');
     if (!t) return;
     if (t.dataset.doc) { $('#infoScrim').hidden = true; openDoc(t.dataset.doc, 0, t.dataset.from ? { from: +t.dataset.from, to: +t.dataset.to, title: t.dataset.part } : null); }
+    else if (t.dataset.sec) goSec(t.dataset.sec);
     else if (t.dataset.view) goView(t.dataset.view);
     else if (t.dataset.abroad) { state.abroadC = t.dataset.abroad; state.view = 'abroad'; state.q = ''; $('#q').value = ''; render(); }
     else if (t.dataset.hosp) { state.hosp = t.dataset.hosp; state.view = 'hosp'; state.q = ''; $('#q').value = ''; render(); }

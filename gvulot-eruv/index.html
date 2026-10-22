@@ -38,8 +38,11 @@
 
   <div class="layout">
     <nav class="rail" id="rail" aria-label="ערים">
+      <div class="secnav" role="tablist" aria-label="ניווט ראשי">
+        <button class="sec" data-sec="il" role="tab">ישראל</button><button class="sec" data-sec="abroad" role="tab">חו"ל</button><button class="sec" data-sec="hosp" role="tab">בתי חולים</button>
+      </div>
       <div class="rail-head">
-        <span>ערים</span><span class="count" id="cityCount"></span>
+        <span id="railTitle">ערים</span><span class="count" id="cityCount"></span>
       </div>
       <div class="rail-list" id="cityList"></div>
     </nav>
