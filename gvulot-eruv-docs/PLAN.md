@@ -46,6 +46,7 @@ python3 pack.py ../gvulot-eruv ../gvulot-eruv-X.Y.Z.otzplugin
 - החבילה שוקלת כ-18MB, בתוך המכסה של 100MB לתוסף.
 
 ## החלטות לפי ה-SDK של אוצריא (docs/plugin-sdk)
+- **description ב-manifest: עד 150 תווים** (אחרת ההתקנה נכשלת). גודל התוסף: עד 50MB.
 - **בלי רשת.** אריחי מפה ו-hiruv.com אינם ב-`plugin_network_allowlist.txt` הרשמי, ולכן הכול ארוז בתוסף.
 - **הרשאות:** `app.open_url` (לאתר המוקד), `app.info.read` + `events.subscribe:theme.changed` (צבעים),
   `plugin.storage.read/write` (מועדפים ואחרונים, דרך `storage.get/set` ולא `plugin.storage.*`), `ui.feedback`,
