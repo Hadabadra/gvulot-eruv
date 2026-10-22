@@ -38,6 +38,23 @@ ADD = [
     {"c": "United States", "ch": "ארצות הברית", "r": "New Jersey", "p": "Lakewood (new map, Sparks)", "in": "", "u": "https://sparksofanation.com/sparks/reader-submitted-a-new-eruv-map-for-a-prime-area-of-lakewood-not-just-a-geographic-depiction-but-a-sign-of-the-growth-and-flourishing-of-torah-neighborhoods-a-celebration-of-yiddishkeit-on-the-ris/"},
     {"c": "United States", "ch": "ארצות הברית", "r": "", "p": "Eruv Finder (US directory)", "in": "", "u": "https://eruvfinder.com/"},
 ]
+# שיקגו: לפי מועצת הרבנים של שיקגו (cRc, crcweb.org/guide_chicago.php) — אתר וקו סטטוס לכל עירוב.
+# מחליף את שורות ויקיפדיה של אילינוי (בהן קישורים מתים כמו geocities). נבדק 22.10.2026.
+CRC = "https://crcweb.org/guide_chicago.php"
+CHICAGO = [
+    {"p": "West Rogers Park (Chicago)", "u": "http://chicagoeruv.tripod.com/", "ph": "773-743-7882"},
+    {"p": "Lincolnwood – Peterson Park", "u": CRC, "ph": "847-677-3788"},
+    {"p": "Skokie", "u": "http://www.skokieeruv.com/", "ph": "847-679-3788"},
+    {"p": "Lakeview (Lakefront)", "u": "https://twitter.com/lakefronteruv", "ph": "773-248-9200"},
+    {"p": "Glenbrook (Glenview/Northbrook)", "u": "http://www.glenbrookcommunityeruv.com", "ph": ""},
+    {"p": "Buffalo Grove", "u": "http://www.bgeruv.com", "ph": "773-771-2613"},
+    {"p": "Highland Park", "u": "http://www.hp-eruv.com/", "ph": "773-415-4940"},
+    {"p": "Hyde Park / South Side", "u": "https://southsideeruv.org/", "ph": ""},
+    {"p": "Evanston (בבנייה, צפי 2028)", "u": "https://evanstoneruv.org/", "ph": ""},
+    {"p": "מפות העירובין של שיקגו (cRc)", "u": "https://www.crcweb.org/eruv%20maps.pdf", "ph": ""},
+]
+KEEP_IL = {"Champaign-Urbana"}
+
 SKIP = {"Israel", "Palestine (Israeli settlements)", "Syria (Israeli settlements)", "References", "External links"}
 
 def clean_name(s):
@@ -71,9 +88,14 @@ def abroad():
                     "p": name, "in": parent if depth >= 2 else "", "u": ref.group(1) if ref else ""})
     return out
 
+def patch_chicago(ab):
+    il = [{"c": "United States", "ch": "ארצות הברית", "r": "Illinois", "in": "", **x} for x in CHICAGO]
+    return [a for a in ab if a["r"] != "Illinois" or a["p"] in KEEP_IL] + il
+
+
 def main(plugin):
     lib, ab = library(), abroad()
-    ab = [a for a in ab if a["u"] not in REMOVE_URLS] + ADD
+    ab = patch_chicago([a for a in ab if a["u"] not in REMOVE_URLS] + ADD)
     with open(os.path.join(plugin, "extra.js"), "w", encoding="utf-8") as f:
         f.write("window.ERUV_EXTRA = " + json.dumps({"library": lib, "abroad": ab}, ensure_ascii=False, separators=(",", ":")) + ";\n")
     print(len(lib), "books;", len(ab), "places abroad in", len({a['c'] for a in ab}), "countries", file=sys.stderr)

@@ -359,11 +359,21 @@
     { id: 'sinai-baltimore', name: 'Sinai Hospital', city: 'בולטימור', abroad: true,
       src: 'https://www.lifebridgehealth.org/news/sinai-hospital-expands-resources-sabbath-observant-jewish-patients-and-families', srcName: 'הודעה באתר LifeBridge Health',
       contacts: [{ role: 'רב בית החולים', name: 'Rabbi Jeffrey Orkin', note: 'לא פורסם טלפון ישיר' }, { role: 'מוקד LifeBridge Health', phone: '410-601-9355' }],
-      eruv: 'לפי ההודעה: שלוש מעליות שבת, חדר ביקור חולים עם אוכל כשר, וכניסת שבת לבניין Blaustein עם ליווי לחדר המיון לפי בקשה. בעמוד לא מפורט עירוב.' }
+      eruv: 'לפי ההודעה: שלוש מעליות שבת, חדר ביקור חולים עם אוכל כשר, וכניסת שבת לבניין Blaustein עם ליווי לחדר המיון לפי בקשה. בעמוד לא מפורט עירוב.' },
+    { id: 'evanston', name: 'Endeavor Evanston Hospital', city: 'שיקגו (אוונסטון)', abroad: true,
+      src: 'https://chicagomitzvahcampaign.org/wp-content/uploads/2024/06/155.-What-to-do-now_Map-Brochure_8-Panel_6.5.2024.pdf', srcName: 'עלון Chicago Mitzvah Campaign',
+      contacts: [{ role: 'Chicago Mitzvah Campaign — ליווי רבני בבתי החולים', phone: '1-866-697-2224' }],
+      eruv: 'לפי העלון: יש עירוב של בית החולים (מפה בעלון), וחדר אירוח לשבת ע"ש סולומון ודורה איינהורן, Central Street 1022. עירוב אוונסטון הכללי בבנייה (צפי 2028) ויחבר את בית החולים לווסט רוג\'רס פארק ולסקוקי.' },
+    { id: 'skokie-hosp', name: 'Endeavor Skokie Hospital', city: 'שיקגו (סקוקי)', abroad: true,
+      src: 'https://chicagomitzvahcampaign.org/wp-content/uploads/2024/06/155.-What-to-do-now_Map-Brochure_8-Panel_6.5.2024.pdf', srcName: 'עלון Chicago Mitzvah Campaign',
+      contacts: [{ role: 'Chicago Mitzvah Campaign — ליווי רבני בבתי החולים', phone: '1-866-697-2224' }, { role: 'קו סטטוס עירוב סקוקי (cRc)', phone: '847-679-3788' }],
+      eruv: 'לפי העלון: עירוב סקוקי מתיר לטלטל בין בית החולים לחדר האירוח לשבת (Gross Point Road 9631, בקומה התחתונה מכניסת החניון). לפני שבת יש לבדוק את קו הסטטוס.' }
   ];
   // ארגונים — רק פרטים מהאתר הרשמי של הארגון
   const ORGS = [
     { name: 'מוקד העירוב', what: 'מענה הלכתי בענייני עירוב, מפות ואחראים', phone: '054-8483320', url: 'http://hiruv.com', src: 'אתר מוקד העירוב' },
+    { name: 'Chicago Mitzvah Campaign (שיקגו)', what: 'ליווי רבני וחדרי אירוח לשבת בבתי החולים באזור שיקגו', phone: '1-866-697-2224', url: 'https://chicagomitzvahcampaign.org/in-hospital-patient-services/', src: 'אתר הארגון' },
+    { name: 'מועצת הרבנים של שיקגו (cRc) — עירובין', what: 'רשימת העירובין באזור שיקגו וקווי הסטטוס', phone: '847-677-3788', url: 'https://crcweb.org/guide_chicago.php', src: 'אתר cRc (הקו של לינקולנווד–פיטרסון פארק)' },
     { name: 'עזר מציון — סניף ראשי', what: 'בחוברת "דרך התחומין" מוזכר שהאגודה מניחה עירוב תחומין ציבורי', phone: '03-6144444', url: 'https://www.ami.org.il/', src: 'אתר עזר מציון' }
   ];
   // מקורות רשמיים נוספים: עמודי שירותי דת של בתי חולים שעוד לא פורטו כאן (קישור בלבד)
@@ -437,7 +447,7 @@
     const list = X.abroad.filter(a => a.c === cur);
     const regions = [...new Set(list.map(a => a.r))];
     const item = a => `<div class="ab-item${a.in ? ' sub' : ''}"><span dir="auto">${esc(a.p)}${a.in ? `<small> · ${esc(a.in)}</small>` : ''}</span>
-      ${a.u ? `<button class="chip" data-url="${esc(a.u)}" title="${esc(a.u)}">${ICON.link}אתר העירוב</button>` : ''}</div>`;
+      ${a.ph ? `<button class="chip" data-phone="${esc(a.ph)}" title="קו סטטוס העירוב">${ICON.phone}${esc(a.ph)}</button>` : ''}${a.u ? `<button class="chip" data-url="${esc(a.u)}" title="${esc(a.u)}">${ICON.link}אתר העירוב</button>` : ''}</div>`;
     return `<div class="wrap">
       <div class="hero"><div class="grow"><h2>עירובין בחו"ל</h2>
       <p>${X.abroad.length} מקומות ב־${cs.length} ארצות. רשימת מקומות וקישורים לאתר העירוב המקומי — בלי מפות. הסטטוס משתנה מדי שבוע, ויש לבדוק באתר המקומי.</p></div></div>
@@ -840,7 +850,7 @@
   // ── יומן שינויים ותגובות ─────────────────────────────────────
   const REPO = 'https://github.com/Hadabadra/gvulot-eruv';
   const CHANGELOG = [
-    ['0.5.0', ['ניווט ראשי בסרגל הצד: ישראל / חו"ל / בתי חולים', 'בתי חולים: נוספו שערי צדק, הדסה עין כרם, מעיני הישועה, לניאדו, בילינסון ושניידר — רב בית החולים, העוזר ושירותי הדת, רק מהאתר הרשמי של בית החולים ועם קישור למקור', 'עירוב במתחם ותחום שבת לפי מה שכתוב במקור הרשמי (בילינסון ושניידר: בתוך התחום מבני ברק ומגבעת שמואל)', 'ארגונים: מוקד העירוב ועזר מציון', 'קישורים לעמודי שירותי הדת של בתי חולים נוספים', 'עדכון אוטומטי שבועי מהמקורות במאגר, עם גרסה חדשה כשמשהו משתנה', 'בתי חולים בחו"ל: Memorial Sloan Kettering, Maimonides, Sinai (בולטימור) — מהאתר הרשמי', 'ממשק בסיסי באנגלית (כפתור EN בסרגל העליון): כפתורים, כותרות, ערים ובתי חולים']],
+    ['0.5.0', ['ניווט ראשי בסרגל הצד: ישראל / חו"ל / בתי חולים', 'בתי חולים: נוספו שערי צדק, הדסה עין כרם, מעיני הישועה, לניאדו, בילינסון ושניידר — רב בית החולים, העוזר ושירותי הדת, רק מהאתר הרשמי של בית החולים ועם קישור למקור', 'עירוב במתחם ותחום שבת לפי מה שכתוב במקור הרשמי (בילינסון ושניידר: בתוך התחום מבני ברק ומגבעת שמואל)', 'ארגונים: מוקד העירוב ועזר מציון', 'קישורים לעמודי שירותי הדת של בתי חולים נוספים', 'עדכון אוטומטי שבועי מהמקורות במאגר, עם גרסה חדשה כשמשהו משתנה', 'בתי חולים בחו"ל: Memorial Sloan Kettering, Maimonides, Sinai (בולטימור) — מהאתר הרשמי', 'שיקגו: רשימת העירובין וקווי הסטטוס לפי מועצת הרבנים (cRc), כולל לינקולנווד–פיטרסון פארק; בתי החולים אוונסטון וסקוקי', 'ממשק בסיסי באנגלית (כפתור EN בסרגל העליון): כפתורים, כותרות, ערים ובתי חולים']],
     ['0.4.0', ['חוברת רציפה: כל העמודים בגלילה אחת, ולא רק עמוד אחר עמוד', 'בדף עיר נפתח רק החלק שלה בחוברת (למשל מודיעין עילית/קרית ספר — חלק ב\' של דרך התחומין)', 'חו"ל: נוספו מונסי, רוקלנד, שני מקורות ללייקווד ו-Eruv Finder', 'חו"ל: הוסר הקישור של מיניאפוליס (darcheinoammn.org) לבקשת משתמש מחו"ל, כי אינו מקור חרדי']],
     ['0.3.5', ['תיקון: שגיאת Stack Overflow בהתקנה']],
     ['0.3.4', ['תיקון: החוברות לא נפתחו באוצריא (Missing PDF)']],

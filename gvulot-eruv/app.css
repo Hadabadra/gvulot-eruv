@@ -451,3 +451,4 @@ mark { background: var(--color-primary-container); color: var(--color-on-primary
 
 .lang-btn { font: inherit; font-size: .78em; font-weight: 700; letter-spacing: .03em; }
 html[lang=en] p, html[lang=en] .techum-empty > div, html[lang=en] .who, html[lang=en] .fine, html[lang=en] .hero p { unicode-bidi: plaintext; }
+.ab-item .chip { white-space: nowrap; flex-shrink: 0; }

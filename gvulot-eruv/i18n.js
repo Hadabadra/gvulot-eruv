@@ -39,7 +39,7 @@
     'מיצד': 'Meitzad', 'מירון': 'Meron', 'נוף הגליל': 'Nof HaGalil', 'נתיבות': 'Netivot', 'נתניה': 'Netanya', 'עמנואל': 'Emmanuel',
     'עפולה': 'Afula', 'פתח תקוה': 'Petah Tikva', 'צפת': 'Tzfat', 'קרית אתא': 'Kiryat Ata', 'קרית יערים (טלזסטון)': 'Kiryat Ye\'arim (Telz-Stone)',
     'קרית מלאכי': 'Kiryat Malachi', 'רחובות': 'Rehovot', 'רכסים': 'Rechasim', 'תל ציון': 'Tel Zion', 'תפרח': 'Tifrach',
-    'תל אביב': 'Tel Aviv', 'ניו יורק': 'New York', 'ברוקלין': 'Brooklyn', 'בולטימור': 'Baltimore', 'תחום': 'Techum', 'רמת גן': 'Ramat Gan', 'חולון': 'Holon',
+    'תל אביב': 'Tel Aviv', 'ניו יורק': 'New York', 'ברוקלין': 'Brooklyn', 'בולטימור': 'Baltimore', 'שיקגו (אוונסטון)': 'Chicago (Evanston)', 'שיקגו (סקוקי)': 'Chicago (Skokie)', 'אתר העירוב': 'Eruv website', 'תחום': 'Techum', 'רמת גן': 'Ramat Gan', 'חולון': 'Holon',
     // בתי חולים
     'שערי צדק': 'Shaare Zedek', 'הדסה עין כרם': 'Hadassah Ein Kerem', 'מעיני הישועה': "Ma'ayanei HaYeshua", 'לניאדו': 'Laniado',
     'בילינסון (רבין)': 'Beilinson (Rabin)', 'שניידר': 'Schneider', 'איכילוב': 'Ichilov', 'תל השומר (שיבא)': 'Tel HaShomer (Sheba)', 'וולפסון': 'Wolfson'
