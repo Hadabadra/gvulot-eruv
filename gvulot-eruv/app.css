@@ -452,3 +452,4 @@ mark { background: var(--color-primary-container); color: var(--color-on-primary
 .lang-btn { font: inherit; font-size: .78em; font-weight: 700; letter-spacing: .03em; }
 html[lang=en] p, html[lang=en] .techum-empty > div, html[lang=en] .who, html[lang=en] .fine, html[lang=en] .hero p { unicode-bidi: plaintext; }
 .ab-item .chip { white-space: nowrap; flex-shrink: 0; }
+.ab-filter { width: 100%; max-width: 28em; margin: 0 0 .8em; padding: .55em .9em; border: 1px solid var(--color-outline-variant); border-radius: var(--radius-pill); background: var(--color-surface); color: var(--color-on-surface); font: inherit; }

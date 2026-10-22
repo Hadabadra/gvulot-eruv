@@ -30,7 +30,12 @@
     'אתר העירוב': 'Eruv website', 'אתר': 'Website', 'הוספת מפה משלי': 'Add my own map', 'רב בית החולים': 'Hospital rabbi',
     'עוזר הרב': "Rabbi's assistant", 'לא פורסם טלפון ישיר': 'No direct phone published', 'אחראים בלבד': 'Contacts only',
     'רשימת אחראים': 'Contacts', 'מפה כללית': 'General map', 'כל החוברת': 'Whole booklet', 'מקור:': 'Source:',
-    'עברית': 'עברית', 'English': 'English',
+    'עברית': 'עברית', 'מפה': 'Map', 'יצירת קשר עם המוקד': 'Contact the Eruv Hotline', 'לאתר המוקד': 'Hotline website',
+    'Evanston (בבנייה, צפי 2028)': 'Evanston (under construction, due 2028)', 'מפות העירובין של שיקגו (cRc)': 'Chicago eruv maps (cRc)',
+    'Chicago Mitzvah Campaign — ליווי רבני בבתי החולים': 'Chicago Mitzvah Campaign — rabbinic hospital support', 'קו סטטוס עירוב סקוקי (cRc)': 'Skokie eruv status line (cRc)',
+    'ליווי רבני וחדרי אירוח לשבת בבתי החולים באזור שיקגו': 'Rabbinic support and Shabbat hospitality rooms in Chicago-area hospitals',
+    'רשימת העירובין באזור שיקגו וקווי הסטטוס': 'Chicago-area eruvin and status lines', 'עירובין בחו"ל — מידע': 'Eruvin abroad',
+    'סינון: עיר או מדינה, בעברית או באנגלית': 'Filter: city or state', 'עלון Chicago Mitzvah Campaign': 'Chicago Mitzvah Campaign brochure', 'English': 'English',
     // ערים
     'אופקים': 'Ofakim', 'אלעד': 'Elad', 'אשדוד': 'Ashdod', 'באר שבע': "Be'er Sheva", 'בית שמש': 'Beit Shemesh', 'ביתר': 'Beitar Illit',
     'בני ברק': 'Bnei Brak', 'בת ים': 'Bat Yam', 'גבעת זאב': "Giv'at Ze'ev", 'גני תקוה': 'Ganei Tikva', 'זכרון יעקב': "Zichron Ya'akov",

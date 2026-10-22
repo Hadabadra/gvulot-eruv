@@ -233,7 +233,7 @@
     const areas = D.areas.filter(a => match([a.city, a.area, a.names.join(' ')].join(' ')));
     const docs = DOCS.filter(d => match(d.title + ' ' + d.cities.join(' ') + ' ' + Object.values(d.summary || {}).join(' ')));
     const books = X.library.filter(b => match(b.t));
-    const abroad = X.abroad.filter(a => match([a.p, a.in, a.r, a.c, a.ch].join(' ')));
+    const abroad = X.abroad.filter(a => match([a.p, a.in, a.r, a.c, a.ch, heOf(a.p), heOf(a.r), metroOf(a)].join(' ')));
     if (!cities.length && !maps.length && !areas.length && !docs.length && !books.length && !abroad.length) {
       return `<div class="empty-state">${ICON.search}<strong>לא נמצא "${esc(state.q)}"</strong>
         אפשר לחפש שם עיר, שכונה, רחוב או שם האחראי. למקום שאינו ברשימה: מוקד העירוב, 054-8483320.</div>`;
@@ -256,10 +256,15 @@
     </div>`;
   }
 
+  // מדף "יצירת קשר" באתר המוקד (נבדק 22.10.2026)
+  const MOKED_EMAIL = 'a83320@gmail.com';
+  const MOKED_CONTACT = 'http://hiruv.com/%D7%99%D7%A6%D7%99%D7%A8%D7%AA-%D7%A7%D7%A9%D7%A8/';
   function sourceCard() {
     return `<div class="source-card"><div class="grow"><b>מקור:</b> ${esc(D.source.name)}, באישורם. ${esc(D.source.note)}
       עודכן ${esc(D.built)}.</div>
       <button class="btn text" data-url="${esc(D.source.site)}">לאתר המוקד</button>
+      <button class="btn text" data-url="${MOKED_CONTACT}">יצירת קשר עם המוקד</button>
+      <button class="btn text" data-phone="${MOKED_EMAIL}" title="העתקת האימייל">${ICON.link} ${MOKED_EMAIL}</button>
       <button class="btn tonal" data-phone="${esc(D.source.phone)}">${ICON.phone} מענה הלכתי ${esc(D.source.phone)}</button></div>`;
   }
 
@@ -371,7 +376,7 @@
   ];
   // ארגונים — רק פרטים מהאתר הרשמי של הארגון
   const ORGS = [
-    { name: 'מוקד העירוב', what: 'מענה הלכתי בענייני עירוב, מפות ואחראים', phone: '054-8483320', url: 'http://hiruv.com', src: 'אתר מוקד העירוב' },
+    { name: 'מוקד העירוב', what: 'מענה הלכתי בענייני עירוב, מפות ואחראים · a83320@gmail.com', phone: '054-8483320', url: 'http://hiruv.com/%D7%99%D7%A6%D7%99%D7%A8%D7%AA-%D7%A7%D7%A9%D7%A8/', src: 'דף יצירת קשר באתר מוקד העירוב' },
     { name: 'Chicago Mitzvah Campaign (שיקגו)', what: 'ליווי רבני וחדרי אירוח לשבת בבתי החולים באזור שיקגו', phone: '1-866-697-2224', url: 'https://chicagomitzvahcampaign.org/in-hospital-patient-services/', src: 'אתר הארגון' },
     { name: 'מועצת הרבנים של שיקגו (cRc) — עירובין', what: 'רשימת העירובין באזור שיקגו וקווי הסטטוס', phone: '847-677-3788', url: 'https://crcweb.org/guide_chicago.php', src: 'אתר cRc (הקו של לינקולנווד–פיטרסון פארק)' },
     { name: 'עזר מציון — סניף ראשי', what: 'בחוברת "דרך התחומין" מוזכר שהאגודה מניחה עירוב תחומין ציבורי', phone: '03-6144444', url: 'https://www.ami.org.il/', src: 'אתר עזר מציון' }
@@ -441,19 +446,29 @@
         `<button class="chip" data-url="${esc(b.u)}" title="פתיחה בדפדפן">${ICON.link}${esc(b.t)}</button>`).join('')}</div>`).join('')}
       ${sourceCard()}</div>`;
   }
+  const HEP = {"Alabama": "אלבמה", "Arizona": "אריזונה", "Arkansas": "ארקנסו", "California": "קליפורניה", "Colorado": "קולורדו", "Connecticut": "קונטיקט", "Delaware": "דלאוור", "District of Columbia": "וושינגטון הבירה", "Florida": "פלורידה", "Georgia": "ג'ורג'יה", "Hawaii": "הוואי", "Illinois": "אילינוי", "Indiana": "אינדיאנה", "Iowa": "איווה", "Kansas": "קנזס", "Kentucky": "קנטקי", "Louisiana": "לואיזיאנה", "Maine": "מיין", "Maryland": "מרילנד", "Massachusetts": "מסצ'וסטס", "Michigan": "מישיגן", "Minnesota": "מינסוטה", "Missouri": "מיזורי", "Nebraska": "נברסקה", "Nevada": "נבדה", "New Hampshire": "ניו המפשייר", "New Jersey": "ניו ג'רזי", "New Mexico": "ניו מקסיקו", "New York": "ניו יורק", "North Carolina": "צפון קרוליינה", "Ohio": "אוהיו", "Oklahoma": "אוקלהומה", "Oregon": "אורגון", "Pennsylvania": "פנסילבניה", "Rhode Island": "רוד איילנד", "South Carolina": "דרום קרוליינה", "Tennessee": "טנסי", "Texas": "טקסס", "Utah": "יוטה", "Vermont": "ורמונט", "Virginia": "וירג'יניה", "Washington": "וושינגטון", "Wisconsin": "ויסקונסין", "Ontario": "אונטריו", "Quebec": "קוויבק", "Québec": "קוויבק", "British Columbia": "קולומביה הבריטית", "Manitoba": "מניטובה", "Alberta": "אלברטה", "England": "אנגליה", "London": "לונדון", "Manchester": "מנצ'סטר", "Gateshead": "גייטסהד", "Chicago": "שיקגו", "Brooklyn": "ברוקלין", "Manhattan": "מנהטן", "Queens": "קווינס", "Monsey": "מונסי", "Lakewood": "לייקווד", "Baltimore": "בולטימור", "Los Angeles": "לוס אנג'לס", "Miami": "מיאמי", "Miami Beach": "מיאמי ביץ'", "Boston": "בוסטון", "Philadelphia": "פילדלפיה", "Cleveland": "קליבלנד", "Detroit": "דטרויט", "Toronto": "טורונטו", "Montreal": "מונטריאול", "Antwerp": "אנטוורפן", "Paris": "פריז", "Zurich": "ציריך", "Vienna": "וינה", "Johannesburg": "יוהנסבורג", "Melbourne": "מלבורן", "Sydney": "סידני", "Passaic": "פסאיק", "Teaneck": "טינק", "Skokie": "סקוקי", "Lincolnwood": "לינקולנווד", "West Rogers Park": "ווסט רוג'רס פארק", "Evanston": "אוונסטון", "Rockland County": "מחוז רוקלנד", "Staten Island": "סטטן איילנד", "Far Rockaway": "פאר רוקאווי", "Five Towns": "פייב טאונס", "Atlanta": "אטלנטה", "Denver": "דנבר", "Dallas": "דאלאס", "Houston": "יוסטון", "St. Louis": "סנט לואיס", "Pittsburgh": "פיטסבורג", "Cincinnati": "סינסינטי", "Phoenix": "פיניקס", "San Diego": "סן דייגו", "San Francisco": "סן פרנסיסקו", "Seattle": "סיאטל", "Buenos Aires": "בואנוס איירס", "Mexico City": "מקסיקו סיטי", "Highland Park": "היילנד פארק", "Buffalo Grove": "באפלו גרוב", "Lakeview": "לייקוויו", "Hyde Park": "הייד פארק"};
+  // שם בעברית למדינה/עיר בחו"ל: התאמה מלאה, ואחרת מילה מוכרת בתוך השם (למשל West Rogers Park (Chicago) → שיקגו)
+  const heOf = s => { if (!s) return ''; if (HEP[s]) return HEP[s]; const k = Object.keys(HEP).find(k => k.length > 4 && s.includes(k)); return k ? HEP[k] : ''; };
+  // פרברים שנחשבים לאזור עיר גדולה (לחיפוש "שיקגו" וכו')
+  const METRO = { 'שיקגו Chicago': /Skokie|Lincolnwood|Rogers Park|Lakeview|Lakefront|Glenbrook|Glenview|Northbrook|Buffalo Grove|Highland Park|Hyde Park|South Side|Evanston|Peterson Park|Chicago/i,
+    'ניו יורק New York': /Brooklyn|Manhattan|Queens|Bronx|Staten Island|Far Rockaway|Five Towns|Riverdale|Kew Gardens/i, 'לונדון London': /London|Edgware|Stanmore|Golders|Hendon|Barnet|Bushey|Borehamwood|Mill Hill|Pinner|Chigwell|Hampstead|Woodside Park/i };
+  const metroOf = a => Object.keys(METRO).filter(k => METRO[k].test(a.p + ' ' + (a.in || ''))).join(' ');
   function abroadView() {
     const cs = [...new Map(X.abroad.map(a => [a.c, a.ch])).entries()].sort((a, b) => a[1].localeCompare(b[1], 'he'));
     const cur = state.abroadC || (cs.find(c => c[0] === 'United States') || cs[0] || [''])[0];
-    const list = X.abroad.filter(a => a.c === cur);
+    const fq = (state.abq || '').trim().toLowerCase();
+    const list = X.abroad.filter(a => a.c === cur && (!fq || [a.p, a.in, a.r, heOf(a.p), heOf(a.r), heOf(a.in), metroOf(a)].join(' ').toLowerCase().includes(fq)));
     const regions = [...new Set(list.map(a => a.r))];
-    const item = a => `<div class="ab-item${a.in ? ' sub' : ''}"><span dir="auto">${esc(a.p)}${a.in ? `<small> · ${esc(a.in)}</small>` : ''}</span>
-      ${a.ph ? `<button class="chip" data-phone="${esc(a.ph)}" title="קו סטטוס העירוב">${ICON.phone}${esc(a.ph)}</button>` : ''}${a.u ? `<button class="chip" data-url="${esc(a.u)}" title="${esc(a.u)}">${ICON.link}אתר העירוב</button>` : ''}</div>`;
+    const item = a => `<div class="ab-item${a.in ? ' sub' : ''}"><span dir="auto">${heOf(a.p) ? `<b>${esc(heOf(a.p))}</b> · ` : ''}${esc(a.p)}${a.in ? `<small> · ${esc(a.in)}</small>` : ''}</span>
+      ${a.em ? `<button class="chip" data-phone="${esc(a.em)}" title="העתקת האימייל">${ICON.link}${esc(a.em)}</button>` : ''}${a.m ? `<button class="chip" data-url="${esc(a.m)}" title="${esc(a.m)}">${ICON.map}מפה</button>` : ''}${a.ph ? `<button class="chip" data-phone="${esc(a.ph)}" title="קו סטטוס העירוב">${ICON.phone}${esc(a.ph)}</button>` : ''}${a.u ? `<button class="chip" data-url="${esc(a.u)}" title="${esc(a.u)}">${ICON.link}אתר העירוב</button>` : ''}</div>`;
     return `<div class="wrap">
       <div class="hero"><div class="grow"><h2>עירובין בחו"ל</h2>
       <p>${X.abroad.length} מקומות ב־${cs.length} ארצות. רשימת מקומות וקישורים לאתר העירוב המקומי — בלי מפות. הסטטוס משתנה מדי שבוע, ויש לבדוק באתר המקומי.</p></div></div>
       <div class="tabs">${cs.map(c => `<button class="tab${c[0] === cur ? ' on' : ''}" data-abroad="${esc(c[0])}">${esc(c[1])}
         <span class="badge">${X.abroad.filter(a => a.c === c[0]).length}</span></button>`).join('')}</div>
-      ${regions.map(r => `${r ? `<div class="section-title">${esc(r)}</div>` : ''}<div class="ab-list">${list.filter(a => a.r === r).map(item).join('')}</div>`).join('')}
+      <input id="abQ" class="ab-filter" type="search" placeholder="סינון: עיר או מדינה, בעברית או באנגלית" value="${esc(state.abq || '')}">
+      ${!list.length ? '<p class="fine">לא נמצא. נסו שם אחר, או את החיפוש הכללי למעלה.</p>' : ''}
+      ${regions.map(r => `${r ? `<div class="section-title">${heOf(r) ? esc(heOf(r)) + ' · ' : ''}${esc(r)}</div>` : ''}<div class="ab-list">${list.filter(a => a.r === r).map(item).join('')}</div>`).join('')}
       <p class="fine">מקור הרשימה: ויקיפדיה, "List of places with eruvin" (CC BY-SA). מדריך עולמי נוסף: eruv.org.
         <button class="btn text" data-url="https://en.wikipedia.org/wiki/List_of_places_with_eruvin">לרשימה המלאה</button>
         <button class="btn text" data-url="https://www.eruv.org/">eruv.org</button></p></div>`;
@@ -850,6 +865,7 @@
   // ── יומן שינויים ותגובות ─────────────────────────────────────
   const REPO = 'https://github.com/Hadabadra/gvulot-eruv';
   const CHANGELOG = [
+    ['0.5.1', ['חו"ל: נתוני המדריך eruv.org (באישורם) — 411 עירובין, קווי סטטוס וטלפונים, אימיילים וקישורי מפה', 'שמות בעברית למדינות ולערים מרכזיות בחו"ל, וחיפוש בעברית ובאנגלית', 'תיבת סינון בתוך דף הארץ (למשל "שיקגו")', 'יצירת קשר עם מוקד העירוב: דף יצירת הקשר, טלפון ואימייל', 'שיקגו: תוקנו שני קישורים מתים (ווסט רוג\'רס פארק, היילנד פארק)', 'אנגלית: גם התוכן של שיקגו']],
     ['0.5.0', ['ניווט ראשי בסרגל הצד: ישראל / חו"ל / בתי חולים', 'בתי חולים: נוספו שערי צדק, הדסה עין כרם, מעיני הישועה, לניאדו, בילינסון ושניידר — רב בית החולים, העוזר ושירותי הדת, רק מהאתר הרשמי של בית החולים ועם קישור למקור', 'עירוב במתחם ותחום שבת לפי מה שכתוב במקור הרשמי (בילינסון ושניידר: בתוך התחום מבני ברק ומגבעת שמואל)', 'ארגונים: מוקד העירוב ועזר מציון', 'קישורים לעמודי שירותי הדת של בתי חולים נוספים', 'עדכון אוטומטי שבועי מהמקורות במאגר, עם גרסה חדשה כשמשהו משתנה', 'בתי חולים בחו"ל: Memorial Sloan Kettering, Maimonides, Sinai (בולטימור) — מהאתר הרשמי', 'שיקגו: רשימת העירובין וקווי הסטטוס לפי מועצת הרבנים (cRc), כולל לינקולנווד–פיטרסון פארק; בתי החולים אוונסטון וסקוקי', 'ממשק בסיסי באנגלית (כפתור EN בסרגל העליון): כפתורים, כותרות, ערים ובתי חולים']],
     ['0.4.0', ['חוברת רציפה: כל העמודים בגלילה אחת, ולא רק עמוד אחר עמוד', 'בדף עיר נפתח רק החלק שלה בחוברת (למשל מודיעין עילית/קרית ספר — חלק ב\' של דרך התחומין)', 'חו"ל: נוספו מונסי, רוקלנד, שני מקורות ללייקווד ו-Eruv Finder', 'חו"ל: הוסר הקישור של מיניאפוליס (darcheinoammn.org) לבקשת משתמש מחו"ל, כי אינו מקור חרדי']],
     ['0.3.5', ['תיקון: שגיאת Stack Overflow בהתקנה']],
@@ -872,7 +888,7 @@
     if (r.success) { $('#fbText').value = ''; toast(r.data === 'queued' ? 'התגובה תישלח כשיהיה חיבור' : 'התגובה נשלחה, תודה!'); }
     else toast('השליחה זמינה בתוך אוצריא');
   }
-  const VERSION = '0.5.0';
+  const VERSION = '0.5.1';
 
   // ── אודות ───────────────────────────────────────────────────
   function openHalacha() {
@@ -916,13 +932,18 @@
   }
 
   // ── אירועים כלליים ─────────────────────────────────────────
+  document.addEventListener('input', e => {
+    if (e.target.id !== 'abQ') return;
+    state.abq = e.target.value; const pos = e.target.selectionStart;
+    $('#main').innerHTML = abroadView(); const n = $('#abQ'); n.focus(); try { n.setSelectionRange(pos, pos); } catch (er) {}
+  });
   document.addEventListener('click', e => {
     const t = e.target.closest('[data-open-map],[data-city],[data-phone],[data-fav],[data-url],[data-add-map],[data-del-map],[data-src],[data-doc],[data-view],[data-abroad],[data-hosp],[data-sec],[data-toggle-toolbar]');
     if (!t) return;
     if (t.dataset.doc) { $('#infoScrim').hidden = true; openDoc(t.dataset.doc, 0, t.dataset.from ? { from: +t.dataset.from, to: +t.dataset.to, title: t.dataset.part } : null); }
     else if (t.dataset.sec) goSec(t.dataset.sec);
     else if (t.dataset.view) goView(t.dataset.view);
-    else if (t.dataset.abroad) { state.abroadC = t.dataset.abroad; state.view = 'abroad'; state.q = ''; $('#q').value = ''; render(); }
+    else if (t.dataset.abroad) { state.abroadC = t.dataset.abroad; state.abq = ''; state.view = 'abroad'; state.q = ''; $('#q').value = ''; render(); }
     else if (t.dataset.hosp) { state.hosp = t.dataset.hosp; state.view = 'hosp'; state.q = ''; $('#q').value = ''; render(); }
     else if (t.dataset.toggleToolbar !== undefined) toggleToolbar();
     else if (t.dataset.addMap !== undefined) addOwnMap(t.dataset.addMap);

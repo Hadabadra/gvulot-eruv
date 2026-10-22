@@ -42,13 +42,13 @@ ADD = [
 # מחליף את שורות ויקיפדיה של אילינוי (בהן קישורים מתים כמו geocities). נבדק 22.10.2026.
 CRC = "https://crcweb.org/guide_chicago.php"
 CHICAGO = [
-    {"p": "West Rogers Park (Chicago)", "u": "http://chicagoeruv.tripod.com/", "ph": "773-743-7882"},
+    {"p": "West Rogers Park (Chicago)", "u": "https://www.eruv.org/eruv-directory/99/west-rogers-park-eruv/", "ph": "773-743-7882"},
     {"p": "Lincolnwood – Peterson Park", "u": CRC, "ph": "847-677-3788"},
     {"p": "Skokie", "u": "http://www.skokieeruv.com/", "ph": "847-679-3788"},
     {"p": "Lakeview (Lakefront)", "u": "https://twitter.com/lakefronteruv", "ph": "773-248-9200"},
     {"p": "Glenbrook (Glenview/Northbrook)", "u": "http://www.glenbrookcommunityeruv.com", "ph": ""},
     {"p": "Buffalo Grove", "u": "http://www.bgeruv.com", "ph": "773-771-2613"},
-    {"p": "Highland Park", "u": "http://www.hp-eruv.com/", "ph": "773-415-4940"},
+    {"p": "Highland Park", "u": "https://www.eruv.org/eruv-directory/604/highland-park-il-eruv/", "ph": "773-415-4940"},
     {"p": "Hyde Park / South Side", "u": "https://southsideeruv.org/", "ph": ""},
     {"p": "Evanston (בבנייה, צפי 2028)", "u": "https://evanstoneruv.org/", "ph": ""},
     {"p": "מפות העירובין של שיקגו (cRc)", "u": "https://www.crcweb.org/eruv%20maps.pdf", "ph": ""},
@@ -93,9 +93,48 @@ def patch_chicago(ab):
     return [a for a in ab if a["r"] != "Illinois" or a["p"] in KEEP_IL] + il
 
 
+COUNTRY_FIX = {"USA": "United States", "UK": "United Kingdom", "England": "United Kingdom"}
+
+
+def norm(s):
+    return re.sub(r"[^a-z]", "", s.lower().replace("eruv", "").replace("eiruv", ""))
+
+
+def merge_eruvorg(ab):
+    """מעשיר/מוסיף מתוך raw/eruvorg.json (eruv.org, באישורם): טלפון ph, אימייל em, מפה m."""
+    fn = os.path.join(R, "eruvorg.json")
+    if not os.path.exists(fn): return ab
+    he = {v: k for k, v in HE.items()}
+    for e in json.load(open(fn)):
+        path = e["cat"] or ["?"]
+        names = [COUNTRY_FIX.get(x, x) for x in path]
+        if "Israel" in names: continue  # בישראל — לפי מוקד העירוב בלבד
+        if names == ["?"]: names = ["Indiana", "United States"]  # Carmel, Indiana ללא קטגוריה
+        country = next((x for x in names if x in HE), names[0])
+        region = names[0] if names[0] != country else ""
+        f = e["f"]
+        ph = f.get("eruv_statushotline") or f.get("contact_phone_") or ""
+        em = next((v for k, v in f.items() if "@" in v and " " not in v), "")
+        mp = f.get("map", "")
+        site = f.get("website_address") or e["link"]
+        nm = re.sub(r"\s*[–-]\s*", " – ", e["name"]).replace(" Eruv", "").strip()
+        key = norm(nm.split("–")[-1])
+        hit = next((a for a in ab if a["c"] == country and key and (key in norm(a["p"]) or norm(a["p"]) in key) and len(norm(a["p"])) > 3), None)
+        if hit:
+            hit.setdefault("ph", ph) if not hit.get("ph") else None
+            if em and not hit.get("em"): hit["em"] = em
+            if mp and not hit.get("m"): hit["m"] = mp
+            if not hit.get("u"): hit["u"] = site
+            hit["eo"] = e["link"]
+        else:
+            ab.append({"c": country, "ch": HE.get(country, country), "r": region, "p": nm, "in": "", "u": site,
+                       "ph": ph, "em": em, "m": mp, "eo": e["link"]})
+    return ab
+
+
 def main(plugin):
     lib, ab = library(), abroad()
-    ab = patch_chicago([a for a in ab if a["u"] not in REMOVE_URLS] + ADD)
+    ab = merge_eruvorg(patch_chicago([a for a in ab if a["u"] not in REMOVE_URLS] + ADD))
     with open(os.path.join(plugin, "extra.js"), "w", encoding="utf-8") as f:
         f.write("window.ERUV_EXTRA = " + json.dumps({"library": lib, "abroad": ab}, ensure_ascii=False, separators=(",", ":")) + ";\n")
     print(len(lib), "books;", len(ab), "places abroad in", len({a['c'] for a in ab}), "countries", file=sys.stderr)

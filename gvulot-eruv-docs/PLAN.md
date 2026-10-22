@@ -1,5 +1,13 @@
 # גבולות עירוב — תיעוד טכני ותכנית
 
+## 0.5.1 — נעשה
+- **eruv.org (באישורם):** `gvulot-eruv-build/build_eruvorg.py` — רשימה מ-WP REST (`wpbdp_listing`, `wpbdp_category`; 294 עירובין), דף HTML לכל עירוב ל-raw/eruvorg/, ניתוח שדות (`website_address`, `map`, `contact_phone_`, `eruv_statushotline`, `contact_email`, `certified_by`, `posek`...) ל-raw/eruvorg.json.
+  `merge_eruvorg()` ב-build_extra.py: מעשיר רשומה קיימת (התאמת שם באותה ארץ) או מוסיף; שדות `ph` (קו סטטוס קודם), `em`, `m` (מפה), `eo` (דף eruv.org). עירובי ישראל מדולגים (רק המוקד).
+  extra.js נבנה מ-HEAD + patch_chicago + merge_eruvorg (raw של ויקיפדיה/ספרייה לא היה בסשן). **auto_update.py עדיין לא מריץ את build_eruvorg** — להוסיף.
+- **עברית בחו"ל:** `HEP` + `heOf()` ב-app.js (התאמה מלאה או מילה מוכרת בתוך השם). חיפוש כללי וסינון `#abQ` (state.abq) כוללים את השמות בעברית.
+- **מוקד:** `MOKED_EMAIL`, `MOKED_CONTACT` ב-app.js (מדף "יצירת קשר" באתר); ב-sourceCard וב-ORGS.
+- **קישורים מתים:** chicagoeruv.tripod.com ו-hp-eruv.com (מרשימת cRc) לא קיימים — הוחלפו בדפי eruv.org 99, 604. בתכנון: בדיקת קישורים אוטומטית ב-workflow השבועי.
+
 ## 0.5.0 — נעשה
 - **עדכון אוטומטי:** `.github/workflows/eruv-auto-update.yml` (רביעי 06:17 UTC + הפעלה ידנית) מריץ `gvulot-eruv-build/auto_update.py`:
   scrape → parse_resp → דפי הספרייה (מזוהים לפי טקסט הקישור בדף הבית) → ויקיפדיה. טביעת אצבע ב-`sources.lock.json`.
