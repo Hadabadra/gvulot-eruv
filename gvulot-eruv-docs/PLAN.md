@@ -1,5 +1,8 @@
 # גבולות עירוב — תיעוד טכני ותכנית
 
+## 0.5.2 — נעשה
+- כרטיסי חו"ל: הכפתורים בקבוצה עוטפת (.ab-acts), עמודות minmax(min(100%,22em)), צ'יפים ארוכים נחתכים ב־ellipsis; overflow-x:hidden בתוכן — אין גלילה אופקית.
+
 ## 0.5.1 — נעשה
 - **eruv.org (באישורם):** `gvulot-eruv-build/build_eruvorg.py` — רשימה מ-WP REST (`wpbdp_listing`, `wpbdp_category`; 294 עירובין), דף HTML לכל עירוב ל-raw/eruvorg/, ניתוח שדות (`website_address`, `map`, `contact_phone_`, `eruv_statushotline`, `contact_email`, `certified_by`, `posek`...) ל-raw/eruvorg.json.
   `merge_eruvorg()` ב-build_extra.py: מעשיר רשומה קיימת (התאמת שם באותה ארץ) או מוסיף; שדות `ph` (קו סטטוס קודם), `em`, `m` (מפה), `eo` (דף eruv.org). עירובי ישראל מדולגים (רק המוקד).

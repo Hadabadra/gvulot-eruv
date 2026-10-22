@@ -459,8 +459,8 @@
     const fq = (state.abq || '').trim().toLowerCase();
     const list = X.abroad.filter(a => a.c === cur && (!fq || [a.p, a.in, a.r, heOf(a.p), heOf(a.r), heOf(a.in), metroOf(a)].join(' ').toLowerCase().includes(fq)));
     const regions = [...new Set(list.map(a => a.r))];
-    const item = a => `<div class="ab-item${a.in ? ' sub' : ''}"><span dir="auto">${heOf(a.p) ? `<b>${esc(heOf(a.p))}</b> · ` : ''}${esc(a.p)}${a.in ? `<small> · ${esc(a.in)}</small>` : ''}</span>
-      ${a.em ? `<button class="chip" data-phone="${esc(a.em)}" title="העתקת האימייל">${ICON.link}${esc(a.em)}</button>` : ''}${a.m ? `<button class="chip" data-url="${esc(a.m)}" title="${esc(a.m)}">${ICON.map}מפה</button>` : ''}${a.ph ? `<button class="chip" data-phone="${esc(a.ph)}" title="קו סטטוס העירוב">${ICON.phone}${esc(a.ph)}</button>` : ''}${a.u ? `<button class="chip" data-url="${esc(a.u)}" title="${esc(a.u)}">${ICON.link}אתר העירוב</button>` : ''}</div>`;
+    const item = a => `<div class="ab-item${a.in ? ' sub' : ''}"><span dir="auto">${heOf(a.p) ? `<b>${esc(heOf(a.p))}</b> · ` : ''}${esc(a.p)}${a.in ? `<small> · ${esc(a.in)}</small>` : ''}</span><span class="ab-acts">
+      ${a.em ? `<button class="chip" data-phone="${esc(a.em)}" title="העתקת האימייל">${ICON.link}${esc(a.em)}</button>` : ''}${a.m ? `<button class="chip" data-url="${esc(a.m)}" title="${esc(a.m)}">${ICON.map}מפה</button>` : ''}${a.ph ? `<button class="chip" data-phone="${esc(a.ph)}" title="קו סטטוס העירוב">${ICON.phone}${esc(a.ph)}</button>` : ''}${a.u ? `<button class="chip" data-url="${esc(a.u)}" title="${esc(a.u)}">${ICON.link}אתר העירוב</button>` : ''}</span></div>`;
     return `<div class="wrap">
       <div class="hero"><div class="grow"><h2>עירובין בחו"ל</h2>
       <p>${X.abroad.length} מקומות ב־${cs.length} ארצות. רשימת מקומות וקישורים לאתר העירוב המקומי — בלי מפות. הסטטוס משתנה מדי שבוע, ויש לבדוק באתר המקומי.</p></div></div>
@@ -865,6 +865,7 @@
   // ── יומן שינויים ותגובות ─────────────────────────────────────
   const REPO = 'https://github.com/Hadabadra/gvulot-eruv';
   const CHANGELOG = [
+    ['0.5.2', ['תיקון: כרטיסי חו"ל — הטקסט והכפתורים כבר לא עולים זה על זה', 'הדף מותאם לרוחב החלון, בלי גלילה אופקית']],
     ['0.5.1', ['חו"ל: נתוני המדריך eruv.org (באישורם) — 411 עירובין, קווי סטטוס וטלפונים, אימיילים וקישורי מפה', 'שמות בעברית למדינות ולערים מרכזיות בחו"ל, וחיפוש בעברית ובאנגלית', 'תיבת סינון בתוך דף הארץ (למשל "שיקגו")', 'יצירת קשר עם מוקד העירוב: דף יצירת הקשר, טלפון ואימייל', 'שיקגו: תוקנו שני קישורים מתים (ווסט רוג\'רס פארק, היילנד פארק)', 'אנגלית: גם התוכן של שיקגו']],
     ['0.5.0', ['ניווט ראשי בסרגל הצד: ישראל / חו"ל / בתי חולים', 'בתי חולים: נוספו שערי צדק, הדסה עין כרם, מעיני הישועה, לניאדו, בילינסון ושניידר — רב בית החולים, העוזר ושירותי הדת, רק מהאתר הרשמי של בית החולים ועם קישור למקור', 'עירוב במתחם ותחום שבת לפי מה שכתוב במקור הרשמי (בילינסון ושניידר: בתוך התחום מבני ברק ומגבעת שמואל)', 'ארגונים: מוקד העירוב ועזר מציון', 'קישורים לעמודי שירותי הדת של בתי חולים נוספים', 'עדכון אוטומטי שבועי מהמקורות במאגר, עם גרסה חדשה כשמשהו משתנה', 'בתי חולים בחו"ל: Memorial Sloan Kettering, Maimonides, Sinai (בולטימור) — מהאתר הרשמי', 'שיקגו: רשימת העירובין וקווי הסטטוס לפי מועצת הרבנים (cRc), כולל לינקולנווד–פיטרסון פארק; בתי החולים אוונסטון וסקוקי', 'ממשק בסיסי באנגלית (כפתור EN בסרגל העליון): כפתורים, כותרות, ערים ובתי חולים']],
     ['0.4.0', ['חוברת רציפה: כל העמודים בגלילה אחת, ולא רק עמוד אחר עמוד', 'בדף עיר נפתח רק החלק שלה בחוברת (למשל מודיעין עילית/קרית ספר — חלק ב\' של דרך התחומין)', 'חו"ל: נוספו מונסי, רוקלנד, שני מקורות ללייקווד ו-Eruv Finder', 'חו"ל: הוסר הקישור של מיניאפוליס (darcheinoammn.org) לבקשת משתמש מחו"ל, כי אינו מקור חרדי']],
@@ -888,7 +889,7 @@
     if (r.success) { $('#fbText').value = ''; toast(r.data === 'queued' ? 'התגובה תישלח כשיהיה חיבור' : 'התגובה נשלחה, תודה!'); }
     else toast('השליחה זמינה בתוך אוצריא');
   }
-  const VERSION = '0.5.1';
+  const VERSION = '0.5.2';
 
   // ── אודות ───────────────────────────────────────────────────
   function openHalacha() {

@@ -451,5 +451,12 @@ mark { background: var(--color-primary-container); color: var(--color-on-primary
 
 .lang-btn { font: inherit; font-size: .78em; font-weight: 700; letter-spacing: .03em; }
 html[lang=en] p, html[lang=en] .techum-empty > div, html[lang=en] .who, html[lang=en] .fine, html[lang=en] .hero p { unicode-bidi: plaintext; }
-.ab-item .chip { white-space: nowrap; flex-shrink: 0; }
+/* 0.5.2: כרטיסי חו"ל — עוטפים, בלי חפיפה ובלי גלילה אופקית */
+.ab-list { grid-template-columns: repeat(auto-fill, minmax(min(100%, 22em), 1fr)); }
+.ab-item { flex-wrap: wrap; align-items: flex-start; min-width: 0; }
+.ab-item > span:first-child { flex: 1 1 10em; min-width: 0; overflow-wrap: anywhere; }
+.ab-acts { display: flex; flex-wrap: wrap; gap: .35em; justify-content: flex-end; max-width: 100%; min-width: 0; }
+.ab-item .chip { white-space: nowrap; max-width: 100%; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.app-content, .wrap { overflow-x: hidden; max-width: 100%; }
+.app-content img, .wrap img { max-width: 100%; }
 .ab-filter { width: 100%; max-width: 28em; margin: 0 0 .8em; padding: .55em .9em; border: 1px solid var(--color-outline-variant); border-radius: var(--radius-pill); background: var(--color-surface); color: var(--color-on-surface); font: inherit; }
