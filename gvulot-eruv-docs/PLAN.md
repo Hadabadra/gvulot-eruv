@@ -2,20 +2,20 @@
 
 ## מצב (22/10/2026, בוקר) — 0.3.0
 המאגר עבר ל-**Hadabadra/gvulot-eruv** (ענף `main`). Release נבנה ב-CI מ-`.github/workflows/eruv-release.yml` בכל דחיפה ל-main עם גרסה חדשה ב-manifest; החבילה (כ-75MB) **לא** נשמרת ב-git.
-0.3.0: תחום שבת, החוברות "דרך התחומין" ו"המדריך לנופש" כדפי תמונה, ספריית עירובין, עירובין בחו"ל, מפות ב-3000px, כפתור בסרגל העיון, קיצור מקשים, שחזור מצב.
+0.3.0: תחום שבת, החוברות "דרך התחומין" ו"המדריך לנופש" כ-PDF מקורי שמוצג ב-pdf.js 4.10.38 (legacy, בתיקייה pdfjs/, רישיון Apache-2.0), ספריית עירובין, עירובין בחו"ל, מפות ב-2400px. **מגבלת החנות: 50MB** — לכן החוברות לא כתמונות (47MB) והמפות לא ב-3000px, כפתור בסרגל העיון, קיצור מקשים, שחזור מצב.
 עדיין לא נבדקה בתוך אוצריא.
 
 ### בנייה של 0.3.0
 ```bash
 cd gvulot-eruv-build
 python3 scrape.py raw && python3 fetch_images.py && python3 parse_resp.py
-python3 build_data.py ../gvulot-eruv     # MAX=3000
+python3 build_data.py ../gvulot-eruv     # MAX=2400 (מגבלת 50MB לתוסף)
 # raw/docs/*.pdf — להוריד לפי הכתובות ב-DOCS שבראש build_docs.py (מאמרי התחום ב-Google Drive: uc?export=download&id=...)
-python3 build_docs.py ../gvulot-eruv     # docs/<id>/NNN.webp + docs.js
+python3 build_docs.py ../gvulot-eruv     # docs/<id>.pdf + ממוזערות docs/<id>/NNN.t.webp + docs.js
 # raw/books1.html, raw/books2.html — דפי "מאגר ספרים" ו"חוברות וספרים" באתר; raw/wiki-eruvin.txt — ויקיפדיה action=raw
 python3 build_extra.py ../gvulot-eruv    # extra.js (ספרייה + חו"ל)
 ```
-- ב-PDF של המוקד הגופנים העבריים בלי מיפוי Unicode (pdftotext מחזיר זבל), ולכן הדפים הם תמונות. OCR עברי לא היה זמין בסשן.
+- ב-PDF של המוקד הגופנים העבריים בלי מיפוי Unicode (pdftotext מחזיר זבל), ולכן אין חיפוש בתוך החוברות. OCR עברי לא היה זמין בסשן.
 - במדור "תחומין" באתר יש שש ערים; רק באלעד ובבית חלקיה הרשימות כתובות בדף עצמו, והן ב-SUMMARY שב-build_docs.py.
 
 ## מצב קודם (22/10/2026, לילה)

@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-"""ממיר את החוברות והמאמרים של מוקד העירוב (באישורם) לדפי תמונה בתוך התוסף.
-קלט: raw/docs/*.pdf (מורדים ידנית — ראו DOCS למטה)
-פלט: <plugin>/docs/<id>/NNN.webp + NNN.t.webp, ו-<plugin>/docs.js (window.ERUV_DOCS)
+"""אורז את החוברות והמאמרים של מוקד העירוב (באישורם) בתוך התוסף: קובץ ה-PDF המקורי (מוצג ב-pdf.js),
+ותמונה ממוזערת קטנה לכל עמוד (לרשימת העמודים ולכרטיסים).
+קלט: raw/docs/*.pdf (מורדים לפי DOCS למטה)
+פלט: <plugin>/docs/<id>.pdf, <plugin>/docs/<id>/NNN.t.webp, ו-<plugin>/docs.js (window.ERUV_DOCS)
 שימוש: python3 build_docs.py ../gvulot-eruv
 """
 import json, os, subprocess, sys, glob, tempfile, shutil
 from PIL import Image
 
-W, Q, TW = 1500, 55, 150
+TW = 120
 # id, קובץ, כותרת, סוג, ערים (לשונית "תחום שבת" בעיר), מקור
 DOCS = [
     ("derech-jlm", "derech-jlm.pdf", "דרך התחומין — ירושלים", "booklet", ["ירושלים"],
@@ -39,16 +40,17 @@ def main(out):
         if not os.path.exists(pdf):
             print("חסר", pdf, file=sys.stderr); continue
         dst = os.path.join(out, "docs", did); shutil.rmtree(dst, ignore_errors=True); os.makedirs(dst)
+        if os.path.exists(dst + ".pdf"): os.remove(dst + ".pdf")
         tmp = tempfile.mkdtemp()
-        subprocess.run(["pdftoppm", "-r", "150", "-png", pdf, f"{tmp}/p"], check=True)
+        subprocess.run(["pdftoppm", "-r", "30", "-png", pdf, f"{tmp}/p"], check=True)
         pages = sorted(glob.glob(f"{tmp}/p-*.png"))
         dims = []
         for i, p in enumerate(pages, 1):
             im = Image.open(p).convert("RGB")
-            if im.width > W: im = im.resize((W, round(im.height * W / im.width)), Image.LANCZOS)
-            im.save(f"{dst}/{i:03d}.webp", "WEBP", quality=Q, method=5)
-            t = im.copy(); t.thumbnail((TW, TW * 2)); t.save(f"{dst}/{i:03d}.t.webp", "WEBP", quality=50, method=5)
-            dims.append([im.width, im.height])
+            dims.append([1000, round(1000 * im.height / im.width)])
+            im.thumbnail((TW, TW * 2), Image.LANCZOS)
+            im.save(f"{dst}/{i:03d}.t.webp", "WEBP", quality=45, method=6)
+        shutil.copyfile(pdf, os.path.join(out, "docs", did + ".pdf"))
         shutil.rmtree(tmp)
         res.append({"id": did, "title": title, "kind": kind, "cities": cities, "url": url,
                     "pages": len(pages), "dims": dims, **({"summary": SUMMARY[did]} if did in SUMMARY else {})})

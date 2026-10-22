@@ -368,17 +368,52 @@
     else V.sideOff = d.pages < 3;
     page = Math.max(1, Math.min(d.pages, page || state.docPages[id] || 1));
     V.doc = d; V.page = page; V.keepFocus = wasOpen;
-    const [w, h] = d.dims[page - 1];
+    const PW = 2200, w = PW, h = Math.round(PW * d.dims[page - 1][1] / d.dims[page - 1][0]);
     const side = `<h3>עמודים</h3><div class="thumbs">${Array.from({ length: d.pages }, (_, i) =>
       `<button class="thumb${i + 1 === page ? ' on' : ''}" data-doc-page="${i + 1}" title="עמוד ${i + 1}"><img src="${pageSrc(d, i + 1, true)}" alt="" loading="lazy"><span>${i + 1}</span></button>`).join('')}</div>
       <button class="btn text" data-url="${esc(d.url)}">המקור באתר מוקד העירוב</button>`;
-    openMap(null, { id: 'doc-' + id + '-' + page, city: 'עמוד ' + page, title: d.title, w, h, src: pageSrc(d, page), thumb: pageSrc(d, page, true),
+    const cached = pageCache.get(id + ':' + page);
+    openMap(null, { id: 'doc-' + id + '-' + page, city: 'עמוד ' + page, title: d.title, w, h, src: cached || pageSrc(d, page, true), thumb: pageSrc(d, page, true),
       sub: 'מוקד העירוב · עמוד ' + page + ' מתוך ' + d.pages, side });
     $('#vTitle').textContent = d.title;
     $('#vPage').value = page; $('#vPage').max = d.pages; $('#vPages').textContent = '/ ' + d.pages;
     $('#vPrev').disabled = page <= 1; $('#vNext').disabled = page >= d.pages;
     const on = $('#vSidePanel .thumb.on'); if (on) on.scrollIntoView({ block: 'nearest' });
     state.docPages[id] = page; clearTimeout(V.dpT); V.dpT = setTimeout(() => savePref('docPages'), 800);
+    if (!cached) renderPage(d, page, PW).then(u => {
+      if (u && V.doc && V.doc.id === id && V.page === page && !$('#viewer').hidden) { img.onload = null; img.src = u; }
+    }).catch(() => toast('לא ניתן להציג את העמוד'));
+    if (page < d.pages) setTimeout(() => renderPage(d, page + 1, PW).catch(() => {}), 600); // העמוד הבא מראש
+  }
+  // הצגת ה-PDF המקורי (pdf.js, ארוז בתוסף) — עמוד מצויר ל-canvas ונשמר כתמונה; שומרים בזיכרון עד 12 עמודים
+  let pdfLib = null;
+  const pdfDocs = new Map(), pageCache = new Map(), pending = new Map();
+  async function getPdf(d) {
+    if (!pdfLib) {
+      pdfLib = await import('./pdfjs/pdf.min.mjs');
+      pdfLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs/pdf.worker.min.mjs', location.href).href;
+    }
+    if (!pdfDocs.has(d.id)) pdfDocs.set(d.id, pdfLib.getDocument({ url: new URL('docs/' + d.id + '.pdf', location.href).href, isEvalSupported: false }).promise);
+    return pdfDocs.get(d.id);
+  }
+  function renderPage(d, p, PW) {
+    const key = d.id + ':' + p;
+    if (pageCache.has(key)) return Promise.resolve(pageCache.get(key));
+    if (pending.has(key)) return pending.get(key);
+    const job = (async () => {
+      const pg = await (await getPdf(d)).getPage(p);
+      const vp = pg.getViewport({ scale: PW / pg.getViewport({ scale: 1 }).width });
+      const cv = document.createElement('canvas'); cv.width = Math.round(vp.width); cv.height = Math.round(vp.height);
+      const g = cv.getContext('2d'); g.fillStyle = 'white'; g.fillRect(0, 0, cv.width, cv.height);
+      await pg.render({ canvasContext: g, viewport: vp }).promise;
+      const blob = await new Promise(r => cv.toBlob(r, 'image/jpeg', .9));
+      const u = URL.createObjectURL(blob);
+      pageCache.set(key, u);
+      if (pageCache.size > 12) { const [k0, u0] = pageCache.entries().next().value; if (img.src !== u0) { URL.revokeObjectURL(u0); pageCache.delete(k0); } }
+      return u;
+    })();
+    pending.set(key, job); job.finally(() => pending.delete(key));
+    return job;
   }
   const turn = k => { if (V.doc) openDoc(V.doc.id, V.page + k); };
   $('#vPrev').onclick = () => turn(-1);
@@ -609,7 +644,8 @@
   // ── יומן שינויים ותגובות ─────────────────────────────────────
   const REPO = 'https://github.com/Hadabadra/gvulot-eruv';
   const CHANGELOG = [
-    ['0.3.0', ['תחום שבת: מאמרי התחומין של מוקד העירוב לשש ערים, ותקציר "מותר / ע"י עירוב תחומין / אסור"', 'החוברות "דרך התחומין" (גוש דן ובתי החולים איכילוב ותל השומר, ירושלים) ו"המדריך לנופש" בתוך התוסף, עם דפדוף ושמירת העמוד האחרון', 'ספריית העירובין של המוקד — 42 ספרים וחוברות', 'עירובין בחו"ל — 339 מקומות ב־27 ארצות', 'מפות חדות יותר (3000 פיקסלים)', 'כפתור בסרגל העיון וקיצור מקשים Ctrl+Alt+E', 'חיפוש גם בחוברות, בספרייה ובחו"ל']],
+    ['0.3.1', ['החוברות כקובצי PDF מקוריים בתוך התוסף, חדות בכל הגדלה', 'גודל התוסף ירד לכ-41MB (מגבלת החנות 50MB)']],
+    ['0.3.0', ['תחום שבת: מאמרי התחומין של מוקד העירוב לשש ערים, ותקציר "מותר / ע"י עירוב תחומין / אסור"', 'החוברות "דרך התחומין" (גוש דן ובתי החולים איכילוב ותל השומר, ירושלים) ו"המדריך לנופש" בתוך התוסף, עם דפדוף ושמירת העמוד האחרון', 'ספריית העירובין של המוקד — 42 ספרים וחוברות', 'עירובין בחו"ל — 339 מקומות ב־27 ארצות', 'מפות חדות יותר (2400 פיקסלים)', 'כפתור בסרגל העיון וקיצור מקשים Ctrl+Alt+E', 'חיפוש גם בחוברות, בספרייה ובחו"ל']],
     ['0.2.5', ['זיהוי מיקום (גשר אחת שאלתי או המכשיר) ופתיחת העיר הקרובה', 'כפתור נפרד למידע הלכתי ומקורות', 'קישורים נפתחים בדפדפן ומועתקים ללוח', 'מקורות הלכות עירובין בספריית אוצריא', 'התכנון והמשימות הפתוחות בתוך התוסף', 'יומן שינויים מקוצר']],
     ['0.2.2', ['סמל חדש לתוסף: קו עירוב בין עמודים סביב סמן מיקום']],
     ['0.2.1', ['שליחת תגובה מתוך התוסף דרך אוצריא', 'יומן שינויים וקישור לתכנון המתעדכן בגיטהאב']],
@@ -624,7 +660,7 @@
     if (r.success) { $('#fbText').value = ''; toast(r.data === 'queued' ? 'התגובה תישלח כשיהיה חיבור' : 'התגובה נשלחה, תודה!'); }
     else toast('השליחה זמינה בתוך אוצריא');
   }
-  const VERSION = '0.3.0';
+  const VERSION = '0.3.1';
 
   // ── אודות ───────────────────────────────────────────────────
   function openHalacha() {
