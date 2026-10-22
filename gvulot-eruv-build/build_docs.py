@@ -53,7 +53,11 @@ def main(out):
         # באוצריא pdf.js לא יכול לקרוא קובץ file:// (MissingPDFException), ולכן ה-PDF נארז כ-base64 בקובץ js שנטען בתג script
         import base64
         with open(os.path.join(out, "docs", did + ".pdf.js"), "w") as f:
-            f.write("(window.ERUV_PDF=window.ERUV_PDF||{})[" + json.dumps(did) + "]=\"" + base64.b64encode(open(pdf, "rb").read()).decode() + "\";\n")
+            # שורות קצרות (4000 תווים) — מחרוזת אחת ענקית גרמה ל-"Stack Overflow" בהתקנה באוצריא
+            b = base64.b64encode(open(pdf, "rb").read()).decode()
+            f.write("(window.ERUV_PDF=window.ERUV_PDF||{})[" + json.dumps(did) + "]=[\n")
+            f.write(",\n".join('"' + b[i:i + 4000] + '"' for i in range(0, len(b), 4000)))
+            f.write("\n].join('');\n")
         shutil.rmtree(tmp)
         res.append({"id": did, "title": title, "kind": kind, "cities": cities, "url": url,
                     "pages": len(pages), "dims": dims, **({"summary": SUMMARY[did]} if did in SUMMARY else {})})
