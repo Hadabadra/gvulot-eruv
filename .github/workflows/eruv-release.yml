@@ -1,10 +1,10 @@
 name: גבולות עירוב — Release
 
-# יוצר GitHub Release לכל גרסה חדשה, עם קובץ ה-.otzplugin ותיאור מתוך README.
-# בודק קודם שהחבילה בענף זהה לאריזה של הקוד (אריזה דטרמיניסטית).
+# יוצר GitHub Release לכל גרסה חדשה (לפי version ב-manifest), עם קובץ ה-.otzplugin ותיאור מתוך README.
+# האריזה נעשית כאן ב-CI (החבילה כ-70MB, ולכן היא לא נשמרת ב-git).
 on:
   push:
-    branches: ['גבולות-עירוב']
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -15,11 +15,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Check package matches source
+      - name: Pack
         run: |
           v="$(node -p "require('./gvulot-eruv/manifest.json').version")"
-          python3 gvulot-eruv-build/pack.py gvulot-eruv /tmp/e.otzplugin
-          cmp /tmp/e.otzplugin "gvulot-eruv-$v.otzplugin" || { echo "::error::gvulot-eruv-$v.otzplugin אינו תואם לקוד. ארזו מחדש."; exit 1; }
+          python3 gvulot-eruv-build/pack.py gvulot-eruv "gvulot-eruv-$v.otzplugin"
+          ls -la "gvulot-eruv-$v.otzplugin"
       - name: Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

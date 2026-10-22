@@ -377,3 +377,53 @@ mark { background: var(--color-primary-container); color: var(--color-on-primary
   .print-sheet p { margin: 0 0 .6em; font-size: .85em; }
   .print-sheet img { width: 100%; height: auto; display: block; }
 }
+
+/* ── 0.3.0: תחום שבת, חוברות, ספרייה, חו"ל ── */
+.topbar-btn.on { background: var(--color-secondary-container); color: var(--color-on-secondary-container); }
+.doc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(11em, 1fr)); gap: .9em; }
+.doc-card {
+  display: flex; flex-direction: column; padding: 0; overflow: hidden; cursor: pointer; text-align: start; font: inherit; color: inherit;
+  border: .0625em solid var(--color-outline-variant); border-radius: var(--radius-lg); background: var(--color-surface);
+  transition: transform .18s var(--ease), border-color .18s var(--ease);
+}
+.doc-card:hover { transform: translateY(-.12em); border-color: var(--color-primary); }
+.doc-card img { width: 100%; aspect-ratio: .72; object-fit: cover; object-position: top; background: var(--color-surface-container); display: block; }
+.doc-card .meta { padding: .6em .8em .75em; display: flex; flex-direction: column; gap: .2em; }
+.doc-card .meta strong { font-weight: 600; font-size: .92em; line-height: 1.35; }
+.doc-card .meta span { font-size: .78em; color: var(--color-on-surface-variant); }
+.techum-sum { display: grid; gap: .45em; margin: 0 0 .9em; padding: .9em 1em; border-radius: var(--radius-md); background: var(--color-surface-container-low); }
+.techum-sum p { margin: 0 0 .2em; }
+.tz { display: flex; gap: .7em; align-items: baseline; }
+.tz b { flex: 0 0 11em; font-weight: 600; font-size: .88em; }
+.tz-near b { color: var(--color-primary); }
+.tz-eruv b { color: var(--color-tertiary); }
+.tz-far b { color: var(--color-error); }
+.techum-empty { display: flex; gap: .8em; align-items: flex-start; margin: 1.2em 0; padding: .9em 1em; border-radius: var(--radius-md);
+  background: var(--color-surface-container-low); color: var(--color-on-surface-variant); }
+.techum-empty > svg { width: 1.4em; height: 1.4em; flex-shrink: 0; color: var(--color-tertiary); }
+.fine { font-size: .82em; color: var(--color-on-surface-variant); margin: .6em 0; }
+.row-links { display: flex; flex-wrap: wrap; gap: .5em; margin-top: .8em; }
+.lib { display: flex; flex-wrap: wrap; gap: .45em; margin-bottom: .6em; }
+.tabs { display: flex; flex-wrap: wrap; gap: .4em; margin: .4em 0 1em; }
+.tab { display: inline-flex; align-items: center; gap: .4em; padding: .45em .9em; font: inherit; cursor: pointer;
+  border: .0625em solid var(--color-outline-variant); border-radius: var(--radius-pill); background: var(--color-surface); color: var(--color-on-surface); }
+.tab.on { background: var(--color-secondary-container); color: var(--color-on-secondary-container); border-color: transparent; font-weight: 600; }
+.tab .badge { font-size: .75em; color: var(--color-on-surface-variant); }
+.ab-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(16em, 1fr)); gap: .4em .9em; }
+.ab-item { display: flex; align-items: center; justify-content: space-between; gap: .6em; padding: .45em .2em;
+  border-bottom: .0625em solid var(--color-outline-variant); }
+.ab-item.sub { padding-inline-start: 1.2em; }
+.ab-item small { color: var(--color-on-surface-variant); }
+.pager { display: inline-flex; align-items: center; gap: .15em; margin-inline-end: .4em; }
+.pager button:disabled { opacity: .35; cursor: default; }
+.page-val { display: inline-flex; align-items: center; gap: .3em; font-size: .9em; color: var(--color-on-surface-variant); }
+.page-val input { width: 3.4em; padding: .2em .3em; font: inherit; text-align: center; color: var(--color-on-surface);
+  border: .0625em solid var(--color-outline-variant); border-radius: var(--radius-xs); background: var(--color-surface); }
+.thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(5.2em, 1fr)); gap: .5em; margin-bottom: .8em; }
+.thumb { position: relative; padding: 0; cursor: pointer; overflow: hidden; background: var(--color-surface-container);
+  border: .125em solid transparent; border-radius: var(--radius-sm); }
+.thumb img { width: 100%; display: block; aspect-ratio: .72; object-fit: cover; object-position: top; }
+.thumb span { position: absolute; inset-inline-start: .25em; bottom: .25em; padding: 0 .35em; font-size: .72em; border-radius: var(--radius-xs);
+  background: var(--color-inverse-surface); color: var(--color-on-inverse-surface); }
+.thumb.on { border-color: var(--color-primary); }
+.switch { display: inline-flex; align-items: center; gap: .5em; cursor: pointer; }

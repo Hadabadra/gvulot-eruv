@@ -1,8 +1,8 @@
 {
   "id": "com.hadabadra.gvulot-eruv",
   "name": "גבולות עירוב",
-  "version": "0.2.5",
-  "description": "מפות העירובים השכונתיים ברחבי הארץ ורשימת האחראים המקומיים, מתוך מוקד העירוב ובאישורו. עובד בלי אינטרנט.",
+  "version": "0.3.0",
+  "description": "מפות העירובים השכונתיים ברחבי הארץ ורשימת האחראים, מאמרי תחום שבת והחוברות \"דרך התחומין\", ספריית עירובין ועירובין בחו\"ל — מתוך מוקד העירוב ובאישורו. עובד בלי אינטרנט.",
   "author": "לזש\"ק לרמב\"ר ומבק\"י",
   "schemaVersion": 1,
   "sdkVersion": "1.x",
@@ -20,11 +20,18 @@
     "fs.user_files.read",
     "library.books.read",
     "reader.open",
-    "fs.user_files.write"
+    "fs.user_files.write",
+    "reader.toolbar",
+    "app.startup_contributions",
+    "app.shortcuts",
+    "navigation.write"
   ],
   "network": {
     "enabled": true,
-    "allowlist": ["127.0.0.1", "localhost"]
+    "allowlist": [
+      "127.0.0.1",
+      "localhost"
+    ]
   },
   "contributes": {
     "toolTab": {
@@ -32,8 +39,37 @@
       "order": 215,
       "defaultPinned": false,
       "iconName": "fluent:map_24_regular"
+    },
+    "startup": {
+      "toolbarItems": [
+        {
+          "id": "open-eruv",
+          "title": "גבולות עירוב",
+          "icon": "fluent:map_24_regular",
+          "contexts": [
+            "reader-text"
+          ],
+          "openPlugin": true,
+          "when": {
+            "not": {
+              "storage": {
+                "key": "hideToolbar",
+                "equals": true
+              }
+            }
+          }
+        }
+      ],
+      "shortcuts": [
+        {
+          "id": "open-eruv-shortcut",
+          "label": "פתיחת גבולות עירוב",
+          "key": "ctrl+alt+e",
+          "command": "open"
+        }
+      ]
     }
   },
-  "homepage": "https://github.com/Hadabadra/Prayer-pointA/tree/%D7%92%D7%91%D7%95%D7%9C%D7%95%D7%AA-%D7%A2%D7%99%D7%A8%D7%95%D7%91",
+  "homepage": "https://github.com/Hadabadra/gvulot-eruv",
   "icon": "icon.png"
 }

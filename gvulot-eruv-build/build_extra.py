@@ -1,0 +1,71 @@
+#!/usr/bin/env python3
+"""נתונים נוספים לתוסף: ספריית העירובין של מוקד העירוב (קישורים), ועירובין בחו"ל (מתוך ויקיפדיה, CC BY-SA).
+קלט: raw/books1.html, raw/books2.html (דפי "מאגר ספרים" ו"חוברות וספרים" באתר המוקד),
+     raw/wiki-eruvin.txt (https://en.wikipedia.org/w/index.php?title=List_of_places_with_eruvin&action=raw)
+פלט: <plugin>/extra.js  (window.ERUV_EXTRA = {library, abroad})
+"""
+import re, html, json, sys, os, urllib.parse
+
+R = os.path.join(os.path.dirname(__file__), "raw")
+
+def library():
+    out, seen = [], set()
+    for fn, group in (("books2.html", "חוברות בהלכות אקטואליות"), ("books1.html", "ספרים תורניים בעירובין")):
+        p = open(os.path.join(R, fn), encoding="utf-8", errors="replace").read()
+        for m in re.finditer(r'<a[^>]+href="([^"]+\.pdf)"[^>]*>(.*?)</a>', p, re.S):
+            url = urllib.parse.unquote(m.group(1)).strip()
+            if url in seen: continue
+            seen.add(url)
+            t = html.unescape(re.sub("<[^>]+>", "", m.group(2))).strip()
+            if t in ("הורדה", "גליונות", "") or len(t) < 3:
+                t = re.sub(r"[-_]+", " ", url.rsplit("/", 1)[1][:-4]).strip()
+            t = re.sub(r"\s+", " ", t.replace("\t", " "))
+            out.append({"g": group, "t": t, "u": url})
+    return out
+
+HE = {"Argentina": "ארגנטינה", "Australia": "אוסטרליה", "Austria": "אוסטריה", "Belarus": "בלארוס", "Belgium": "בלגיה",
+      "Brazil": "ברזיל", "Canada": "קנדה", "Chile": "צ'ילה", "France": "צרפת", "Gibraltar": "גיברלטר", "Hong Kong": "הונג קונג",
+      "Hungary": "הונגריה", "Italy": "איטליה", "Lithuania": "ליטא", "Mexico": "מקסיקו", "Netherlands": "הולנד", "Poland": "פולין",
+      "Portugal": "פורטוגל", "Russia": "רוסיה", "Slovakia": "סלובקיה", "South Africa": "דרום אפריקה", "Spain": "ספרד",
+      "Switzerland": "שווייץ", "Ukraine": "אוקראינה", "United Kingdom": "בריטניה", "United States": "ארצות הברית", "Uruguay": "אורוגוואי"}
+SKIP = {"Israel", "Palestine (Israeli settlements)", "Syria (Israeli settlements)", "References", "External links"}
+
+def clean_name(s):
+    s = re.sub(r"<ref[^>]*/>|<ref[^>]*>.*?</ref>", "", s, flags=re.S)
+    s = re.sub(r"\[\[(?:[^|\]]*\|)?([^\]]+)\]\]", r"\1", s)
+    s = re.sub(r"\{\{[^}]*\}\}", "", s)
+    s = re.sub(r"'{2,}", "", s)
+    return re.sub(r"\s+", " ", s).strip(" :;,-—")
+
+def abroad():
+    txt = open(os.path.join(R, "wiki-eruvin.txt"), encoding="utf-8").read()
+    out, country, region = [], None, ""
+    for line in txt.splitlines():
+        h = re.match(r"^(=+)\s*(.*?)\s*\1\s*$", line)
+        if h:
+            lvl, name = len(h.group(1)), h.group(2)
+            if lvl == 2: country, region = name, ""
+            else: region = clean_name(name)
+            continue
+        if not country or country in SKIP: continue
+        if not (line.startswith("*") or (line and line[0] != "{" and "<ref" in line and line.startswith("[["))): continue
+        depth = len(line) - len(line.lstrip("*"))
+        ref = re.search(r"\|\s*url\s*=\s*([^\s|}]+)", line) or re.search(r"\[(https?://[^\s\]]+)", line)
+        name = clean_name(line.lstrip("*"))
+        if not name or len(name) > 70: continue
+        if depth >= 2 and out and out[-1]["c"] == country and not out[-1].get("sub"):
+            parent = out[-1]["p"] if depth == 2 else out[-1]["p"]
+        else:
+            parent = ""
+        out.append({"c": country, "ch": HE.get(country.strip(), country.strip()), "r": region,
+                    "p": name, "in": parent if depth >= 2 else "", "u": ref.group(1) if ref else ""})
+    return out
+
+def main(plugin):
+    lib, ab = library(), abroad()
+    with open(os.path.join(plugin, "extra.js"), "w", encoding="utf-8") as f:
+        f.write("window.ERUV_EXTRA = " + json.dumps({"library": lib, "abroad": ab}, ensure_ascii=False, separators=(",", ":")) + ";\n")
+    print(len(lib), "books;", len(ab), "places abroad in", len({a['c'] for a in ab}), "countries", file=sys.stderr)
+
+if __name__ == "__main__":
+    main(sys.argv[1] if len(sys.argv) > 1 else "../gvulot-eruv")
