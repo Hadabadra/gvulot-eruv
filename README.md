@@ -12,6 +12,11 @@
 - **עירובין בחו"ל — נוספו** לפי משתמש מחו"ל בפורום: [Eiruv of Monsey](https://eiruvofmonsey.org/), [Rockland Eruv](https://www.rocklanderuv.org/copy-of-about-us), [The Lakewood Luach — Eruv](https://thelakewoodluach.com/eruv-info), [מפה חדשה לאזור בלייקווד](https://sparksofanation.com/sparks/reader-submitted-a-new-eruv-map-for-a-prime-area-of-lakewood-not-just-a-geographic-depiction-but-a-sign-of-the-growth-and-flourishing-of-torah-neighborhoods-a-celebration-of-yiddishkeit-on-the-ris/), [Eruv Finder](https://eruvfinder.com/).
 - **עירובין בחו"ל — הוסר:** הקישור של מיניאפוליס / סנט לואיס פארק ([darcheinoammn.org](https://darcheinoammn.org/information_links/information_links.htm)), שהגיע מרשימת ויקיפדיה. המשתמש, שמכיר את המקומות מקרוב, כתב שאינו מקור חרדי וביקש להוריד אותו. עוד מדבריו: אין לסמוך על עירוב שבאתר שלו יש "רבנית", או רב שהוסמך בישיבת Chovevei Torah (YCT).
 
+- **בתכנון (לא בוצע עדיין):**
+  - סיווג אחיד של רמות עירוב (הצעת "אבא כדברה", פוסט 45142): חצר, שכונתי בשכירות מלאה, שכונתי בשכירות משר העיר, עירוני בד"ץ על רוב מחיצות, עירוני בד"ץ על צוה"פ, עירוני כללי. לא נמצא מקור מוסמך לסיווג כזה. הוא יתווסף רק כשהמוקד או הרב האחראי יספקו את הסיווג לכל עירוב.
+  - המרת המפות לקווים משכבת העירובין של GovMap. צריך להריץ מישראל, כי השרת בחו"ל נחסם.
+  - עירובין נוספים בחו"ל שהמשתמש shmuel ישלח בהמשך.
+
 ## מה חדש ב-0.3.5
 - תיקון: ההתקנה נכשלה בשגיאה "Stack Overflow".
 
