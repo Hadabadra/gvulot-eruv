@@ -28,6 +28,16 @@ HE = {"Argentina": "ארגנטינה", "Australia": "אוסטרליה", "Austria
       "Hungary": "הונגריה", "Italy": "איטליה", "Lithuania": "ליטא", "Mexico": "מקסיקו", "Netherlands": "הולנד", "Poland": "פולין",
       "Portugal": "פורטוגל", "Russia": "רוסיה", "Slovakia": "סלובקיה", "South Africa": "דרום אפריקה", "Spain": "ספרד",
       "Switzerland": "שווייץ", "Ukraine": "אוקראינה", "United Kingdom": "בריטניה", "United States": "ארצות הברית", "Uruguay": "אורוגוואי"}
+# הוסרו לפי בקשת משתמש מחו"ל בפורום (shmuel, 22.10.2026): מקור שאינו חרדי
+REMOVE_URLS = {"http://darcheinoammn.org/information_links/information_links.htm"}
+# נוספו לפי אותו משתמש (מקורות עירובין בחו"ל)
+ADD = [
+    {"c": "United States", "ch": "ארצות הברית", "r": "New York", "p": "Monsey", "in": "", "u": "https://eiruvofmonsey.org/"},
+    {"c": "United States", "ch": "ארצות הברית", "r": "New York", "p": "Rockland County", "in": "", "u": "https://www.rocklanderuv.org/copy-of-about-us"},
+    {"c": "United States", "ch": "ארצות הברית", "r": "New Jersey", "p": "Lakewood (The Lakewood Luach)", "in": "", "u": "https://thelakewoodluach.com/eruv-info"},
+    {"c": "United States", "ch": "ארצות הברית", "r": "New Jersey", "p": "Lakewood (new map, Sparks)", "in": "", "u": "https://sparksofanation.com/sparks/reader-submitted-a-new-eruv-map-for-a-prime-area-of-lakewood-not-just-a-geographic-depiction-but-a-sign-of-the-growth-and-flourishing-of-torah-neighborhoods-a-celebration-of-yiddishkeit-on-the-ris/"},
+    {"c": "United States", "ch": "ארצות הברית", "r": "", "p": "Eruv Finder (US directory)", "in": "", "u": "https://eruvfinder.com/"},
+]
 SKIP = {"Israel", "Palestine (Israeli settlements)", "Syria (Israeli settlements)", "References", "External links"}
 
 def clean_name(s):
@@ -63,6 +73,7 @@ def abroad():
 
 def main(plugin):
     lib, ab = library(), abroad()
+    ab = [a for a in ab if a["u"] not in REMOVE_URLS] + ADD
     with open(os.path.join(plugin, "extra.js"), "w", encoding="utf-8") as f:
         f.write("window.ERUV_EXTRA = " + json.dumps({"library": lib, "abroad": ab}, ensure_ascii=False, separators=(",", ":")) + ";\n")
     print(len(lib), "books;", len(ab), "places abroad in", len({a['c'] for a in ab}), "countries", file=sys.stderr)

@@ -247,12 +247,14 @@
 
 
   // ── תחום שבת, חוברות וספרייה ───────────────────────────────
-  function docCardHTML(d) {
-    const last = state.docPages[d.id];
-    return `<button class="doc-card" data-doc="${d.id}">
+  // חוברת עם חלקים (parts): בדף עיר נפתח רק החלק של אותה עיר
+  const partOf = (d, c) => c && d.parts ? d.parts.find(p => p.cities.includes(c)) : null;
+  function docCardHTML(d, c) {
+    const last = state.docPages[d.id], pt = partOf(d, typeof c === 'string' ? c : null);
+    return `<button class="doc-card" data-doc="${d.id}"${pt ? ` data-from="${pt.from}" data-to="${pt.to}" data-part="${esc(pt.title)}"` : ''}>
       <img src="${esc(pageSrc(d, 1, true))}" alt="" loading="lazy">
       <div class="meta"><strong>${esc(d.title)}</strong>
-      <span>${d.pages} עמודים${last > 1 ? ' · המשך מעמוד ' + last : ''}</span></div></button>`;
+      <span>${pt ? esc(pt.title) + ' · עמ\' ' + pt.from + '–' + pt.to : d.pages + ' עמודים'}${last > 1 ? ' · המשך מעמוד ' + last : ''}</span></div></button>`;
   }
   const SUM_ROWS = [['near', 'מותר ללכת בלי חשש'], ['eruv', 'רק ע"י עירוב תחומין'], ['far', 'אסור גם ע"י עירוב תחומין']];
   function summaryHTML(sm, title) {
@@ -266,7 +268,7 @@
       לבירור התחום ועירוב תחומין: מוקד העירוב <button class="chip" data-phone="${esc(D.source.phone)}">${ICON.phone}${esc(D.source.phone)}</button></div></div>`;
     return `<div class="section-title">תחום שבת</div>
       ${ds.map(d => summaryHTML(d.summary)).join('')}
-      <div class="doc-grid">${ds.map(docCardHTML).join('')}</div>
+      <div class="doc-grid">${ds.map(d => docCardHTML(d, c)).join('')}</div>
       <p class="fine">מאמרי התחומין של מוקד העירוב. החישוב תלוי בשיטות שונות — לשאלה למעשה יש לפנות לרב או למוקד.</p>`;
   }
   // בתי חולים: מה שמבואר בחוברות המוקד; ללא מספרי טלפון שלא אומתו
@@ -388,15 +390,19 @@
   function closeMap() { $('#viewer').hidden = true; $('#expMenu').hidden = true; img.removeAttribute('src'); if (V.doc) { V.doc = null; render(); } }
 
   // דפי חוברת במציג: דפדוף, תמונות ממוזערות בצד, זכירת העמוד האחרון
-  function openDoc(id, page) {
+  function openDoc(id, page, range) {
     const d = docById.get(id); if (!d) return;
     const wasOpen = V.doc && V.doc.id === id && !$('#viewer').hidden;
+    if (range !== undefined) V.range = range; else if (!wasOpen) V.range = null;
+    const R0 = V.range ? V.range.from : 1, R1 = V.range ? V.range.to : d.pages;
     if (wasOpen) V.sideOff = $('#viewer').classList.contains('side-off');
     else V.sideOff = d.pages < 3;
-    page = Math.max(1, Math.min(d.pages, page || state.docPages[id] || 1));
+    page = Math.max(R0, Math.min(R1, page || (V.range ? R0 : state.docPages[id]) || 1));
     V.doc = d; V.page = page; V.keepFocus = wasOpen;
     const PW = 2200, w = PW, h = Math.round(PW * d.dims[page - 1][1] / d.dims[page - 1][0]);
-    const side = `<h3>עמודים</h3><div class="thumbs">${Array.from({ length: d.pages }, (_, i) =>
+    const side = `<h3>עמודים${V.range ? ' · ' + esc(V.range.title) : ''}</h3>
+      <div class="row-links"><button class="btn" data-booklet="1">${ICON.book} חוברת רציפה</button>${V.range ? '<button class="btn text" data-doc-all="1">כל החוברת</button>' : ''}</div>
+      <div class="thumbs">${Array.from({ length: R1 - R0 + 1 }, (_, i) => i + R0 - 1).map(i =>
       `<button class="thumb${i + 1 === page ? ' on' : ''}" data-doc-page="${i + 1}" title="עמוד ${i + 1}"><img src="${pageSrc(d, i + 1, true)}" alt="" loading="lazy"><span>${i + 1}</span></button>`).join('')}</div>
       <button class="btn text" data-url="${esc(d.url)}">המקור באתר מוקד העירוב</button>`;
     const cached = pageCache.get(id + ':' + page);
@@ -404,14 +410,14 @@
       sub: 'מוקד העירוב · עמוד ' + page + ' מתוך ' + d.pages, side });
     $('#vTitle').textContent = d.title;
     $('#vPage').value = page; $('#vPage').max = d.pages; $('#vPages').textContent = '/ ' + d.pages;
-    $('#vPrev').disabled = page <= 1; $('#vNext').disabled = page >= d.pages;
+    $('#vPrev').disabled = page <= R0; $('#vNext').disabled = page >= R1; $('#vPage').min = R0; $('#vPage').max = R1;
     const on = $('#vSidePanel .thumb.on'); if (on) on.scrollIntoView({ block: 'nearest' });
     state.docPages[id] = page; clearTimeout(V.dpT); V.dpT = setTimeout(() => savePref('docPages'), 800);
     $('#viewer').classList.toggle('loading', !cached);
     if (!cached) renderPage(d, page, PW).then(u => {
       if (u && V.doc && V.doc.id === id && V.page === page && !$('#viewer').hidden) { img.onload = null; img.src = u; $('#viewer').classList.remove('loading'); }
     }).catch(e => { $('#viewer').classList.remove('loading'); toast('לא ניתן להציג את ה-PDF: ' + ((e && e.message) || e)); });
-    if (page < d.pages) setTimeout(() => renderPage(d, page + 1, PW).catch(() => {}), 600); // העמוד הבא מראש
+    if (page < R1) setTimeout(() => renderPage(d, page + 1, PW).catch(() => {}), 600); // העמוד הבא מראש
   }
   // הצגת ה-PDF המקורי (pdf.js, ארוז בתוסף) — עמוד מצויר ל-canvas ונשמר כתמונה; שומרים בזיכרון עד 12 עמודים
   let pdfLib = null;
@@ -459,7 +465,35 @@
   $('#vPrev').onclick = () => turn(-1);
   $('#vNext').onclick = () => turn(1);
   $('#vPage').addEventListener('change', e => { if (V.doc) openDoc(V.doc.id, +e.target.value || 1); });
-  $('#vSidePanel').addEventListener('click', e => { const t = e.target.closest('[data-doc-page]'); if (t && V.doc) openDoc(V.doc.id, +t.dataset.docPage); });
+  $('#vSidePanel').addEventListener('click', e => {
+    if (!V.doc) return;
+    const t = e.target.closest('[data-doc-page]'); if (t) return openDoc(V.doc.id, +t.dataset.docPage);
+    if (e.target.closest('[data-doc-all]')) return openDoc(V.doc.id, V.page, null);
+    if (e.target.closest('[data-booklet]')) openBooklet(V.doc, V.range, V.page);
+  });
+  // חוברת רציפה: כל העמודים (או החלק של העיר) זה תחת זה בגלילה, ציור עצל לפי הגלילה
+  function openBooklet(d, range, at) {
+    const R0 = range ? range.from : 1, R1 = range ? range.to : d.pages;
+    let bk = $('#booklet');
+    if (!bk) { bk = document.createElement('div'); bk.id = 'booklet'; bk.className = 'booklet'; document.body.appendChild(bk); }
+    bk.innerHTML = `<div class="bk-bar"><strong>${esc(d.title)}${range ? ' · ' + esc(range.title) : ''}</strong><span class="bk-pos"></span>
+      <button class="btn text" data-bk-close="1" aria-label="סגירה">✕ חזרה</button></div><div class="bk-pages">${Array.from({ length: R1 - R0 + 1 }, (_, i) => {
+        const p = i + R0, dm = d.dims[p - 1] || [1000, 1410];
+        return `<figure class="bk-page" data-p="${p}" style="aspect-ratio:${dm[0]}/${dm[1]}"><img alt="עמוד ${p}" src="${pageSrc(d, p, true)}"><figcaption>${p}</figcaption></figure>`; }).join('')}</div>`;
+    bk.hidden = false;
+    const pos = bk.querySelector('.bk-pos');
+    const io = new IntersectionObserver(es => es.forEach(en => {
+      if (!en.isIntersecting) return; const f = en.target, p = +f.dataset.p; pos.textContent = 'עמוד ' + p + ' / ' + R1;
+      if (f.dataset.done) return; f.dataset.done = 1;
+      renderPage(d, p, 1400).then(u => { f.querySelector('img').src = u; }).catch(() => { delete f.dataset.done; });
+    }), { root: bk.querySelector('.bk-pages'), rootMargin: '600px 0px' });
+    bk.querySelectorAll('.bk-page').forEach(f => io.observe(f));
+    bk.onclick = e => {
+      if (e.target.closest('[data-bk-close]')) { io.disconnect(); bk.hidden = true; bk.innerHTML = ''; return; }
+      const f = e.target.closest('.bk-page'); if (f) { io.disconnect(); bk.hidden = true; bk.innerHTML = ''; openDoc(d.id, +f.dataset.p); }
+    };
+    const t = bk.querySelector(`.bk-page[data-p="${at}"]`); if (t) requestAnimationFrame(() => t.scrollIntoView({ block: 'start' }));
+  }
 
   stage.addEventListener('wheel', e => {
     e.preventDefault();
@@ -684,6 +718,7 @@
   // ── יומן שינויים ותגובות ─────────────────────────────────────
   const REPO = 'https://github.com/Hadabadra/gvulot-eruv';
   const CHANGELOG = [
+    ['0.4.0', ['חוברת רציפה: כל העמודים בגלילה אחת, ולא רק עמוד אחר עמוד', 'בדף עיר נפתח רק החלק שלה בחוברת (למשל מודיעין עילית/קרית ספר — חלק ב\' של דרך התחומין)', 'חו"ל: נוספו מונסי, רוקלנד, שני מקורות ללייקווד ו-Eruv Finder', 'חו"ל: הוסר הקישור של מיניאפוליס (darcheinoammn.org) לבקשת משתמש מחו"ל, כי אינו מקור חרדי']],
     ['0.3.5', ['תיקון: שגיאת Stack Overflow בהתקנה']],
     ['0.3.4', ['תיקון: החוברות לא נפתחו באוצריא (Missing PDF)']],
     ['0.3.3', ['החוברות כ-PDF בקורא של צופה PDF+OCR — חדות בכל הגדלה', 'סרגל הצד: ערים (עם סימון תחום), בתי חולים וחו"ל', 'בתי חולים: עירוב במתחם ותחום שבת, עזר מציון', 'מפות 2000 פיקסלים כדי לעמוד ב-50MB']],
@@ -704,7 +739,7 @@
     if (r.success) { $('#fbText').value = ''; toast(r.data === 'queued' ? 'התגובה תישלח כשיהיה חיבור' : 'התגובה נשלחה, תודה!'); }
     else toast('השליחה זמינה בתוך אוצריא');
   }
-  const VERSION = '0.3.5';
+  const VERSION = '0.4.0';
 
   // ── אודות ───────────────────────────────────────────────────
   function openHalacha() {
@@ -751,7 +786,7 @@
   document.addEventListener('click', e => {
     const t = e.target.closest('[data-open-map],[data-city],[data-phone],[data-fav],[data-url],[data-add-map],[data-del-map],[data-src],[data-doc],[data-view],[data-abroad],[data-hosp],[data-toggle-toolbar]');
     if (!t) return;
-    if (t.dataset.doc) { $('#infoScrim').hidden = true; openDoc(t.dataset.doc); }
+    if (t.dataset.doc) { $('#infoScrim').hidden = true; openDoc(t.dataset.doc, 0, t.dataset.from ? { from: +t.dataset.from, to: +t.dataset.to, title: t.dataset.part } : null); }
     else if (t.dataset.view) goView(t.dataset.view);
     else if (t.dataset.abroad) { state.abroadC = t.dataset.abroad; state.view = 'abroad'; state.q = ''; $('#q').value = ''; render(); }
     else if (t.dataset.hosp) { state.hosp = t.dataset.hosp; state.view = 'hosp'; state.q = ''; $('#q').value = ''; render(); }

@@ -32,6 +32,11 @@ SUMMARY = {
                              "near": "יד בנימין, חפץ חיים, חלק מגני טל", "eruv": "החלק הנוסף של גני טל", "far": "יסודות, בני ראם"},
 }
 
+# חלקי חוברת לפי עיר: בדף העיר נפתח רק החלק שלה (עמודי PDF; חלק ב' של דרך התחומין מתחיל בשער בעמ' 79)
+PARTS = {"derech-ab": [
+    {"title": "חלק א'", "from": 1, "to": 78, "cities": ["בני ברק", "פתח תקוה", "אלעד", "תל אביב", "רמת גן"]},
+    {"title": "חלק ב'", "from": 79, "to": 147, "cities": ["מודיעין עילית", "אופקים", "חפץ חיים", "מירון"]}]}
+
 def main(out):
     src = os.path.join(os.path.dirname(__file__), "raw", "docs")
     res = []
@@ -60,7 +65,8 @@ def main(out):
             f.write("\n].join('');\n")
         shutil.rmtree(tmp)
         res.append({"id": did, "title": title, "kind": kind, "cities": cities, "url": url,
-                    "pages": len(pages), "dims": dims, **({"summary": SUMMARY[did]} if did in SUMMARY else {})})
+                    "pages": len(pages), "dims": dims, **({"summary": SUMMARY[did]} if did in SUMMARY else {}),
+                    **({"parts": PARTS[did]} if did in PARTS else {})})
         print(title, len(pages), file=sys.stderr)
     with open(os.path.join(out, "docs.js"), "w") as f:
         f.write("window.ERUV_DOCS = " + json.dumps(res, ensure_ascii=False, separators=(",", ":")) + ";\n")

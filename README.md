@@ -6,6 +6,12 @@
 > המפות להתמצאות בלבד. עירוב יכול להיפסל בכל שבוע, ולכן לפני שבת יש לוודא מול האחראי המקומי.
 > מוקד העירוב — מענה הלכתי: 054-8483320.
 
+## מה חדש ב-0.4.0
+- **חוברת רציפה:** כפתור בצד המציג פותח את כל עמודי החוברת זה תחת זה בגלילה אחת, ולא רק עמוד אחר עמוד. לחיצה על עמוד פותחת אותו במציג להגדלה.
+- **חלק העיר בלבד:** מדף עיר נפתח רק החלק שלה בחוברת. למשל במודיעין עילית (קרית ספר) נפתח רק חלק ב' של "דרך התחומין" (עמ' 79–147), ובבני ברק רק חלק א'. כפתור "כל החוברת" מציג את כולה.
+- **עירובין בחו"ל — נוספו** לפי משתמש מחו"ל בפורום: [Eiruv of Monsey](https://eiruvofmonsey.org/), [Rockland Eruv](https://www.rocklanderuv.org/copy-of-about-us), [The Lakewood Luach — Eruv](https://thelakewoodluach.com/eruv-info), [מפה חדשה לאזור בלייקווד](https://sparksofanation.com/sparks/reader-submitted-a-new-eruv-map-for-a-prime-area-of-lakewood-not-just-a-geographic-depiction-but-a-sign-of-the-growth-and-flourishing-of-torah-neighborhoods-a-celebration-of-yiddishkeit-on-the-ris/), [Eruv Finder](https://eruvfinder.com/).
+- **עירובין בחו"ל — הוסר:** הקישור של מיניאפוליס / סנט לואיס פארק ([darcheinoammn.org](https://darcheinoammn.org/information_links/information_links.htm)), שהגיע מרשימת ויקיפדיה. המשתמש, שמכיר את המקומות מקרוב, כתב שאינו מקור חרדי וביקש להוריד אותו. עוד מדבריו: אין לסמוך על עירוב שבאתר שלו יש "רבנית", או רב שהוסמך בישיבת Chovevei Torah (YCT).
+
 ## מה חדש ב-0.3.5
 - תיקון: ההתקנה נכשלה בשגיאה "Stack Overflow".
 
