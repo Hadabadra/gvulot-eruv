@@ -135,6 +135,7 @@ t('renderSVG: רחובות, שכבות, חץ צפון ושורת מקור', () =
   assert.ok(svg.includes('data-layer="mikvaot"') && svg.includes('data-id="x"'));
   assert.ok(svg.includes('מקווה &lt;בדיקה&gt;') && !svg.includes('<בדיקה>'), 'בריחה מ-HTML');
   assert.ok(svg.includes('OpenStreetMap contributors'));
+  assert.ok(/direction="rtl" text-anchor="start"[^>]*>\d+ מ' לרוחב/.test(svg), 'תווית קנה המידה מעוגנת rtl ולא נחתכת');
   assert.ok(svg.includes('stroke-width="7"'), 'רחוב נבחר מודגש');
   const noArea = M.renderSVG({ area: null, view: v, layers: [layer] });
   assert.ok(!noArea.includes('OpenStreetMap'), 'בלי אזור אין שורת מקור');

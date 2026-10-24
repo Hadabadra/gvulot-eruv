@@ -249,7 +249,8 @@
       sel = `<line x1="${f(q[0])}" y1="${f(q[1])}" x2="${f(p[0])}" y2="${f(p[1])}" stroke="var(--color-primary)" stroke-width="7" stroke-linecap="round"/>`;
     }
     const north = `<g transform="translate(${W - 20},30) rotate(${f(v.rot)})"><path d="M0,-12 L6,7 L0,3 L-6,7Z" fill="var(--color-on-surface)" stroke="var(--color-surface)" stroke-width="1.5"/><text y="-15" text-anchor="middle" font-size="11" fill="var(--color-on-surface)" paint-order="stroke" stroke="var(--color-surface)" stroke-width="3">צ N</text></g>`;
-    const scale = `<text x="8" y="18" font-size="12" fill="var(--color-on-surface-dim)">${Math.round(v.hw * 2)} מ' לרוחב</text>`;
+    // טקסט עברי מתיישר מימין: מעוגן ב-rtl ליד חץ הצפון, ומתפרש שמאלה (כמו בכיוון תפילה)
+    const scale = `<text x="${W - 38}" y="18" direction="rtl" text-anchor="start" font-size="12" fill="var(--color-on-surface-dim)">${Math.round(v.hw * 2)} מ' לרוחב</text>`;
     const attr = area ? `<text x="8" y="${H - 8}" direction="ltr" font-size="10" fill="var(--color-on-surface-dim)">© OpenStreetMap contributors${area.d ? ' · ' + esc(area.d) : ''}</text>` : '';
     return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img">${lines}${sel}${labels}${pts}${north}${scale}${attr}</svg>`;
   }
