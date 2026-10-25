@@ -1,7 +1,7 @@
 {
   "id": "com.hadabadra.gvulot-eruv",
   "name": "גבולות עירוב",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "מפות העירובים השכונתיים והאחראים, תחום שבת והחוברות \"דרך התחומין\", ספריית עירובין ועירובין בחו\"ל — מתוך מוקד העירוב ובאישורו.",
   "author": "לזש\"ק לרמב\"ר ומבק\"י",
   "schemaVersion": 1,
@@ -38,14 +38,14 @@
       "title": "גבולות עירוב",
       "order": 215,
       "defaultPinned": false,
-      "iconName": "fluent:map_24_regular"
+      "iconName": "map_24_regular"
     },
     "startup": {
       "toolbarItems": [
         {
           "id": "open-eruv",
           "title": "גבולות עירוב",
-          "icon": "fluent:map_24_regular",
+          "icon": "map_24_regular",
           "contexts": [
             "reader-text"
           ],
