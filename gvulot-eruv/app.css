@@ -467,6 +467,7 @@ html[lang=en] p, html[lang=en] .techum-empty > div, html[lang=en] .who, html[lan
 .mapdev g[data-id]:hover circle { r: 11; }
 
 /* מפה במסך מלא */
-.sheet-scrim.full { padding: 0; }
-.sheet-scrim.full .sheet { width: 100%; max-width: none; height: 100%; max-height: none; border-radius: 0; }
+.sheet-scrim.full { padding: 0; display: block; background: none; pointer-events: none; }
+.sheet-scrim.full .sheet { position: absolute; inset-block: 0; inset-inline-end: 0; width: min(46vw, 44em); max-width: none; height: 100%; max-height: none; border-radius: 0; pointer-events: auto; box-shadow: 0 0 1.5em rgba(0,0,0,.25); }
+@media (max-width: 760px) { .sheet-scrim.full .sheet { width: 100%; } }
 .sheet-scrim.full .mapui .view svg { max-height: 62vh; }
