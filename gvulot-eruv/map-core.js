@@ -222,7 +222,7 @@
   function renderSVG(o) {
     const v = o.view, area = o.area, f = n => n.toFixed(1), W = v.width, H = v.height;
     let lines = '', labels = '', pts = '';
-    if (o.outline) lines += `<path d="${OUTLINE.map((c, i) => { const p = project(v, c[0], c[1]); return (i ? 'L' : 'M') + f(p[0]) + ',' + f(p[1]); }).join('')}Z" fill="var(--color-on-surface-dim)" fill-opacity=".07" stroke="var(--color-on-surface-dim)" stroke-opacity=".5" stroke-width="1.5" stroke-linejoin="round"><title>קו מתאר מקורב</title></path>`;
+    if (o.outline) lines += `<path d="${OUTLINE.map((c, i) => { const p = project(v, c[0], c[1]); return (i ? 'L' : 'M') + f(p[0]) + ',' + f(p[1]); }).join('')}Z" fill="var(--color-on-surface-variant, #5f6368)" fill-opacity=".07" stroke="var(--color-on-surface-variant, #5f6368)" stroke-opacity=".5" stroke-width="1.5" stroke-linejoin="round"><title>קו מתאר מקורב</title></path>`;
     const inView = (x, y, m) => x > -m && x < W + m && y > -m && y < H + m;
     if (area && o.streets !== false) {
       for (const [name, hw, g] of area.w) {
@@ -235,7 +235,7 @@
         }
         if (!any) continue;
         const big = /^(motorway|trunk|primary|secondary)/.test(hw), bld = hw === 'building', pth = /^(path|footway|track|steps|cycleway|bridleway|service)$/.test(hw);
-        lines += `<path d="${d}" fill="${bld ? 'var(--color-on-surface-dim)' : 'none'}" fill-opacity=".12" stroke="var(--color-on-surface-dim)" stroke-opacity=".75" stroke-width="${big ? 4 : bld ? 1 : pth ? 1.6 : 2.5}"${pth ? ' stroke-dasharray="5 3"' : ''} stroke-linecap="round" stroke-linejoin="round"/>`;
+        lines += `<path d="${d}" fill="${bld ? 'var(--color-on-surface-variant, #5f6368)' : 'none'}" fill-opacity=".12" stroke="var(--color-on-surface-variant, #5f6368)" stroke-opacity=".5" stroke-width="${big ? 3.5 : bld ? 1 : pth ? 1.2 : 2}"${pth ? ' stroke-dasharray="5 3"' : ''} stroke-linecap="round" stroke-linejoin="round"/>`;
         if (o.labels !== false && best && best[0] > 70 && name) {
           let a = Math.atan2(best[2][1] - best[1][1], best[2][0] - best[1][0]) / R; if (a > 90) a -= 180; if (a < -90) a += 180;
           labels += `<text transform="translate(${f((best[1][0] + best[2][0]) / 2)},${f((best[1][1] + best[2][1]) / 2)}) rotate(${f(a)})" y="-5" text-anchor="middle" font-size="11" fill="var(--color-on-surface)" paint-order="stroke" stroke="var(--color-surface)" stroke-width="3">${esc(name)}</text>`;
@@ -268,8 +268,8 @@
     }
     const north = `<g transform="translate(${W - 20},30) rotate(${f(v.rot)})"><path d="M0,-12 L6,7 L0,3 L-6,7Z" fill="var(--color-on-surface)" stroke="var(--color-surface)" stroke-width="1.5"/><text y="-15" text-anchor="middle" font-size="11" fill="var(--color-on-surface)" paint-order="stroke" stroke="var(--color-surface)" stroke-width="3">צ N</text></g>`;
     // טקסט עברי מתיישר מימין: מעוגן ב-rtl ליד חץ הצפון, ומתפרש שמאלה (כמו בכיוון תפילה)
-    const scale = `<text x="${W - 38}" y="18" direction="rtl" text-anchor="start" font-size="12" fill="var(--color-on-surface-dim)">${widthLabel(v.hw * 2)} לרוחב</text>`;
-    const attr = area && o.streets !== false ? `<text x="8" y="${H - 8}" direction="ltr" font-size="10" fill="var(--color-on-surface-dim)">© OpenStreetMap contributors${area.d ? ' · ' + esc(area.d) : ''}</text>` : '';
+    const scale = `<text x="${W - 38}" y="18" direction="rtl" text-anchor="start" font-size="12" fill="var(--color-on-surface-variant, #5f6368)">${widthLabel(v.hw * 2)} לרוחב</text>`;
+    const attr = area && o.streets !== false ? `<text x="8" y="${H - 8}" direction="ltr" font-size="10" fill="var(--color-on-surface-variant, #5f6368)">© OpenStreetMap contributors${area.d ? ' · ' + esc(area.d) : ''}</text>` : '';
     return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img">${lines}${sel}${labels}${syn}${pts}${me}${north}${scale}${attr}</svg>`;
   }
 
