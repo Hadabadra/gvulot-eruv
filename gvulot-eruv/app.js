@@ -5,7 +5,7 @@
   'use strict';
   const D = window.ERUV_DATA;
   // אחראי נוסף שנמסר על ידי מפתח התוסף (לא מהמוקד הארצי): ועד העירובים השכונתיים בבני ברק
-  if (!D.areas.some(a => a.phones && a.phones.includes('050-4154005'))) D.areas.push({ city: 'בני ברק', n: '', area: 'ועד העירובים השכונתיים (מסר מפתח התוסף)', names: ['רפאל סטפנסקי (אחראי בפ"כ)'], phones: ['050-4154005'], maps: [] });
+  if (!D.areas.some(a => a.phones && a.phones.includes('050-4154005'))) D.areas.push({ city: 'בני ברק', n: '', area: 'ועד העירובים השכונתיים (מסר מפתח התוסף)', names: ['רפאל סטפנסקי (אחראי בפ"כ)'], phones: ['050-4154005'], emails: [['ועד העירובים השכונתיים', 'eruv.bbc@gmail.com']], maps: [] });
   const $ = (s, r = document) => r.querySelector(s);
   const hasOtz = typeof window.Otzaria !== 'undefined';
   const call = async (method, params) => {
@@ -115,12 +115,13 @@
     const gm = !opts.noMaps && !a.maps.length && !own.length && generalMap(a.city);
     if (gm) mapsChips += `<button class="chip map" data-open-map="${gm.id}" title="השכונה מסומנת במפה הכללית של העיר">${ICON.map}מפה כללית</button>`;
     const phones = a.phones.map(p => `<button class="chip" data-phone="${esc(p)}" title="העתקת המספר">${ICON.phone}${esc(fmtPhone(p))}</button>`).join('');
+    const mails = (a.emails || []).map(([t, m]) => `<button class="chip" data-url="mailto:${esc(m)}" title="${esc(m)} · הכתובת גם מועתקת">✉ ${esc(t)}</button>`).join('');
     return `<div class="area${opts.hl ? ' hl' : ''}">
       <span class="area-num">${esc(a.n || '•')}</span>
       <div class="area-body">
         <div class="area-title">${opts.withCity ? esc(a.city) + ' · ' : ''}${hl(a.area || 'כל השכונה', q)}</div>
         <div class="area-names">${a.names.length ? hl(a.names.join(' · '), q) : 'שם האחראי לא צוין'}</div>
-        <div class="area-actions">${phones}${mapsChips}</div>
+        <div class="area-actions">${phones}${mails}${mapsChips}</div>
       </div></div>`;
   }
   function mapCardHTML(m) {
@@ -873,6 +874,7 @@
   // בכל ייצוא (תמונה, הדפסה/PDF): קישור לגיטהאב והפניה לחנות התוספים של אוצריא
   const exportLinks = () => `מתוך תוסף "גבולות עירוב" לאוצריא · GitHub: ${REPO.replace('https://', '')}/releases · חנות התוספים של אוצריא: כלים ← תוספים ← חנות, חיפוש "גבולות עירוב"`;
   const CHANGELOG = [
+    ['0.6.3', ['ועד העירובים השכונתיים בבני ברק: כפתור שליחת מייל לוועד']],
     ['0.6.2', ['המפה נפתחת במסך מלא', 'ועד העירובים השכונתיים בבני ברק נוסף לרשימת האחראים (רפאל סטפנסקי)']],
     ['0.6.1', ['תיקון שם האייקון לפי דרישות חנות אוצריא']],
     ['0.6.0', ['מסך מפה חדש: זום, גרירה, חיפוש, טעינת רחובות מקובץ, בתי כנסת, ופתיחת העיר מהמפה', 'כפתור מפה בסרגל העליון', 'אפשרויות עתידיות מסומנות "בקרוב": קווי עירוב, בדיקת כתובת, כיוון תפילה', 'חיפוש רחוב וכתובת תומך בקיצורי ערים']],
@@ -901,7 +903,7 @@
     if (r.success) { $('#fbText').value = ''; toast(r.data === 'queued' ? 'התגובה תישלח כשיהיה חיבור' : 'התגובה נשלחה, תודה!'); }
     else toast('השליחה זמינה בתוך אוצריא');
   }
-  const VERSION = '0.6.2';
+  const VERSION = '0.6.3';
 
   // ── אודות ───────────────────────────────────────────────────
   function openHalacha() {
