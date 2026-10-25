@@ -798,8 +798,16 @@
     closeMap(); render(); toast('המפה הוסרה');
   }
 
+  async function confirmExternal(url) {
+    if (!/^https?:/i.test(url)) return true;
+    let host = url; try { host = new URL(url).hostname || url; } catch (e) {}
+    const c = await call('ui.showConfirm', { title: 'קישור לאתר חיצוני', content: 'הקישור מוביל אל "' + host + '", מחוץ לתוסף. לפתוח אותו בדפדפן המערכת?' });
+    if (!c || !c.success || !c.data) return true;   // אין חלון אישור זמין: ממשיכים לפתוח
+    return c.data.confirmed === true;
+  }
   // ── קישורים: באוצריא קישור רגיל לא נפתח — פותחים בדפדפן החיצוני וגם מעתיקים ללוח ──
   async function openLink(u) {
+    if (!(await confirmExternal(u))) return;
     let copied = false;
     try { await navigator.clipboard.writeText(u); copied = true; } catch (e) {}
     let w = null;
@@ -874,6 +882,7 @@
   // בכל ייצוא (תמונה, הדפסה/PDF): קישור לגיטהאב והפניה לחנות התוספים של אוצריא
   const exportLinks = () => `מתוך תוסף "גבולות עירוב" לאוצריא · GitHub: ${REPO.replace('https://', '')}/releases · חנות התוספים של אוצריא: כלים ← תוספים ← חנות, חיפוש "גבולות עירוב"`;
   const CHANGELOG = [
+    ['1.0.0', ['גרסה סופית ראשונה', 'קישור חיצוני נפתח בדפדפן המערכת אחרי אישור', 'המפה במסך מלא מתחת לסרגל העליון', 'הורדת קובץ רחובות לעיר בלחיצה אחת, ואז טעינה במסך המפה']],
     ['0.6.4', ['קו מתאר מקורב של הארץ כרקע במפה', 'הורדת רחובות משני שרתים לבחירה (פתרון לשגיאה 406), עם הסבר']],
     ['0.6.3', ['ועד העירובים השכונתיים בבני ברק: כפתור שליחת מייל לוועד']],
     ['0.6.2', ['המפה נפתחת במסך מלא', 'ועד העירובים השכונתיים בבני ברק נוסף לרשימת האחראים (רפאל סטפנסקי)']],
@@ -904,7 +913,7 @@
     if (r.success) { $('#fbText').value = ''; toast(r.data === 'queued' ? 'התגובה תישלח כשיהיה חיבור' : 'התגובה נשלחה, תודה!'); }
     else toast('השליחה זמינה בתוך אוצריא');
   }
-  const VERSION = '0.6.4';
+  const VERSION = '1.0.0';
 
   // ── אודות ───────────────────────────────────────────────────
   function openHalacha() {
@@ -926,7 +935,7 @@
     $('#infoTitle').textContent = 'מפה (בפיתוח)';
     $('#infoBody').innerHTML = '<div id="mapHost"></div><p class="fine">מיקומי הערים בקירוב. המפות עצמן הן התמונות של מוקד העירוב. כדי להגיע לעיר: לחיצה על נקודה ואז "פתיחת העיר".</p><div class="sheet-actions"><button class="btn tonal" id="mapBack">חזרה</button></div>';
     $('#mapBack').onclick = openInfo;
-    $('#infoScrim').hidden = false; $('#infoScrim').classList.add('full');
+    $('#infoScrim').hidden = false; $('#infoScrim').classList.add('full'); $('#infoScrim').style.top = Math.round(document.querySelector('.topbar, header').getBoundingClientRect().bottom) + 'px';
     if (!MC || !UI) { $('#mapHost').textContent = 'רכיב המפה לא נטען.'; return; }
     const pts = cities.map(c => ({ id: c, name: c + ' · ' + byCity.get(c).maps.length + ' מפות', sub: byCity.get(c).maps.length + ' מפות עירוב', lat: CITY_POS[c][0], lon: CITY_POS[c][1] }));
     UI.mount($('#mapHost'), { points: pts, layerId: 'eruv', glyph: 'ע', layerName: 'ערי עירוב', call, openLink, repo: REPO, forumUrl: 'https://otzaria.org/forum/post/45390', issueUrl: REPO + '/issues/1',
@@ -934,7 +943,7 @@
       onPick: id => { $('#infoScrim').hidden = true; goCity(id); } });
   }
   function openInfo() {
-    $('#infoScrim').classList.remove('full');
+    $('#infoScrim').classList.remove('full'); $('#infoScrim').style.top = '';
     $('#infoTitle').textContent = 'אודות התוסף';
     $('#infoBody').innerHTML = `
       <p>גבולות עירוב ${VERSION} · מאת לזש"ק לרמב"ר ומבק"י. המפות ורשימת האחראים מאתר <b>מוקד העירוב</b>, באישורם.

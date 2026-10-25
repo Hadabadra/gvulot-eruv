@@ -18,7 +18,7 @@
   // מחרוזות לתרגום: המארחים ממזגים את MapUI.EN למילון שלהם
   const EN = {
     'זום פנימה': 'Zoom in', 'זום החוצה': 'Zoom out', 'מרכוז': 'Center', 'מקור נתוני הרחובות': 'Street data source',
-    'טעינת רחובות מקובץ': 'Load streets from a file', 'הורדת רחובות לאזור (שרת 1)': 'Download streets for this area (server 1)', 'שרת 2': 'Server 2',
+    'טעינת רחובות מקובץ': 'Load streets from a file', 'הורדת רחובות לעיר': 'Download city streets', 'הורדת רחובות (מתקרבים לעיר בזום)': 'Download streets (zoom in to a city)', 'מקור חלופי 1': 'Alternative source 1', 'מקור חלופי 2': 'Alternative source 2',
     'חיפוש רחוב או פינה, למשל: הרצל פינת בן יהודה': 'Search a street or corner, e.g. Herzl corner Ben Yehuda', 'חיפוש': 'Search',
     'שכבות': 'Layers', 'רחובות': 'Streets', 'בתי כנסת': 'Synagogues', 'מסלול הליכה או נסיעה (בקרוב)': 'Walking or driving route (coming soon)',
     'קווי עירוב (בקרוב)': 'Eruv lines (coming soon)', 'כיוון תפילה (בקרוב)': 'Prayer direction (coming soon)', 'בדיקת כתובת בתוך העירוב (בקרוב)': 'Check an address inside the eruv (coming soon)',
@@ -84,17 +84,23 @@
         ${future.map(f => `<label class="off" title="בפיתוח: מחכה לעזרה"><input type="checkbox" disabled> ${esc(f)}</label>`).join('')}
       </div>
       <h4>רחובות וחיפוש</h4>
-      <div class="bar"><button class="mu" data-mu="load">טעינת רחובות מקובץ</button><button class="mu" data-mu="url">הורדת רחובות לאזור (שרת 1)</button><button class="mu" data-mu="url2">שרת 2</button></div>
-      <p class="msg">ההורדה נפתחת בדפדפן כטקסט. שומרים אותו (Ctrl+S, כסוג JSON) ואז בוחרים "טעינת רחובות מקובץ". אם שרת אחד מחזיר שגיאה (כמו 406), מנסים את השני. הקווים בלי רחובות הם קו מתאר מקורב של הארץ, לרקע בלבד.</p>
+      <div class="bar"><button class="mu" data-mu="dl" id="mu-dl">הורדת רחובות לעיר</button><button class="mu" data-mu="load">טעינת רחובות מקובץ</button></div>
+      <p class="msg">מורידים את קובץ העיר (נפתח בדפדפן וההורדה מתחילה לבד), ואז "טעינת רחובות מקובץ" ובוחרים אותו. <button class="mu" data-mu="url">מקור חלופי 1</button> <button class="mu" data-mu="url2">מקור חלופי 2</button> לעיר שאינה ברשימה. הקווים בלי רחובות הם קו מתאר מקורב של הארץ, לרקע בלבד.</p>
       <div class="bar"><div class="grow"><input type="search" id="mu-q" placeholder="חיפוש רחוב או פינה, למשל: הרצל פינת בן יהודה" aria-label="חיפוש"></div><button class="mu" data-mu="search">חיפוש</button></div>
       <div class="msg" id="mu-msg"></div><div id="mu-near"></div>
       <h4>בפיתוח</h4>
       <div class="bar">${future.map(f => `<button class="mu" aria-disabled="true" data-mu="soon" title="בפיתוח: מחכה לעזרה">${esc(f)}</button>`).join('')}</div>
       <p class="msg">זו תצוגה ראשונית, ויש בה שגיאות אפשריות. הקובץ נטען רק לזמן הפתיחה של המסך. מחכה לעזרה: ${join}</p>`;
     const $ = id => el.querySelector('#' + id);
+    const nearCity = () => {
+      const C = window.STREET_CITIES || {}; let best = null;
+      for (const [n, c] of Object.entries(C)) { const d = MC.distM([S.lat, S.lon], [c.lat, c.lon]); if (!best || d < best.d) best = { n, c, d }; }
+      return best && best.d < 30000 && S.zoom >= 0.5 ? best : null;
+    };
+    const updDl = () => { const b = $('mu-dl'); if (!b) return; const c = nearCity(); b.dataset.slug = c ? c.c.slug : ''; b.textContent = c ? 'הורדת רחובות: ' + c.n : 'הורדת רחובות (מתקרבים לעיר בזום)'; b.setAttribute('aria-disabled', c ? 'false' : 'true'); };
     const say = t => { $('mu-msg').textContent = t || ''; };
 
-    function draw() {
+    function draw() { setTimeout(updDl, 0);
       const v = MC.createView({ lat: S.lat, lon: S.lon, zoom: S.zoom, width: W, height: H });
       const svg = MC.renderSVG({ area: S.area, view: v, layers: S.show.pts ? [layer()] : [], streets: S.show.streets, syn: S.show.syn, me: o.me, hl: S.sel, selected: S.street, labels: S.zoom >= 2, outline: !S.area });
       $('mu-view').innerHTML = svg; $('mu-view')._v = v;
@@ -114,7 +120,7 @@
       const L = pts.map(p => [p, MC.distM(center, [p.lat, p.lon])]).sort((a, b) => a[1] - b[1]).slice(0, 5);
       $('mu-near').innerHTML = L.length ? `<div class="msg"><strong>${esc(o.nearbyLabel || 'קרוב לכתובת')}</strong></div><div class="bar">` + L.map(([p, d]) => `<button class="mu" data-mu-sel="${esc(p.id)}">${esc(p.name)} · ${d >= 1000 ? (d / 1000).toFixed(1) + " ק\"מ" : Math.round(d) + " מ'"}</button>`).join('') + '</div>' : '';
     }
-    function refresh() { draw(); showSel(); }
+    function refresh() { draw(); showSel(); updDl(); }
     function selectPt(id) { S.sel = String(id); const p = selPt(); if (p) { S.lat = p.lat; S.lon = p.lon; S.zoom = Math.max(S.zoom, 3); } S.street = null; refresh(); }
 
     async function loadFile() {
@@ -180,6 +186,7 @@
       else if (a === 'out') { S.zoom = Math.max(0.0005, S.zoom / 1.5); draw(); }
       else if (a === 'fit') { S.sel = null; S.street = null; fit(); refresh(); }
       else if (a === 'load') loadFile();
+      else if (a === 'dl') { const sl = b.dataset.slug; if (!sl) return say('אין קובץ רחובות מוכן לעיר הזו. אפשר לנסות מקור חלופי.'); say('ההורדה נפתחה בדפדפן. אחריה: "טעינת רחובות מקובץ".'); if (o.openLink) o.openLink((window.STREETS_BASE || '') + sl + '.json'); }
       else if (a === 'url' || a === 'url2') { const u = MC.overpassUrl(S.lat, S.lon, 1500, a === 'url2' ? 1 : 0); say('נפתח בדפדפן. שומרים את הקובץ שמתקבל (Ctrl+S) ואז "טעינת רחובות מקובץ".'); if (o.openLink) o.openLink(u); }
       else if (a === 'search') search();
       else if (a === 'pick') { const p = selPt(); if (p && o.onPick) o.onPick(p.id); }

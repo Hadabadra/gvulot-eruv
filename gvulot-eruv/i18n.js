@@ -51,6 +51,7 @@
   });
   // ביטויים עם מספרים
   const P = [
+    [/^הורדת רחובות: (.+)$/, (m, a) => 'Download streets: ' + (window.STREET_CITIES && window.STREET_CITIES[a] ? window.STREET_CITIES[a].en : a)],
     [/^(\d+) מפות$/, '$1 maps'], [/^(\d+) מפות · (\d+) שכונות$/, '$1 maps · $2 neighborhoods'], [/^אחראים בלבד · (\d+) שכונות$/, 'Contacts only · $1 neighborhoods'],
     [/^(\d+) אחראים$/, '$1 contacts'], [/^(.+) · מידע לשבת$/, (m, a) => (W[a] || a) + ' · Shabbat info']
   ];
