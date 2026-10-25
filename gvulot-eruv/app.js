@@ -893,6 +893,7 @@
   // בכל ייצוא (תמונה, הדפסה/PDF): קישור לגיטהאב והפניה לחנות התוספים של אוצריא
   const exportLinks = () => `מתוך תוסף "גבולות עירוב" לאוצריא · GitHub: ${REPO.replace('https://', '')}/releases · חנות התוספים של אוצריא: כלים ← תוספים ← חנות, חיפוש "גבולות עירוב"`;
   const CHANGELOG = [
+    ['1.2.0', ["רחובות ובתי כנסת של 76 ערים מובנים בתוסף ונטענים לבד בלשונית המפה כשמתקרבים לעיר — בלי אינטרנט ובלי הורדת קובץ."]],
     ['1.1.0', ["המפה היא עכשיו לשונית בתוך התוסף (\"רשימה | מפה\" מעל התוכן) במקום חלון מעל המסך. בדף כל עיר כפתור \"במפה\" שעובר ללשונית וממקד על העיר.", "מצב מנותק באוצריא: כל הקישורים החוצה (אתרים, GitHub, הורדת רחובות) מוסתרים. טלפונים ואימיילים נשארים.", "מפה אישית: השכונה נבחרת מרשימת השכונות של העיר, והמפה מופיעה אוטומטית באריח של האחראי לשכונה. בחלון ההוספה קישור למפה המצוירת (בפיתוח).", "הוסרה מהמפה השכבה \"כיוון תפילה (בקרוב)\"."]],
     ['1.0.2', ['תיקון צבע צל בחלון המפה הצדדי כדי שהעדכון יעלה לחנות']],
     ['1.0.1', ['המפה נפתחת בצד ליד סרגל הערים ולא מכסה את המסך; לחיצה נוספת על כפתור המפה סוגרת אותה; בחירת עיר ברשימה ממקדת את המפה']],
@@ -927,7 +928,7 @@
     if (r.success) { $('#fbText').value = ''; toast(r.data === 'queued' ? 'התגובה תישלח כשיהיה חיבור' : 'התגובה נשלחה, תודה!'); }
     else toast('השליחה זמינה בתוך אוצריא');
   }
-  const VERSION = '1.1.0';
+  const VERSION = '1.2.0';
 
   // ── אודות ───────────────────────────────────────────────────
   function openHalacha() {
@@ -958,7 +959,7 @@
     if (!MC || !UI) { $('#mapTab').textContent = 'רכיב המפה לא נטען.'; return; }
     const cities = Object.keys(CITY_POS).filter(c => byCity.has(c));
     const pts = cities.map(c => ({ id: c, name: c + ' · ' + byCity.get(c).maps.length + ' מפות', sub: byCity.get(c).maps.length + ' מפות עירוב · ' + byCity.get(c).areas.length + ' שכונות עם אחראי', lat: CITY_POS[c][0], lon: CITY_POS[c][1] }));
-    UI.mount($('#mapTab'), { tab: true, online: state.online, points: pts, layerId: 'eruv', glyph: 'ע', layerName: 'ערי עירוב', selectedId: sel, call, openLink, repo: REPO, forumUrl: 'https://otzaria.org/forum/post/45390', issueUrl: REPO + '/issues/1',
+    UI.mount($("#mapTab"), { tab: true, builtinStreets: true, online: state.online, points: pts, layerId: 'eruv', glyph: 'ע', layerName: 'ערי עירוב', selectedId: sel, call, openLink, repo: REPO, forumUrl: 'https://otzaria.org/forum/post/45390', issueUrl: REPO + '/issues/1',
       pickLabel: 'פתיחת העיר', nearbyLabel: 'ערים קרובות', future: ['קווי עירוב על המפה (בקרוב)', 'בדיקת כתובת בתוך העירוב (בקרוב)'],
       onPick: id => { state.tab = 'list'; goCity(id); } });
     $('#mapTab').insertAdjacentHTML('beforeend', '<p class="fine">מיקומי הערים בקירוב. המפות עצמן הן התמונות של מוקד העירוב (בלשונית "רשימה").</p>');

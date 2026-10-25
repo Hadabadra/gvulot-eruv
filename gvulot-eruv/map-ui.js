@@ -87,8 +87,8 @@
         ${future.map(f => `<label class="off" title="בפיתוח: מחכה לעזרה"><input type="checkbox" disabled> ${esc(f)}</label>`).join('')}
       </div>
       <h4>רחובות וחיפוש</h4>
-      <div class="bar">${off ? '' : '<button class="mu" data-mu="dl" id="mu-dl">הורדת רחובות לעיר</button>'}<button class="mu" data-mu="load">טעינת רחובות מקובץ</button></div>
-      ${off ? '<p class="msg">אוצריא במצב מנותק: אפשר לטעון קובץ רחובות שכבר שמור במחשב.</p>' : `<p class="msg">מורידים את קובץ העיר (נפתח בדפדפן וההורדה מתחילה לבד), ואז "טעינת רחובות מקובץ" ובוחרים אותו. <button class="mu" data-mu="url">מקור חלופי 1</button> <button class="mu" data-mu="url2">מקור חלופי 2</button> לעיר שאינה ברשימה. הקווים בלי רחובות הם קו מתאר מקורב של הארץ, לרקע בלבד.</p>`}
+      <div class="bar">${off || o.builtinStreets ? '' : '<button class="mu" data-mu="dl" id="mu-dl">הורדת רחובות לעיר</button>'}<button class="mu" data-mu="load">טעינת רחובות מקובץ</button></div>
+      ${o.builtinStreets ? '<p class="msg">הרחובות של 76 ערים מובנים בתוסף ונטענים לבד כשמתקרבים לעיר בזום, בלי אינטרנט. לעיר אחרת: טעינת קובץ רחובות.</p>' : off ? '<p class="msg">אוצריא במצב מנותק: אפשר לטעון קובץ רחובות שכבר שמור במחשב.</p>' : `<p class="msg">מורידים את קובץ העיר (נפתח בדפדפן וההורדה מתחילה לבד), ואז "טעינת רחובות מקובץ" ובוחרים אותו. <button class="mu" data-mu="url">מקור חלופי 1</button> <button class="mu" data-mu="url2">מקור חלופי 2</button> לעיר שאינה ברשימה. הקווים בלי רחובות הם קו מתאר מקורב של הארץ, לרקע בלבד.</p>`}
       <div class="bar"><div class="grow"><input type="search" id="mu-q" placeholder="חיפוש רחוב או פינה, למשל: הרצל פינת בן יהודה" aria-label="חיפוש"></div><button class="mu" data-mu="search">חיפוש</button></div>
       <div class="msg" id="mu-msg"></div><div id="mu-near"></div>
       <h4>בפיתוח</h4>
@@ -98,10 +98,22 @@
     const nearCity = () => {
       const C = window.STREET_CITIES || {}; let best = null;
       for (const [n, c] of Object.entries(C)) { const d = MC.distM([S.lat, S.lon], [c.lat, c.lon]); if (!best || d < best.d) best = { n, c, d }; }
-      return best && best.d < 30000 && S.zoom >= 0.5 ? best : null;
+      return best && best.d < 30000 && S.zoom >= 0.05 ? best : null;
     };
-    const updDl = () => { const b = $('mu-dl'); if (!b) return; const c = nearCity(); b.dataset.slug = c ? c.c.slug : ''; b.textContent = c ? 'הורדת רחובות: ' + c.n : 'הורדת רחובות (מתקרבים לעיר בזום)'; b.setAttribute('aria-disabled', c ? 'false' : 'true'); };
+    const updDl = () => { const c0 = nearCity(); if (BUILT) useBuiltin(c0); const b = $('mu-dl'); if (!b) return; const c = c0; b.dataset.slug = c ? c.c.slug : ''; b.textContent = c ? 'הורדת רחובות: ' + c.n : 'הורדת רחובות (מתקרבים לעיר בזום)'; b.setAttribute('aria-disabled', c ? 'false' : 'true'); };
     const say = t => { $('mu-msg').textContent = t || ''; };
+    // רחובות מובנים בתוסף (streets/<slug>.js): נטענים לבד כשמתקרבים לעיר, בלי אינטרנט
+    const BUILT = o.builtinStreets ? (window.STREETS = window.STREETS || {}) : null;
+    function setArea(a) {
+      S.area = a; S.areaName = a.name || '';
+      el.querySelectorAll('[data-mu-layer="streets"],[data-mu-layer="syn"]').forEach(c => { c.disabled = false; c.parentElement.classList.remove('off'); });
+    }
+    function useBuiltin(c) {
+      if (!BUILT || !c || S.areaName === c.n) return;
+      const go = () => { try { setArea(MC.decodeArea(MC.compactOverpass(BUILT[c.c.slug]))); S.areaName = c.n; say('רחובות ' + c.n + ' (מובנים בתוסף)'); draw(); } catch (e) {} };
+      if (BUILT[c.c.slug]) return go();
+      const sc = document.createElement('script'); sc.src = 'streets/' + c.c.slug + '.js'; sc.onload = go; document.head.append(sc);
+    }
 
     function draw() { setTimeout(updDl, 0);
       const v = MC.createView({ lat: S.lat, lon: S.lon, zoom: S.zoom, width: W, height: H });
@@ -135,8 +147,7 @@
         let j = null; try { j = JSON.parse(t.data); } catch (e) { return say('הקובץ לא נקרא'); }
         let a;
         try { a = MC.decodeArea(MC.compactOverpass(j)); } catch (e) { return say(e.message || 'בקובץ אין רחובות'); }
-        S.area = a; S.areaName = a.name || '';
-        el.querySelectorAll('[data-mu-layer="streets"],[data-mu-layer="syn"]').forEach(c => { c.disabled = false; c.parentElement.classList.remove('off'); });
+        setArea(a);
         if (!selPt()) { S.lat = a.lat; S.lon = a.lon; S.zoom = 1.2; }
         say(`הקובץ נטען: ${a.w.length} רחובות${(a.s || []).length ? ' ו-' + a.s.length + ' בתי כנסת' : ''}.`);
         refresh();
