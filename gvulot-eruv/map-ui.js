@@ -18,7 +18,7 @@
   // מחרוזות לתרגום: המארחים ממזגים את MapUI.EN למילון שלהם
   const EN = {
     'זום פנימה': 'Zoom in', 'זום החוצה': 'Zoom out', 'מרכוז': 'Center', 'מקור נתוני הרחובות': 'Street data source',
-    'טעינת רחובות מקובץ': 'Load streets from a file', 'הורדת רחובות לאזור (פתיחה בדפדפן)': 'Download streets for this area (opens browser)',
+    'טעינת רחובות מקובץ': 'Load streets from a file', 'הורדת רחובות לאזור (שרת 1)': 'Download streets for this area (server 1)', 'שרת 2': 'Server 2',
     'חיפוש רחוב או פינה, למשל: הרצל פינת בן יהודה': 'Search a street or corner, e.g. Herzl corner Ben Yehuda', 'חיפוש': 'Search',
     'שכבות': 'Layers', 'רחובות': 'Streets', 'בתי כנסת': 'Synagogues', 'מסלול הליכה או נסיעה (בקרוב)': 'Walking or driving route (coming soon)',
     'קווי עירוב (בקרוב)': 'Eruv lines (coming soon)', 'כיוון תפילה (בקרוב)': 'Prayer direction (coming soon)', 'בדיקת כתובת בתוך העירוב (בקרוב)': 'Check an address inside the eruv (coming soon)',
@@ -84,7 +84,8 @@
         ${future.map(f => `<label class="off" title="בפיתוח: מחכה לעזרה"><input type="checkbox" disabled> ${esc(f)}</label>`).join('')}
       </div>
       <h4>רחובות וחיפוש</h4>
-      <div class="bar"><button class="mu" data-mu="load">טעינת רחובות מקובץ</button><button class="mu" data-mu="url">הורדת רחובות לאזור (פתיחה בדפדפן)</button></div>
+      <div class="bar"><button class="mu" data-mu="load">טעינת רחובות מקובץ</button><button class="mu" data-mu="url">הורדת רחובות לאזור (שרת 1)</button><button class="mu" data-mu="url2">שרת 2</button></div>
+      <p class="msg">ההורדה נפתחת בדפדפן כטקסט. שומרים אותו (Ctrl+S, כסוג JSON) ואז בוחרים "טעינת רחובות מקובץ". אם שרת אחד מחזיר שגיאה (כמו 406), מנסים את השני. הקווים בלי רחובות הם קו מתאר מקורב של הארץ, לרקע בלבד.</p>
       <div class="bar"><div class="grow"><input type="search" id="mu-q" placeholder="חיפוש רחוב או פינה, למשל: הרצל פינת בן יהודה" aria-label="חיפוש"></div><button class="mu" data-mu="search">חיפוש</button></div>
       <div class="msg" id="mu-msg"></div><div id="mu-near"></div>
       <h4>בפיתוח</h4>
@@ -95,7 +96,7 @@
 
     function draw() {
       const v = MC.createView({ lat: S.lat, lon: S.lon, zoom: S.zoom, width: W, height: H });
-      const svg = MC.renderSVG({ area: S.area, view: v, layers: S.show.pts ? [layer()] : [], streets: S.show.streets, syn: S.show.syn, me: o.me, hl: S.sel, selected: S.street, labels: S.zoom >= 2 });
+      const svg = MC.renderSVG({ area: S.area, view: v, layers: S.show.pts ? [layer()] : [], streets: S.show.streets, syn: S.show.syn, me: o.me, hl: S.sel, selected: S.street, labels: S.zoom >= 2, outline: !S.area });
       $('mu-view').innerHTML = svg; $('mu-view')._v = v;
     }
     function showSel() {
@@ -179,7 +180,7 @@
       else if (a === 'out') { S.zoom = Math.max(0.0005, S.zoom / 1.5); draw(); }
       else if (a === 'fit') { S.sel = null; S.street = null; fit(); refresh(); }
       else if (a === 'load') loadFile();
-      else if (a === 'url') { const u = MC.overpassUrl(S.lat, S.lon, 1500); say('נפתח בדפדפן. שומרים את הקובץ שמתקבל ואז "טעינת רחובות מקובץ".'); if (o.openLink) o.openLink(u); }
+      else if (a === 'url' || a === 'url2') { const u = MC.overpassUrl(S.lat, S.lon, 1500, a === 'url2' ? 1 : 0); say('נפתח בדפדפן. שומרים את הקובץ שמתקבל (Ctrl+S) ואז "טעינת רחובות מקובץ".'); if (o.openLink) o.openLink(u); }
       else if (a === 'search') search();
       else if (a === 'pick') { const p = selPt(); if (p && o.onPick) o.onPick(p.id); }
       else if (a === 'soon') say('בפיתוח: הפעולה הזו עדיין לא קיימת. מחכה לעזרה, ראו את הקישורים למטה.');

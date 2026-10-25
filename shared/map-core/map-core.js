@@ -186,10 +186,12 @@
   }
 
   /* כתובת Overpass להורדת רחובות (ובתי כנסת) סביב נקודה. פותחים בדפדפן, שומרים את הקובץ וטוענים בתוסף. */
-  const OVERPASS = 'https://overpass-api.de/api/interpreter';
-  function overpassUrl(lat, lon, r) {
+  const OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
+  // קו מתאר מקורב של ישראל (לא מדויק; לרקע בלבד כשאין קובץ רחובות)
+  const OUTLINE = [[33.09,35.10],[33.28,35.58],[33.25,35.65],[33.10,35.84],[32.95,35.88],[32.70,35.80],[32.55,35.55],[32.00,35.55],[31.75,35.55],[31.30,35.45],[30.80,35.40],[30.00,35.15],[29.55,34.95],[30.00,34.85],[30.80,34.45],[31.25,34.27],[31.60,34.50],[31.80,34.63],[32.08,34.76],[32.33,34.85],[32.82,34.96],[32.93,35.07]];
+  function overpassUrl(lat, lon, r, i) {
     const a = `(around:${r || 1500},${(+lat).toFixed(5)},${(+lon).toFixed(5)})`;
-    return OVERPASS + '?data=' + encodeURIComponent(`[out:json][timeout:60];(way["highway"]["name"]${a};nwr["amenity"="place_of_worship"]["religion"="jewish"]${a};);out tags geom;`);
+    return OVERPASS[i || 0] + '?data=' + encodeURIComponent(`[out:json][timeout:60];(way["highway"]["name"]${a};nwr["amenity"="place_of_worship"]["religion"="jewish"]${a};);out tags geom;`);
   }
 
   /* ── שכבות ──
@@ -220,6 +222,7 @@
   function renderSVG(o) {
     const v = o.view, area = o.area, f = n => n.toFixed(1), W = v.width, H = v.height;
     let lines = '', labels = '', pts = '';
+    if (o.outline) lines += `<path d="${OUTLINE.map((c, i) => { const p = project(v, c[0], c[1]); return (i ? 'L' : 'M') + f(p[0]) + ',' + f(p[1]); }).join('')}Z" fill="var(--color-on-surface-dim)" fill-opacity=".07" stroke="var(--color-on-surface-dim)" stroke-opacity=".5" stroke-width="1.5" stroke-linejoin="round"><title>קו מתאר מקורב</title></path>`;
     const inView = (x, y, m) => x > -m && x < W + m && y > -m && y < H + m;
     if (area && o.streets !== false) {
       for (const [name, hw, g] of area.w) {
