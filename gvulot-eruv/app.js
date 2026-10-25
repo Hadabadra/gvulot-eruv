@@ -4,6 +4,8 @@
 (function () {
   'use strict';
   const D = window.ERUV_DATA;
+  // אחראי נוסף שנמסר על ידי מפתח התוסף (לא מהמוקד הארצי): ועד העירובים השכונתיים בבני ברק
+  if (!D.areas.some(a => a.phones && a.phones.includes('050-4154005'))) D.areas.push({ city: 'בני ברק', n: '', area: 'ועד העירובים השכונתיים (מסר מפתח התוסף)', names: ['רפאל סטפנסקי (אחראי בפ"כ)'], phones: ['050-4154005'], maps: [] });
   const $ = (s, r = document) => r.querySelector(s);
   const hasOtz = typeof window.Otzaria !== 'undefined';
   const call = async (method, params) => {
@@ -871,6 +873,7 @@
   // בכל ייצוא (תמונה, הדפסה/PDF): קישור לגיטהאב והפניה לחנות התוספים של אוצריא
   const exportLinks = () => `מתוך תוסף "גבולות עירוב" לאוצריא · GitHub: ${REPO.replace('https://', '')}/releases · חנות התוספים של אוצריא: כלים ← תוספים ← חנות, חיפוש "גבולות עירוב"`;
   const CHANGELOG = [
+    ['0.6.2', ['המפה נפתחת במסך מלא', 'ועד העירובים השכונתיים בבני ברק נוסף לרשימת האחראים (רפאל סטפנסקי)']],
     ['0.6.1', ['תיקון שם האייקון לפי דרישות חנות אוצריא']],
     ['0.6.0', ['מסך מפה חדש: זום, גרירה, חיפוש, טעינת רחובות מקובץ, בתי כנסת, ופתיחת העיר מהמפה', 'כפתור מפה בסרגל העליון', 'אפשרויות עתידיות מסומנות "בקרוב": קווי עירוב, בדיקת כתובת, כיוון תפילה', 'חיפוש רחוב וכתובת תומך בקיצורי ערים']],
     ['0.5.3', ['מסך חדש "מפה (בפיתוח)" באודות: ערי העירוב על מפה, ולחיצה על עיר פותחת אותה', 'בכל ייצוא (תמונה והדפסה/PDF): קישור לגיטהאב והפניה לחנות התוספים של אוצריא', 'בסיס משותף למפה ולחיפוש (map-core) עם מקוואות וכיוון תפילה']],
@@ -898,7 +901,7 @@
     if (r.success) { $('#fbText').value = ''; toast(r.data === 'queued' ? 'התגובה תישלח כשיהיה חיבור' : 'התגובה נשלחה, תודה!'); }
     else toast('השליחה זמינה בתוך אוצריא');
   }
-  const VERSION = '0.6.1';
+  const VERSION = '0.6.2';
 
   // ── אודות ───────────────────────────────────────────────────
   function openHalacha() {
@@ -920,7 +923,7 @@
     $('#infoTitle').textContent = 'מפה (בפיתוח)';
     $('#infoBody').innerHTML = '<div id="mapHost"></div><p class="fine">מיקומי הערים בקירוב. המפות עצמן הן התמונות של מוקד העירוב. כדי להגיע לעיר: לחיצה על נקודה ואז "פתיחת העיר".</p><div class="sheet-actions"><button class="btn tonal" id="mapBack">חזרה</button></div>';
     $('#mapBack').onclick = openInfo;
-    $('#infoScrim').hidden = false;
+    $('#infoScrim').hidden = false; $('#infoScrim').classList.add('full');
     if (!MC || !UI) { $('#mapHost').textContent = 'רכיב המפה לא נטען.'; return; }
     const pts = cities.map(c => ({ id: c, name: c + ' · ' + byCity.get(c).maps.length + ' מפות', sub: byCity.get(c).maps.length + ' מפות עירוב', lat: CITY_POS[c][0], lon: CITY_POS[c][1] }));
     UI.mount($('#mapHost'), { points: pts, layerId: 'eruv', glyph: 'ע', layerName: 'ערי עירוב', call, openLink, repo: REPO, forumUrl: 'https://otzaria.org/forum/post/45390', issueUrl: REPO + '/issues/1',
@@ -928,6 +931,7 @@
       onPick: id => { $('#infoScrim').hidden = true; goCity(id); } });
   }
   function openInfo() {
+    $('#infoScrim').classList.remove('full');
     $('#infoTitle').textContent = 'אודות התוסף';
     $('#infoBody').innerHTML = `
       <p>גבולות עירוב ${VERSION} · מאת לזש"ק לרמב"ר ומבק"י. המפות ורשימת האחראים מאתר <b>מוקד העירוב</b>, באישורם.

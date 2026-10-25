@@ -465,3 +465,8 @@ html[lang=en] p, html[lang=en] .techum-empty > div, html[lang=en] .who, html[lan
 .mapdev svg { display: block; width: 100%; height: auto; max-height: 60vh; background: var(--color-surface-container, transparent); border-radius: var(--radius-md); }
 .mapdev g[data-id] circle { transition: r .12s; }
 .mapdev g[data-id]:hover circle { r: 11; }
+
+/* מפה במסך מלא */
+.sheet-scrim.full { padding: 0; }
+.sheet-scrim.full .sheet { width: 100%; max-width: none; height: 100%; max-height: none; border-radius: 0; }
+.sheet-scrim.full .mapui .view svg { max-height: 62vh; }
