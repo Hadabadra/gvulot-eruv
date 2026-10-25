@@ -33,7 +33,7 @@
   }
 
   // ── מצב ושמירה ──────────────────────────────────────────────
-  const state = { sec: 'il', view: 'home', city: null, q: '', favs: [], recent: [], docPages: {}, abroadC: '', settings: { toolbar: true } };
+  const state = { sec: 'il', view: 'home', city: null, q: '', favs: [], recent: [], docPages: {}, abroadC: '', settings: { toolbar: true }, tab: 'list', mapSel: null, online: true };
   async function loadPrefs() {
     for (const k of ['favs', 'recent']) {
       const r = await call('storage.get', { key: k });
@@ -110,7 +110,7 @@
       const m = mapById.get(id);
       return `<button class="chip map" data-open-map="${id}" title="פתיחת המפה">${ICON.map}${esc(m.title)}</button>`;
     }).join('');
-    const own = (byCity.get(a.city) || { maps: [] }).maps.filter(m => m.user && m.area && norm(a.area).includes(norm(m.area)));
+    const own = (byCity.get(a.city) || { maps: [] }).maps.filter(m => m.user && m.area && (m.area === a.area || norm(a.area).includes(norm(m.area))));
     if (!opts.noMaps) mapsChips += own.map(m => `<button class="chip map" data-open-map="${m.id}">${ICON.map}${esc(m.title)} (שלי)</button>`).join('');
     const gm = !opts.noMaps && !a.maps.length && !own.length && generalMap(a.city);
     if (gm) mapsChips += `<button class="chip map" data-open-map="${gm.id}" title="השכונה מסומנת במפה הכללית של העיר">${ICON.map}מפה כללית</button>`;
@@ -177,6 +177,7 @@
     else if (state.view === 'abroad') { $('#crumb').textContent = 'עירובין בחו"ל'; main.innerHTML = abroadView(); }
     else { $('#crumb').textContent = 'כל הארץ'; main.innerHTML = homeView(); }
     main.scrollTop = 0;
+    showTab();
     $('#btnDocs').classList.toggle('on', state.view === 'docs' && !state.q.trim());
     saveView();
   }
@@ -184,7 +185,7 @@
   let saveT;
   function saveView() {
     clearTimeout(saveT);
-    saveT = setTimeout(() => call('plugin.setRestoreState', { state: { view: state.view, city: state.city, abroadC: state.abroadC } }), 400);
+    saveT = setTimeout(() => call('plugin.setRestoreState', { state: { view: state.view, city: state.city, abroadC: state.abroadC, tab: state.tab } }), 400);
   }
 
   function homeView() {
@@ -218,6 +219,7 @@
     return `<div class="wrap">
       <div class="hero"><div class="grow"><h2>${esc(c)}</h2>
         <p>${n.maps.length ? n.maps.length + ' מפות עירוב' : 'אין עדיין מפה לעיר זו, אך יש אחראים מקומיים'}${n.areas.length ? ' · ' + n.areas.length + ' שכונות עם אחראי' : ''}</p></div>
+        ${CITY_POS[c] ? `<button class="btn text" data-mapdev="${esc(c)}">${ICON.map} במפה</button>` : ''}
         <button class="btn text" data-add-map="${esc(c)}">${ICON.map} הוספת מפה משלי</button>
         <button class="btn ${fav ? 'tonal' : 'text'}" data-fav="${esc(c)}">${ICON.star} ${fav ? 'במועדפים' : 'הוספה למועדפים'}</button>
       </div>
@@ -480,7 +482,7 @@
   // ── ניווט ───────────────────────────────────────────────────
   function goCity(c) {
     state.view = 'city'; state.city = c; state.q = ''; $('#q').value = '';
-    if (!$('#infoScrim').hidden && $('#infoScrim').classList.contains('full') && D.cities.includes(c)) setTimeout(() => openMapDev(c), 0);
+    state.mapSel = null;
     state.recent = [c, ...state.recent.filter(x => x !== c)].slice(0, 8); savePref('recent');
     render();
   }
@@ -779,10 +781,17 @@
         <label class="field"><span>עיר</span><input name="city" list="dlCities" required value="${esc(city || '')}"></label>
         <datalist id="dlCities">${D.cities.map(c => `<option value="${esc(c)}">`).join('')}</datalist>
         <label class="field"><span>שם המפה</span><input name="title" required value="${esc(title)}"></label>
-        <label class="field"><span>שכונה (לקישור לאחראים, לא חובה)</span><input name="area" placeholder="למשל: פרדס כץ"></label>
+        <label class="field"><span>שכונה (המפה תופיע באריח של האחראי)</span><select name="area"></select></label>
+        <p class="fine own-link">רוצים לראות היכן העיר על המפה? <button type="button" class="btn text" data-own-mapdev>המפה המצוירת (בפיתוח)</button></p>
         <div class="sheet-actions"><button type="button" class="btn text" data-x>ביטול</button><button class="btn filled">הוספה</button></div></form>`;
       document.body.appendChild(sc);
-      const f = sc.querySelector('form'); (city ? f.title : f.city).focus();
+      const f = sc.querySelector('form');
+      // השכונות של העיר מתוך רשימת האחראים, כך שהמפה מתחברת לאריח הנכון בלי הקלדה
+      const fillAreas = () => { const n = byCity.get(f.city.value.trim()); const list = n ? [...new Set(n.areas.map(a => a.area).filter(Boolean))] : [];
+        f.area.innerHTML = '<option value="">כל העיר</option>' + list.map(x => `<option value="${esc(x)}">${esc(x)}</option>`).join(''); };
+      fillAreas(); f.city.addEventListener('change', fillAreas); f.city.addEventListener('input', fillAreas);
+      sc.querySelector('[data-own-mapdev]').onclick = () => { const c = f.city.value.trim(); done(null); openMapDev(byCity.has(c) ? c : null); };
+      (city ? f.title : f.city).focus();
       const done = v => { sc.remove(); res(v); };
       sc.querySelector('[data-x]').onclick = () => done(null);
       sc.addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); done(null); } });
@@ -808,6 +817,7 @@
   }
   // ── קישורים: באוצריא קישור רגיל לא נפתח — פותחים בדפדפן החיצוני וגם מעתיקים ללוח ──
   async function openLink(u) {
+    if (!state.online && /^https?:/i.test(u)) { toast('אוצריא במצב מנותק: קישורים חיצוניים כבויים'); return; }
     if (!(await confirmExternal(u))) return;
     let copied = false;
     try { await navigator.clipboard.writeText(u); copied = true; } catch (e) {}
@@ -883,6 +893,7 @@
   // בכל ייצוא (תמונה, הדפסה/PDF): קישור לגיטהאב והפניה לחנות התוספים של אוצריא
   const exportLinks = () => `מתוך תוסף "גבולות עירוב" לאוצריא · GitHub: ${REPO.replace('https://', '')}/releases · חנות התוספים של אוצריא: כלים ← תוספים ← חנות, חיפוש "גבולות עירוב"`;
   const CHANGELOG = [
+    ['1.1.0', ["המפה היא עכשיו לשונית בתוך התוסף (\"רשימה | מפה\" מעל התוכן) במקום חלון מעל המסך. בדף כל עיר כפתור \"במפה\" שעובר ללשונית וממקד על העיר.", "מצב מנותק באוצריא: כל הקישורים החוצה (אתרים, GitHub, הורדת רחובות) מוסתרים. טלפונים ואימיילים נשארים.", "מפה אישית: השכונה נבחרת מרשימת השכונות של העיר, והמפה מופיעה אוטומטית באריח של האחראי לשכונה. בחלון ההוספה קישור למפה המצוירת (בפיתוח).", "הוסרה מהמפה השכבה \"כיוון תפילה (בקרוב)\"."]],
     ['1.0.2', ['תיקון צבע צל בחלון המפה הצדדי כדי שהעדכון יעלה לחנות']],
     ['1.0.1', ['המפה נפתחת בצד ליד סרגל הערים ולא מכסה את המסך; לחיצה נוספת על כפתור המפה סוגרת אותה; בחירת עיר ברשימה ממקדת את המפה']],
     ['1.0.0', ['גרסה סופית ראשונה', 'קישור חיצוני נפתח בדפדפן המערכת אחרי אישור', 'המפה במסך מלא מתחת לסרגל העליון', 'הורדת קובץ רחובות לעיר בלחיצה אחת, ואז טעינה במסך המפה']],
@@ -916,7 +927,7 @@
     if (r.success) { $('#fbText').value = ''; toast(r.data === 'queued' ? 'התגובה תישלח כשיהיה חיבור' : 'התגובה נשלחה, תודה!'); }
     else toast('השליחה זמינה בתוך אוצריא');
   }
-  const VERSION = '1.0.2';
+  const VERSION = '1.1.0';
 
   // ── אודות ───────────────────────────────────────────────────
   function openHalacha() {
@@ -932,18 +943,33 @@
     $('#infoScrim').hidden = false; $('#infoClose').focus();
   }
   // מפה (בפיתוח): בסיס משותף עם מקוואות וכיוון תפילה (map-core.js). כרגע ערי העירוב כנקודות, בלי שכבת רחובות וקווי עירוב.
-  function openMapDev(sel) {
+  // לשונית מפה (1.1.0): חלק מהתוסף, לא חלון מעליו. ערי העירוב כנקודות (מיקום בקירוב), בלי קווי עירוב עדיין.
+  let mapKey = '';
+  function showTab() {
+    const map = state.tab === 'map';
+    document.querySelectorAll('#viewTabs [data-tab]').forEach(b => { b.classList.toggle('on', b.dataset.tab === state.tab); b.setAttribute('aria-selected', String(b.dataset.tab === state.tab)); });
+    $('#main').hidden = map; $('#mapTab').hidden = !map;
+    const sel = state.mapSel || (state.view === 'city' && CITY_POS[state.city] ? state.city : null);
+    $('#viewScope').textContent = map ? (sel || 'כל הארץ') : '';
+    if (!map) return;
+    const key = [sel, state.online].join('|');
+    if (key === mapKey && $('#mapTab').firstChild) return; mapKey = key;
     const MC = window.MapCore, UI = window.MapUI;
+    if (!MC || !UI) { $('#mapTab').textContent = 'רכיב המפה לא נטען.'; return; }
     const cities = Object.keys(CITY_POS).filter(c => byCity.has(c));
-    $('#infoTitle').textContent = 'מפה (בפיתוח)';
-    $('#infoBody').innerHTML = '<div id="mapHost"></div><p class="fine">מיקומי הערים בקירוב. המפות עצמן הן התמונות של מוקד העירוב. כדי להגיע לעיר: לחיצה על נקודה ואז "פתיחת העיר".</p><div class="sheet-actions"><button class="btn tonal" id="mapBack">חזרה</button></div>';
-    $('#mapBack').onclick = () => { $('#infoScrim').hidden = true; };
-    $('#infoScrim').hidden = false; $('#infoScrim').classList.add('full'); $('#infoScrim').style.top = Math.round(document.querySelector('.topbar, header').getBoundingClientRect().bottom) + 'px';
-    if (!MC || !UI) { $('#mapHost').textContent = 'רכיב המפה לא נטען.'; return; }
-    const pts = cities.map(c => ({ id: c, name: c + ' · ' + byCity.get(c).maps.length + ' מפות', sub: byCity.get(c).maps.length + ' מפות עירוב', lat: CITY_POS[c][0], lon: CITY_POS[c][1] }));
-    UI.mount($('#mapHost'), { points: pts, layerId: 'eruv', glyph: 'ע', layerName: 'ערי עירוב', selectedId: typeof sel === 'string' ? sel : null, call, openLink, repo: REPO, forumUrl: 'https://otzaria.org/forum/post/45390', issueUrl: REPO + '/issues/1',
-      pickLabel: 'פתיחת העיר', nearbyLabel: 'ערים קרובות', future: ['קווי עירוב על המפה (בקרוב)', 'בדיקת כתובת בתוך העירוב (בקרוב)', 'כיוון תפילה (בקרוב)'],
-      onPick: id => { goCity(id); } });
+    const pts = cities.map(c => ({ id: c, name: c + ' · ' + byCity.get(c).maps.length + ' מפות', sub: byCity.get(c).maps.length + ' מפות עירוב · ' + byCity.get(c).areas.length + ' שכונות עם אחראי', lat: CITY_POS[c][0], lon: CITY_POS[c][1] }));
+    UI.mount($('#mapTab'), { tab: true, online: state.online, points: pts, layerId: 'eruv', glyph: 'ע', layerName: 'ערי עירוב', selectedId: sel, call, openLink, repo: REPO, forumUrl: 'https://otzaria.org/forum/post/45390', issueUrl: REPO + '/issues/1',
+      pickLabel: 'פתיחת העיר', nearbyLabel: 'ערים קרובות', future: ['קווי עירוב על המפה (בקרוב)', 'בדיקת כתובת בתוך העירוב (בקרוב)'],
+      onPick: id => { state.tab = 'list'; goCity(id); } });
+    $('#mapTab').insertAdjacentHTML('beforeend', '<p class="fine">מיקומי הערים בקירוב. המפות עצמן הן התמונות של מוקד העירוב (בלשונית "רשימה").</p>');
+  }
+  function openMapDev(sel) { state.mapSel = typeof sel === 'string' && sel ? sel : null; state.tab = 'map'; showTab(); saveView(); }
+  // ── מצב מנותק באוצריא: מסתירים כל קישור החוצה (טלפונים ואימיילים נשארים) ──
+  function setOnline(v) { const was = state.online; state.online = v !== false; document.body.classList.toggle('offline', !state.online); if (was !== state.online) { mapKey = ''; showTab(); } }
+  async function recheckOnline(payload) {
+    if (payload && payload.connectivity && payload.connectivity.isOnline != null) return setOnline(payload.connectivity.isOnline);
+    if (!hasOtz) return;
+    const c = await call('app.getConnectivity'); if (c && c.success && c.data && c.data.isOnline != null) setOnline(c.data.isOnline);
   }
   function openInfo() {
     $('#infoScrim').classList.remove('full'); $('#infoScrim').style.top = '';
@@ -989,7 +1015,7 @@
     else if (t.dataset.view) goView(t.dataset.view);
     else if (t.dataset.abroad) { state.abroadC = t.dataset.abroad; state.abq = ''; state.view = 'abroad'; state.q = ''; $('#q').value = ''; render(); }
     else if (t.dataset.hosp) { state.hosp = t.dataset.hosp; state.view = 'hosp'; state.q = ''; $('#q').value = ''; render(); }
-    else if (t.dataset.mapdev !== undefined) openMapDev();
+    else if (t.dataset.mapdev !== undefined) { $('#infoScrim').hidden = true; openMapDev(t.dataset.mapdev || null); }
     else if (t.dataset.toggleToolbar !== undefined) toggleToolbar();
     else if (t.dataset.addMap !== undefined) addOwnMap(t.dataset.addMap);
     else if (t.dataset.delMap) delOwnMap(t.dataset.delMap);
@@ -1009,7 +1035,7 @@
   $('#btnHome').onclick = goHome;
   $('#btnDocs').onclick = () => goView('docs');
   $('#btnInfo').onclick = openInfo;
-  $('#btnMap').onclick = () => { const sc = $('#infoScrim'); if (!sc.hidden && sc.classList.contains('full')) sc.hidden = true; else openMapDev(); };
+  $('#viewTabs').onclick = e => { const b = e.target.closest('[data-tab]'); if (!b) return; state.tab = b.dataset.tab; if (state.tab === 'list') state.mapSel = null; showTab(); saveView(); };
   $('#btnHal').onclick = openHalacha;
   $('#btnLoc').onclick = locateMe;
   $('#infoClose').onclick = () => { $('#infoScrim').hidden = true; };
@@ -1054,6 +1080,10 @@
     await loadPrefs();
     await loadOwnMaps();
     const rs = payload && payload.restore && payload.restore.state;
+    if (rs && rs.tab) state.tab = rs.tab;
+    await recheckOnline(payload);
+    addEventListener('focus', () => recheckOnline());
+    if (hasOtz) Otzaria.on('plugin.resumed', () => recheckOnline());
     if (rs && rs.view) { state.view = rs.view; state.city = byCity.has(rs.city) ? rs.city : null; state.abroadC = rs.abroadC || ''; if (rs.view === 'city' && !state.city) state.view = 'home'; }
     render();
     $('#q').focus();

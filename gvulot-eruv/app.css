@@ -471,3 +471,13 @@ html[lang=en] p, html[lang=en] .techum-empty > div, html[lang=en] .who, html[lan
 .sheet-scrim.full .sheet { position: absolute; inset-block: 0; inset-inline-end: 0; width: min(46vw, 44em); max-width: none; height: 100%; max-height: none; border-radius: 0; pointer-events: auto; box-shadow: 0 0 1.5em var(--color-shadow-soft); }
 @media (max-width: 760px) { .sheet-scrim.full .sheet { width: 100%; } }
 .sheet-scrim.full .mapui .view svg { max-height: 62vh; }
+
+/* 1.1.0: לשוניות רשימה | מפה בתוך אזור התוכן */
+.main-col { flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 0; }
+.viewbar { display: flex; align-items: center; gap: .75em; padding: .6em 1.6em 0; }
+.viewtabs { display: flex; gap: .25em; padding: .25em; width: 12em; border-radius: var(--radius-pill); background: var(--color-surface-container); }
+.viewscope { color: var(--color-on-surface-variant); font-size: .9em; }
+.map-tab { flex: 1; min-height: 0; overflow-y: auto; padding: .4em 1.6em 2em; }
+.own-link { font-size: .9em; }
+/* מצב מנותק באוצריא: בלי קישורים החוצה */
+body.offline [data-url^="http"], body.offline .ext-only { display: none !important; }

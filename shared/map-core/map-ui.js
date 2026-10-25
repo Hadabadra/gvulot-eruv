@@ -1,7 +1,8 @@
 /* map-ui: מסך מפה משותף לתוספי אוצריא (מקוואות, גבולות עירוב). נשען על map-core.js.
    סטטוס: בפיתוח. מה שעובד היום: מפת נקודות עם זום וגרירה, חיפוש לפי שם, טעינת רחובות מקובץ
    (חיפוש רחוב ופינה, הנקודות הקרובות, בתי כנסת), הצגת "המיקום שלי".
-   מה שעדיין "בקרוב" (מוצג כפתור שלא פעיל, כדי שיהיה ברור איפה זה יהיה): מסלול הגעה, קווי עירוב, כיוון תפילה, בדיקת כתובת.
+   מה שעדיין "בקרוב" (מוצג כפתור שלא פעיל, כדי שיהיה ברור איפה זה יהיה): מסלול הגעה, קווי עירוב, בדיקת כתובת.
+   online:false (מצב מנותק באוצריא) מסתיר כל קישור החוצה: הורדת רחובות, Waze/Google, הצטרפות.
 
    שימוש: MapUI.mount(element, {
      points: [{id, name, sub, lat, lon}], layerId, glyph, layerName, selectedId, me: [lat, lon],
@@ -21,7 +22,7 @@
     'טעינת רחובות מקובץ': 'Load streets from a file', 'הורדת רחובות לעיר': 'Download city streets', 'הורדת רחובות (מתקרבים לעיר בזום)': 'Download streets (zoom in to a city)', 'מקור חלופי 1': 'Alternative source 1', 'מקור חלופי 2': 'Alternative source 2',
     'חיפוש רחוב או פינה, למשל: הרצל פינת בן יהודה': 'Search a street or corner, e.g. Herzl corner Ben Yehuda', 'חיפוש': 'Search',
     'שכבות': 'Layers', 'רחובות': 'Streets', 'בתי כנסת': 'Synagogues', 'מסלול הליכה או נסיעה (בקרוב)': 'Walking or driving route (coming soon)',
-    'קווי עירוב (בקרוב)': 'Eruv lines (coming soon)', 'כיוון תפילה (בקרוב)': 'Prayer direction (coming soon)', 'בדיקת כתובת בתוך העירוב (בקרוב)': 'Check an address inside the eruv (coming soon)',
+    'קווי עירוב (בקרוב)': 'Eruv lines (coming soon)', 'בדיקת כתובת בתוך העירוב (בקרוב)': 'Check an address inside the eruv (coming soon)',
     'בפיתוח': 'In development', 'מחכה לעזרה': 'Looking for help', 'הצטרפות': 'Join', 'הבקשה בגיטהאב': 'Request on GitHub', 'השרשור בפורום': 'Forum thread',
     'חזרה': 'Back', 'קרוב לכתובת': 'Near this address', 'נמצא:': 'Found:', 'לא נמצא רחוב בשם': 'No street found named', 'הרחובות לא נפגשים באזור הזה': 'The streets do not meet in this area',
     'הקובץ לא נקרא': 'The file could not be read', 'בקובץ אין רחובות': 'The file has no streets', 'כדי לחפש רחוב צריך לטעון קובץ רחובות': 'To search a street, load a streets file first',
@@ -46,6 +47,7 @@
 .mapui .layers { display: flex; flex-wrap: wrap; gap: .3em 1em; margin: .4em 0; font-size: .9em; }
 .mapui .layers label.off { opacity: .55; }
 .mapui h4 { margin: .8em 0 .2em; }
+.mapui.mapui-tab .view svg { max-height: calc(100vh - 16em); min-height: 18em; }
 `;
 
   function mount(el, o) {
@@ -67,10 +69,11 @@
     const selPt = () => (S.sel != null ? byId.get(S.sel) : null);
     if (selPt()) { S.lat = selPt().lat; S.lon = selPt().lon; S.zoom = 3; } else fit();
 
-    const future = (o.future || ['מסלול הליכה או נסיעה (בקרוב)', 'קווי עירוב (בקרוב)', 'כיוון תפילה (בקרוב)']);
-    const join = [o.repo ? `<button class="mu" data-mu-open="${esc(o.repo + '/issues/new')}">הצטרפות</button>` : '', o.issueUrl ? `<button class="mu" data-mu-open="${esc(o.issueUrl)}">הבקשה בגיטהאב</button>` : '', o.forumUrl ? `<button class="mu" data-mu-open="${esc(o.forumUrl)}">השרשור בפורום</button>` : ''].join(' ');
+    const future = (o.future || ['מסלול הליכה או נסיעה (בקרוב)', 'קווי עירוב (בקרוב)']);
+    const off = o.online === false;
+    const join = off ? '' : [o.repo ? `<button class="mu" data-mu-open="${esc(o.repo + '/issues/new')}">הצטרפות</button>` : '', o.issueUrl ? `<button class="mu" data-mu-open="${esc(o.issueUrl)}">הבקשה בגיטהאב</button>` : '', o.forumUrl ? `<button class="mu" data-mu-open="${esc(o.forumUrl)}">השרשור בפורום</button>` : ''].join(' ');
 
-    el.classList.add('mapui');
+    el.classList.add('mapui'); el.classList.toggle('mapui-tab', !!o.tab);
     el.innerHTML = `
       <div class="bar"><button class="mu" data-mu="in" title="זום פנימה" aria-label="זום פנימה">+</button><button class="mu" data-mu="out" title="זום החוצה" aria-label="זום החוצה">−</button><button class="mu" data-mu="fit">מרכוז</button>
         <span class="msg" id="mu-hint">${pts.length ? 'מעבירים עכבר על נקודה, ולוחצים לפרטים' : 'אין נקודות עם מיקום להצגה'}</span></div>
@@ -84,13 +87,13 @@
         ${future.map(f => `<label class="off" title="בפיתוח: מחכה לעזרה"><input type="checkbox" disabled> ${esc(f)}</label>`).join('')}
       </div>
       <h4>רחובות וחיפוש</h4>
-      <div class="bar"><button class="mu" data-mu="dl" id="mu-dl">הורדת רחובות לעיר</button><button class="mu" data-mu="load">טעינת רחובות מקובץ</button></div>
-      <p class="msg">מורידים את קובץ העיר (נפתח בדפדפן וההורדה מתחילה לבד), ואז "טעינת רחובות מקובץ" ובוחרים אותו. <button class="mu" data-mu="url">מקור חלופי 1</button> <button class="mu" data-mu="url2">מקור חלופי 2</button> לעיר שאינה ברשימה. הקווים בלי רחובות הם קו מתאר מקורב של הארץ, לרקע בלבד.</p>
+      <div class="bar">${off ? '' : '<button class="mu" data-mu="dl" id="mu-dl">הורדת רחובות לעיר</button>'}<button class="mu" data-mu="load">טעינת רחובות מקובץ</button></div>
+      ${off ? '<p class="msg">אוצריא במצב מנותק: אפשר לטעון קובץ רחובות שכבר שמור במחשב.</p>' : `<p class="msg">מורידים את קובץ העיר (נפתח בדפדפן וההורדה מתחילה לבד), ואז "טעינת רחובות מקובץ" ובוחרים אותו. <button class="mu" data-mu="url">מקור חלופי 1</button> <button class="mu" data-mu="url2">מקור חלופי 2</button> לעיר שאינה ברשימה. הקווים בלי רחובות הם קו מתאר מקורב של הארץ, לרקע בלבד.</p>`}
       <div class="bar"><div class="grow"><input type="search" id="mu-q" placeholder="חיפוש רחוב או פינה, למשל: הרצל פינת בן יהודה" aria-label="חיפוש"></div><button class="mu" data-mu="search">חיפוש</button></div>
       <div class="msg" id="mu-msg"></div><div id="mu-near"></div>
       <h4>בפיתוח</h4>
       <div class="bar">${future.map(f => `<button class="mu" aria-disabled="true" data-mu="soon" title="בפיתוח: מחכה לעזרה">${esc(f)}</button>`).join('')}</div>
-      <p class="msg">זו תצוגה ראשונית, ויש בה שגיאות אפשריות. הקובץ נטען רק לזמן הפתיחה של המסך. מחכה לעזרה: ${join}</p>`;
+      <p class="msg">זו תצוגה ראשונית, ויש בה שגיאות אפשריות. הקובץ נטען רק לזמן הפתיחה של המסך.${join ? ' מחכה לעזרה: ' + join : ''}</p>`;
     const $ = id => el.querySelector('#' + id);
     const nearCity = () => {
       const C = window.STREET_CITIES || {}; let best = null;
@@ -111,8 +114,8 @@
       b.hidden = false;
       b.innerHTML = `<strong>${esc(p.name)}</strong>${p.sub ? '<br>' + esc(p.sub) : ''}<div class="bar">`
         + (o.onPick ? `<button class="mu" data-mu="pick">${esc(o.pickLabel || 'פתיחה ברשימה')}</button>` : '')
-        + `<button class="mu" data-mu-open="https://waze.com/ul?ll=${p.lat},${p.lon}&navigate=yes">ניווט ב-Waze</button>`
-        + `<button class="mu" data-mu-open="https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lon}">פתיחה ב-Google Maps</button>`
+        + (off ? '' : `<button class="mu" data-mu-open="https://waze.com/ul?ll=${p.lat},${p.lon}&navigate=yes">ניווט ב-Waze</button>`
+        + `<button class="mu" data-mu-open="https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lon}">פתיחה ב-Google Maps</button>`)
         + `<button class="mu" aria-disabled="true" data-mu="soon" title="בפיתוח: מחכה לעזרה">${esc(future[0])}</button></div>`;
     }
     function nearList(center) {

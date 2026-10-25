@@ -30,7 +30,7 @@
     'אתר העירוב': 'Eruv website', 'אתר': 'Website', 'הוספת מפה משלי': 'Add my own map', 'רב בית החולים': 'Hospital rabbi',
     'עוזר הרב': "Rabbi's assistant", 'לא פורסם טלפון ישיר': 'No direct phone published', 'אחראים בלבד': 'Contacts only',
     'רשימת אחראים': 'Contacts', 'מפה כללית': 'General map', 'כל החוברת': 'Whole booklet', 'מקור:': 'Source:',
-    'עברית': 'עברית', 'מפה': 'Map', 'יצירת קשר עם המוקד': 'Contact the Eruv Hotline', 'לאתר המוקד': 'Hotline website',
+    'עברית': 'עברית', 'מפה': 'Map', 'רשימה': 'List', 'במפה': 'On the map', 'יצירת קשר עם המוקד': 'Contact the Eruv Hotline', 'לאתר המוקד': 'Hotline website',
     'Evanston (בבנייה, צפי 2028)': 'Evanston (under construction, due 2028)', 'מפות העירובין של שיקגו (cRc)': 'Chicago eruv maps (cRc)',
     'Chicago Mitzvah Campaign — ליווי רבני בבתי החולים': 'Chicago Mitzvah Campaign — rabbinic hospital support', 'קו סטטוס עירוב סקוקי (cRc)': 'Skokie eruv status line (cRc)',
     'ליווי רבני וחדרי אירוח לשבת בבתי החולים באזור שיקגו': 'Rabbinic support and Shabbat hospitality rooms in Chicago-area hospitals',

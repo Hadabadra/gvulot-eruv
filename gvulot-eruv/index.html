@@ -27,7 +27,6 @@
       <button class="icon-btn topbar-btn" id="btnLoc" title="המיקום שלי — פתיחת העיר הקרובה" aria-label="המיקום שלי"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button>
       <button class="icon-btn topbar-btn" id="btnDocs" title="תחום שבת, חוברות וספרייה" aria-label="תחום שבת וחוברות"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray="3 2.2"/><path d="M12 8v4l2.6 2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
       <button class="icon-btn topbar-btn" id="btnHal" title="מידע הלכתי ומקורות" aria-label="מידע הלכתי"><svg viewBox="0 0 24 24"><path d="M5 4.5h5.5a2 2 0 0 1 2 2V20a1.6 1.6 0 0 0-1.6-1.6H5zM19 4.5h-5.5a1 1 0 0 0-1 1V20a1.6 1.6 0 0 1 1.6-1.6H19z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></button>
-      <button class="icon-btn topbar-btn" id="btnMap" title="מפה (בפיתוח)" aria-label="מפה"><svg viewBox="0 0 24 24"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></button>
       <button class="icon-btn topbar-btn" id="btnInfo" title="אודות ומקור הנתונים" aria-label="אודות"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 11v6M12 7.5v.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
     </div>
   </header>
@@ -48,7 +47,11 @@
       </div>
       <div class="rail-list" id="cityList"></div>
     </nav>
-    <main class="app-content" id="main" tabindex="-1"></main>
+    <div class="main-col">
+      <div class="viewbar"><div class="viewtabs" id="viewTabs" role="tablist" aria-label="תצוגה"><button class="sec on" data-tab="list" role="tab">רשימה</button><button class="sec" data-tab="map" role="tab">מפה</button></div><span class="viewscope" id="viewScope"></span></div>
+      <main class="app-content" id="main" tabindex="-1"></main>
+      <section class="map-tab" id="mapTab" aria-label="מפה" hidden></section>
+    </div>
   </div>
 </div>
 
