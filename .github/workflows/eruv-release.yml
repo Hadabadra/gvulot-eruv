@@ -30,3 +30,15 @@ jobs:
           awk -v h="## מה חדש ב-$v" 'index($0,h)==1{f=1;next} /^## /{if(f)exit} f' README.md > notes.md
           printf '\n### התקנה\nבאוצריא: כלים ← תוספים ← התקן תוסף חדש, ובחירת הקובץ.\n' >> notes.md
           gh release create "$tag" "$file" --target "$GITHUB_SHA" --title "גבולות עירוב $v" --notes-file notes.md --prerelease
+
+  # פרסום לחנות התוספים של אוצריא (נדרשים הסודות OTZARIA_USER ו-OTZARIA_PASSWORD).
+  store:
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Otzaria/otzaria-plugin-validator@v1
+        with:
+          path: gvulot-eruv
+          otzaria-user: ${{ secrets.OTZARIA_USER }}
+          otzaria-password: ${{ secrets.OTZARIA_PASSWORD }}

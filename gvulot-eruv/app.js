@@ -684,7 +684,7 @@
   const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
   function composeCanvas() {
     const m = V.m, W = img.naturalWidth || m.w, H = img.naturalHeight || m.h;
-    const band = Math.round(W * .055), pad = Math.round(band * .3);
+    const band = Math.round(W * .07), pad = Math.round(band * .3);
     const cv = document.createElement('canvas'); cv.width = W; cv.height = H + band;
     const g = cv.getContext('2d');
     g.fillStyle = cssVar('--color-surface') || 'white'; g.fillRect(0, 0, cv.width, cv.height);
@@ -692,11 +692,12 @@
     const font = cssVar('--font-ui') || 'sans-serif';
     g.direction = 'rtl'; g.textAlign = 'right'; g.textBaseline = 'middle';
     g.fillStyle = cssVar('--color-on-surface') || 'black';
-    g.font = `600 ${Math.round(band * .36)}px ${font}`;
-    g.fillText(V.doc ? `${m.title} · עמוד ${V.page}` : `גבולות עירוב · ${m.city} · ${m.title}`, W - pad, band * .36);
+    g.font = `600 ${Math.round(band * .28)}px ${font}`;
+    g.fillText(V.doc ? `${m.title} · עמוד ${V.page}` : `גבולות עירוב · ${m.city} · ${m.title}`, W - pad, band * .24);
     g.fillStyle = cssVar('--color-on-surface-variant') || 'black';
-    g.font = `400 ${Math.round(band * .22)}px ${font}`;
-    g.fillText(`מקור: מוקד העירוב (${D.source.phone}). להתמצאות בלבד — יש לוודא מול האחראי המקומי לפני שבת.`, W - pad, band * .75);
+    g.font = `400 ${Math.round(band * .17)}px ${font}`;
+    g.fillText(`מקור: מוקד העירוב (${D.source.phone}). להתמצאות בלבד — יש לוודא מול האחראי המקומי לפני שבת.`, W - pad, band * .54);
+    g.fillText(exportLinks(), W - pad, band * .8);
     g.drawImage(img, 0, band, W, H);
     return cv;
   }
@@ -725,6 +726,7 @@
     const m = V.m, ps = $('#printSheet');
     ps.innerHTML = `<h1>${V.doc ? esc(m.title) + ' · עמוד ' + V.page : 'גבולות עירוב · ' + esc(m.city) + ' · ' + esc(m.title)}</h1>
       <p>מקור: מוקד העירוב (${esc(D.source.phone)}). להתמצאות בלבד — יש לוודא מול האחראי המקומי לפני שבת.</p>
+      <p>${esc(exportLinks())}</p>
       <img src="${esc(srcOf(m))}" alt="">`;
     const go = () => {
       document.body.classList.add('printing');
@@ -824,6 +826,8 @@
     ['גמרא — מסכת עירובין', 'עירובין', 'ב א']
   ];
   const OPEN_TASKS = [
+    'קווי עירוב וקטוריים, ובדיקת כתובת בתוך העירוב (מחכה לקבצי מפה: ועד העירובים השכונתיים בבני ברק יועברו אליו בקשות)',
+    'מפת רחובות בלי אינטרנט, בסיס משותף עם מקוואות וכיוון תפילה (בפיתוח, מחכה לעזרה: ראו "מפה (בפיתוח)")',
     'עדכון מתוך התוסף בזמן ריצה — אחרי שאוצריא תפתח את הכתובות (בקשה הוכנה)',
     'סיווג רמות עירוב (חצר / שכונתי / עירוני) — רק עם מקור מהמוקד',
     'קווי עירוב חדים (וקטור/SVG) מעל מפת רחובות, משכבת העירוב של GovMap — מחייב הרצה מישראל',
@@ -864,7 +868,11 @@
 
   // ── יומן שינויים ותגובות ─────────────────────────────────────
   const REPO = 'https://github.com/Hadabadra/gvulot-eruv';
+  // בכל ייצוא (תמונה, הדפסה/PDF): קישור לגיטהאב והפניה לחנות התוספים של אוצריא
+  const exportLinks = () => `מתוך תוסף "גבולות עירוב" לאוצריא · GitHub: ${REPO.replace('https://', '')}/releases · חנות התוספים של אוצריא: כלים ← תוספים ← חנות, חיפוש "גבולות עירוב"`;
   const CHANGELOG = [
+    ['0.6.0', ['מסך מפה חדש: זום, גרירה, חיפוש, טעינת רחובות מקובץ, בתי כנסת, ופתיחת העיר מהמפה', 'כפתור מפה בסרגל העליון', 'אפשרויות עתידיות מסומנות "בקרוב": קווי עירוב, בדיקת כתובת, כיוון תפילה', 'חיפוש רחוב וכתובת תומך בקיצורי ערים']],
+    ['0.5.3', ['מסך חדש "מפה (בפיתוח)" באודות: ערי העירוב על מפה, ולחיצה על עיר פותחת אותה', 'בכל ייצוא (תמונה והדפסה/PDF): קישור לגיטהאב והפניה לחנות התוספים של אוצריא', 'בסיס משותף למפה ולחיפוש (map-core) עם מקוואות וכיוון תפילה']],
     ['0.5.2', ['תיקון: כרטיסי חו"ל — הטקסט והכפתורים כבר לא עולים זה על זה', 'הדף מותאם לרוחב החלון, בלי גלילה אופקית']],
     ['0.5.1', ['חו"ל: נתוני המדריך eruv.org (באישורם) — 411 עירובין, קווי סטטוס וטלפונים, אימיילים וקישורי מפה', 'שמות בעברית למדינות ולערים מרכזיות בחו"ל, וחיפוש בעברית ובאנגלית', 'תיבת סינון בתוך דף הארץ (למשל "שיקגו")', 'יצירת קשר עם מוקד העירוב: דף יצירת הקשר, טלפון ואימייל', 'שיקגו: תוקנו שני קישורים מתים (ווסט רוג\'רס פארק, היילנד פארק)', 'אנגלית: גם התוכן של שיקגו']],
     ['0.5.0', ['ניווט ראשי בסרגל הצד: ישראל / חו"ל / בתי חולים', 'בתי חולים: נוספו שערי צדק, הדסה עין כרם, מעיני הישועה, לניאדו, בילינסון ושניידר — רב בית החולים, העוזר ושירותי הדת, רק מהאתר הרשמי של בית החולים ועם קישור למקור', 'עירוב במתחם ותחום שבת לפי מה שכתוב במקור הרשמי (בילינסון ושניידר: בתוך התחום מבני ברק ומגבעת שמואל)', 'ארגונים: מוקד העירוב ועזר מציון', 'קישורים לעמודי שירותי הדת של בתי חולים נוספים', 'עדכון אוטומטי שבועי מהמקורות במאגר, עם גרסה חדשה כשמשהו משתנה', 'בתי חולים בחו"ל: Memorial Sloan Kettering, Maimonides, Sinai (בולטימור) — מהאתר הרשמי', 'שיקגו: רשימת העירובין וקווי הסטטוס לפי מועצת הרבנים (cRc), כולל לינקולנווד–פיטרסון פארק; בתי החולים אוונסטון וסקוקי', 'ממשק בסיסי באנגלית (כפתור EN בסרגל העליון): כפתורים, כותרות, ערים ובתי חולים']],
@@ -889,7 +897,7 @@
     if (r.success) { $('#fbText').value = ''; toast(r.data === 'queued' ? 'התגובה תישלח כשיהיה חיבור' : 'התגובה נשלחה, תודה!'); }
     else toast('השליחה זמינה בתוך אוצריא');
   }
-  const VERSION = '0.5.2';
+  const VERSION = '0.6.0';
 
   // ── אודות ───────────────────────────────────────────────────
   function openHalacha() {
@@ -903,6 +911,20 @@
       <h3 class="info-h">ללימוד: מקורות בספריית אוצריא</h3>
       <div class="area-actions">${SOURCES.map(x => `<button class="chip map" data-src="${esc(x[1])}" data-ref="${esc(x[2])}">${ICON.map}${esc(x[0])}</button>`).join('')}</div>`;
     $('#infoScrim').hidden = false; $('#infoClose').focus();
+  }
+  // מפה (בפיתוח): בסיס משותף עם מקוואות וכיוון תפילה (map-core.js). כרגע ערי העירוב כנקודות, בלי שכבת רחובות וקווי עירוב.
+  function openMapDev() {
+    const MC = window.MapCore, UI = window.MapUI;
+    const cities = Object.keys(CITY_POS).filter(c => byCity.has(c));
+    $('#infoTitle').textContent = 'מפה (בפיתוח)';
+    $('#infoBody').innerHTML = '<div id="mapHost"></div><p class="fine">מיקומי הערים בקירוב. המפות עצמן הן התמונות של מוקד העירוב. כדי להגיע לעיר: לחיצה על נקודה ואז "פתיחת העיר".</p><div class="sheet-actions"><button class="btn tonal" id="mapBack">חזרה</button></div>';
+    $('#mapBack').onclick = openInfo;
+    $('#infoScrim').hidden = false;
+    if (!MC || !UI) { $('#mapHost').textContent = 'רכיב המפה לא נטען.'; return; }
+    const pts = cities.map(c => ({ id: c, name: c + ' · ' + byCity.get(c).maps.length + ' מפות', sub: byCity.get(c).maps.length + ' מפות עירוב', lat: CITY_POS[c][0], lon: CITY_POS[c][1] }));
+    UI.mount($('#mapHost'), { points: pts, layerId: 'eruv', glyph: 'ע', layerName: 'ערי עירוב', call, openLink, repo: REPO, forumUrl: 'https://otzaria.org/forum/post/45390', issueUrl: REPO + '/issues/1',
+      pickLabel: 'פתיחת העיר', nearbyLabel: 'ערים קרובות', future: ['קווי עירוב על המפה (בקרוב)', 'בדיקת כתובת בתוך העירוב (בקרוב)', 'כיוון תפילה (בקרוב)'],
+      onPick: id => { $('#infoScrim').hidden = true; goCity(id); } });
   }
   function openInfo() {
     $('#infoTitle').textContent = 'אודות התוסף';
@@ -926,6 +948,7 @@
       <ul class="tasks">${OPEN_TASKS.map(t => `<li>${esc(t)}</li>`).join('')}</ul>
       <details class="cl"><summary><b>יומן שינויים</b> · גרסה ${VERSION}: ${esc(CHANGELOG[0][1].join('; '))}</summary>
         ${CHANGELOG.slice(1).map(c => `<p><b>${esc(c[0])}</b> — ${esc(c[1].join('; '))}</p>`).join('')}</details>
+      <p><button class="btn tonal" data-mapdev>מפה (בפיתוח)</button></p>
       <p><button class="btn text" data-url="${REPO}/blob/main/gvulot-eruv-docs/PLAN.md">התכנון המלא בגיטהאב</button>
       <button class="btn text" data-url="${REPO}/releases">כל הגרסאות</button></p>`;
     $('#fbSend').onclick = sendFeedback;
@@ -939,13 +962,14 @@
     $('#main').innerHTML = abroadView(); const n = $('#abQ'); n.focus(); try { n.setSelectionRange(pos, pos); } catch (er) {}
   });
   document.addEventListener('click', e => {
-    const t = e.target.closest('[data-open-map],[data-city],[data-phone],[data-fav],[data-url],[data-add-map],[data-del-map],[data-src],[data-doc],[data-view],[data-abroad],[data-hosp],[data-sec],[data-toggle-toolbar]');
+    const t = e.target.closest('[data-open-map],[data-city],[data-phone],[data-fav],[data-url],[data-add-map],[data-del-map],[data-src],[data-doc],[data-view],[data-abroad],[data-hosp],[data-sec],[data-toggle-toolbar],[data-mapdev]');
     if (!t) return;
     if (t.dataset.doc) { $('#infoScrim').hidden = true; openDoc(t.dataset.doc, 0, t.dataset.from ? { from: +t.dataset.from, to: +t.dataset.to, title: t.dataset.part } : null); }
     else if (t.dataset.sec) goSec(t.dataset.sec);
     else if (t.dataset.view) goView(t.dataset.view);
     else if (t.dataset.abroad) { state.abroadC = t.dataset.abroad; state.abq = ''; state.view = 'abroad'; state.q = ''; $('#q').value = ''; render(); }
     else if (t.dataset.hosp) { state.hosp = t.dataset.hosp; state.view = 'hosp'; state.q = ''; $('#q').value = ''; render(); }
+    else if (t.dataset.mapdev !== undefined) openMapDev();
     else if (t.dataset.toggleToolbar !== undefined) toggleToolbar();
     else if (t.dataset.addMap !== undefined) addOwnMap(t.dataset.addMap);
     else if (t.dataset.delMap) delOwnMap(t.dataset.delMap);
@@ -965,6 +989,7 @@
   $('#btnHome').onclick = goHome;
   $('#btnDocs').onclick = () => goView('docs');
   $('#btnInfo').onclick = openInfo;
+  $('#btnMap').onclick = openMapDev;
   $('#btnHal').onclick = openHalacha;
   $('#btnLoc').onclick = locateMe;
   $('#infoClose').onclick = () => { $('#infoScrim').hidden = true; };

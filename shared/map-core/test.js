@@ -137,6 +137,9 @@ t('renderSVG: רחובות, שכבות, חץ צפון ושורת מקור', () =
   assert.ok(svg.includes('OpenStreetMap contributors'));
   assert.ok(/direction="rtl" text-anchor="start"[^>]*>\d+ מ' לרוחב/.test(svg), 'תווית קנה המידה מעוגנת rtl ולא נחתכת');
   assert.ok(svg.includes('stroke-width="7"'), 'רחוב נבחר מודגש');
+  const wide = M.renderSVG({ area: null, view: M.createView({ lat: 31.78, lon: 35.2, zoom: 0.001 }), layers: [] });
+  assert.ok(wide.includes('600 ק"מ לרוחב'), 'רוחב גדול מוצג בק"מ');
+  assert.ok(M.renderSVG({ area: null, view: M.createView({ lat: 31.78, lon: 35.2, zoom: 0.1 }), layers: [] }).includes('6.0 ק"מ לרוחב'));
   const noArea = M.renderSVG({ area: null, view: v, layers: [layer] });
   assert.ok(!noArea.includes('OpenStreetMap'), 'בלי אזור אין שורת מקור');
   assert.ok(noArea.includes('data-layer="mikvaot"'), 'שכבת נקודות עובדת בלי מפת רחובות');
@@ -159,5 +162,16 @@ if (process.env.KIVUN_ST) {
     console.log('    ' + a.name + ': ' + a.w.length + ' רחובות, חיפוש "' + name + '" ← ' + r.lat + ',' + r.lon + ', SVG ' + svg.length + ' תווים');
   });
 }
+
+t('overpassUrl, ציור שכבת בתי כנסת, מיקום שלי והדגשה', () => {
+  const u = M.overpassUrl(31.78, 35.2, 1200);
+  assert.ok(u.startsWith('https://overpass-api.de/api/interpreter?data=') && decodeURIComponent(u).includes('around:1200,31.78000,35.20000'));
+  const v = M.createView({ lat: 31.78, lon: 35.2, zoom: 2 });
+  const layer = M.toLayer(M.toGeoJSON([{ id: 'x', name: 'א', lat: 31.7801, lon: 35.2001 }], 'm'), 'm', 'מ');
+  const svg = M.renderSVG({ area, view: v, layers: [layer], syn: true, me: [31.78, 35.2], hl: 'x', streets: false });
+  assert.ok(svg.includes('✡') && svg.includes('המיקום שלי') && svg.includes('r="15"'));
+  assert.ok(!svg.includes('stroke-opacity=".75"'), 'streets:false מסתיר רחובות');
+  assert.ok(!M.renderSVG({ area, view: v, layers: [], syn: false, streets: true }).includes('✡'));
+});
 
 console.log('\n' + n + ' בדיקות עברו');

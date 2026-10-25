@@ -2,7 +2,7 @@
 // עובד בהחלפת טקסט מדויק אחרי כל ציור (MutationObserver), בלי לגעת בלוגיקה של app.js.
 // תוכן (שכונות, אחראים, חוברות, הסברים ארוכים) נשאר בעברית.
 (function () {
-  const W = {
+  const W = Object.assign({}, (window.MapUI && window.MapUI.EN) || {}, {
     // מסגרת וכפתורים
     'גבולות עירוב': 'Eruv Borders', 'כל הארץ': 'All Israel', 'ישראל': 'Israel', 'חו"ל': 'Abroad', 'בתי חולים': 'Hospitals',
     'ערים': 'Cities', 'ארצות': 'Countries', 'חיפוש': 'Search', 'כל הערים': 'All cities', 'המיקום שלי': 'My location',
@@ -48,7 +48,7 @@
     // בתי חולים
     'שערי צדק': 'Shaare Zedek', 'הדסה עין כרם': 'Hadassah Ein Kerem', 'מעיני הישועה': "Ma'ayanei HaYeshua", 'לניאדו': 'Laniado',
     'בילינסון (רבין)': 'Beilinson (Rabin)', 'שניידר': 'Schneider', 'איכילוב': 'Ichilov', 'תל השומר (שיבא)': 'Tel HaShomer (Sheba)', 'וולפסון': 'Wolfson'
-  };
+  });
   // ביטויים עם מספרים
   const P = [
     [/^(\d+) מפות$/, '$1 maps'], [/^(\d+) מפות · (\d+) שכונות$/, '$1 maps · $2 neighborhoods'], [/^אחראים בלבד · (\d+) שכונות$/, 'Contacts only · $1 neighborhoods'],

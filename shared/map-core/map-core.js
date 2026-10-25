@@ -185,6 +185,13 @@
     return [+(v.lat + dy / M_LAT).toFixed(6), +(v.lon + dx / v.kx).toFixed(6)];
   }
 
+  /* כתובת Overpass להורדת רחובות (ובתי כנסת) סביב נקודה. פותחים בדפדפן, שומרים את הקובץ וטוענים בתוסף. */
+  const OVERPASS = 'https://overpass-api.de/api/interpreter';
+  function overpassUrl(lat, lon, r) {
+    const a = `(around:${r || 1500},${(+lat).toFixed(5)},${(+lon).toFixed(5)})`;
+    return OVERPASS + '?data=' + encodeURIComponent(`[out:json][timeout:60];(way["highway"]["name"]${a};nwr["amenity"="place_of_worship"]["religion"="jewish"]${a};);out tags geom;`);
+  }
+
   /* ── שכבות ──
      שכבה: { id, glyph, points: [{lat, lon, label, id}], lines: [{coords: [[lat, lon], ...], closed, label}] }
      glyph: תו קצר שמצויר על הנקודה (למשל "מ" למקווה, "ע" לעירוב). */
@@ -209,11 +216,12 @@
   }
 
   /* ── ציור SVG (מחרוזת). צבעים כמשתני CSS של אוצריא, כמו בכיוון תפילה. ── */
+  const widthLabel = m => m >= 2000 ? (m >= 20000 ? Math.round(m / 1000) : (m / 1000).toFixed(1)) + ' ק"מ' : Math.round(m) + " מ'";
   function renderSVG(o) {
     const v = o.view, area = o.area, f = n => n.toFixed(1), W = v.width, H = v.height;
     let lines = '', labels = '', pts = '';
     const inView = (x, y, m) => x > -m && x < W + m && y > -m && y < H + m;
-    if (area) {
+    if (area && o.streets !== false) {
       for (const [name, hw, g] of area.w) {
         let d = '', best = null, any = false;
         for (let k = 0; k < g.length; k += 2) {
@@ -238,11 +246,18 @@
       }
       for (const pt of layer.points || []) {
         const p = project(v, pt.lat, pt.lon); if (!inView(p[0], p[1], 20)) continue;
-        pts += `<g data-layer="${esc(layer.id)}" data-id="${esc(pt.id || '')}"><title>${esc(pt.label || layer.id)}</title><circle cx="${f(p[0])}" cy="${f(p[1])}" r="9" fill="var(--color-primary)" stroke="var(--color-surface)" stroke-width="2"/>`
+        const hl = o.hl != null && String(o.hl) === String(pt.id);
+        pts += `<g data-layer="${esc(layer.id)}" data-id="${esc(pt.id || '')}"><title>${esc(pt.label || layer.id)}</title>${hl ? `<circle cx="${f(p[0])}" cy="${f(p[1])}" r="15" fill="none" stroke="var(--color-primary)" stroke-width="3"/>` : ''}<circle cx="${f(p[0])}" cy="${f(p[1])}" r="9" fill="var(--color-primary)" stroke="var(--color-surface)" stroke-width="2"/>`
           + `<text x="${f(p[0])}" y="${f(p[1] + 4)}" text-anchor="middle" font-size="11" font-weight="700" fill="var(--color-on-primary, #fff)">${esc(layer.glyph || '•')}</text></g>`;
         if (v.zoom >= 2 && pt.label) pts += `<text x="${f(p[0])}" y="${f(p[1] + 22)}" text-anchor="middle" font-size="10" fill="var(--color-primary)" paint-order="stroke" stroke="var(--color-surface)" stroke-width="3">${esc(pt.label)}</text>`;
       }
     }
+    let syn = '', me = '';
+    if (area && o.syn) for (const [sn, la, lo] of area.s || []) {
+      const p = project(v, la, lo); if (!inView(p[0], p[1], 10)) continue;
+      syn += `<g><title>${esc(sn || 'בית כנסת')}</title><text x="${f(p[0])}" y="${f(p[1] + 5)}" text-anchor="middle" font-size="14" fill="var(--color-primary)" paint-order="stroke" stroke="var(--color-surface)" stroke-width="3">✡</text></g>`;
+    }
+    if (o.me) { const p = project(v, o.me[0], o.me[1]); if (inView(p[0], p[1], 20)) me = `<circle cx="${f(p[0])}" cy="${f(p[1])}" r="7" fill="var(--color-on-surface)" stroke="var(--color-surface)" stroke-width="2.5"><title>המיקום שלי</title></circle>`; }
     let sel = '';
     if (o.selected && area && area.w[o.selected.i]) {
       const g = area.w[o.selected.i][2], k = o.selected.k, q = project(v, g[k], g[k + 1]), p = project(v, g[k + 2], g[k + 3]);
@@ -250,11 +265,11 @@
     }
     const north = `<g transform="translate(${W - 20},30) rotate(${f(v.rot)})"><path d="M0,-12 L6,7 L0,3 L-6,7Z" fill="var(--color-on-surface)" stroke="var(--color-surface)" stroke-width="1.5"/><text y="-15" text-anchor="middle" font-size="11" fill="var(--color-on-surface)" paint-order="stroke" stroke="var(--color-surface)" stroke-width="3">צ N</text></g>`;
     // טקסט עברי מתיישר מימין: מעוגן ב-rtl ליד חץ הצפון, ומתפרש שמאלה (כמו בכיוון תפילה)
-    const scale = `<text x="${W - 38}" y="18" direction="rtl" text-anchor="start" font-size="12" fill="var(--color-on-surface-dim)">${Math.round(v.hw * 2)} מ' לרוחב</text>`;
-    const attr = area ? `<text x="8" y="${H - 8}" direction="ltr" font-size="10" fill="var(--color-on-surface-dim)">© OpenStreetMap contributors${area.d ? ' · ' + esc(area.d) : ''}</text>` : '';
-    return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img">${lines}${sel}${labels}${pts}${north}${scale}${attr}</svg>`;
+    const scale = `<text x="${W - 38}" y="18" direction="rtl" text-anchor="start" font-size="12" fill="var(--color-on-surface-dim)">${widthLabel(v.hw * 2)} לרוחב</text>`;
+    const attr = area && o.streets !== false ? `<text x="8" y="${H - 8}" direction="ltr" font-size="10" fill="var(--color-on-surface-dim)">© OpenStreetMap contributors${area.d ? ' · ' + esc(area.d) : ''}</text>` : '';
+    return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img">${lines}${sel}${labels}${syn}${pts}${me}${north}${scale}${attr}</svg>`;
   }
 
   return { distM, decodeArea, compactOverpass, findCover, normName, normHe, expandAliases, findWays, searchStreet, findCorner, nearestStreets, placeLabel,
-    createView, project, unproject, toLayer, toGeoJSON, renderSVG };
+    createView, project, unproject, toLayer, toGeoJSON, renderSVG, overpassUrl };
 });

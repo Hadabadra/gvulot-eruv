@@ -460,3 +460,8 @@ html[lang=en] p, html[lang=en] .techum-empty > div, html[lang=en] .who, html[lan
 .app-content, .wrap { overflow-x: hidden; max-width: 100%; }
 .app-content img, .wrap img { max-width: 100%; }
 .ab-filter { width: 100%; max-width: 28em; margin: 0 0 .8em; padding: .55em .9em; border: 1px solid var(--color-outline-variant); border-radius: var(--radius-pill); background: var(--color-surface); color: var(--color-on-surface); font: inherit; }
+
+/* 0.5.3: מסך מפה (בפיתוח) */
+.mapdev svg { display: block; width: 100%; height: auto; max-height: 60vh; background: var(--color-surface-container, transparent); border-radius: var(--radius-md); }
+.mapdev g[data-id] circle { transition: r .12s; }
+.mapdev g[data-id]:hover circle { r: 11; }
