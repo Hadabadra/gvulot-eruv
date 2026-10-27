@@ -681,12 +681,20 @@
   $('#vSide').onclick = () => { const v = $('#viewer'); v.classList.toggle('side-off'); $('#vSide').classList.toggle('on', !v.classList.contains('side-off')); };
 
   // ── ייצוא: PNG / JPG / הדפסה ─────────────────────────────────
-  $('#vExp').onclick = e => { e.stopPropagation(); $('#expMenu').hidden = !$('#expMenu').hidden; };
+  $('#vExp').onclick = e => {
+    e.stopPropagation();
+    document.querySelectorAll('#expMenu .doc-only').forEach(b => { b.hidden = !V.doc; });
+    document.querySelectorAll('#expMenu .part-only').forEach(b => { b.hidden = !(V.doc && V.range); });
+    $('#expMenu').hidden = !$('#expMenu').hidden;
+  };
   document.addEventListener('click', () => { $('#expMenu').hidden = true; });
   $('#expMenu').addEventListener('click', e => {
     const b = e.target.closest('[data-exp]'); if (!b) return;
     $('#expMenu').hidden = true;
-    if (b.dataset.exp === 'print') printMap(); else exportImage(b.dataset.exp);
+    const x = b.dataset.exp;
+    if (x === 'print') printMap();
+    else if (x === 'book-pdf' || x === 'book-zip' || x === 'part-pdf') exportBooklet(x === 'book-zip' ? 'zip' : 'pdf', x === 'part-pdf');
+    else exportImage(x);
   });
 
   const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
@@ -708,6 +716,112 @@
     g.fillText(exportLinks(), W - pad, band * .8);
     g.drawImage(img, 0, band, W, H);
     return cv;
+  }
+  // שמירת קובץ בינארי דרך אוצריא (חלון "שמירה בשם" אחד); מחוץ לאוצריא — הורדה בדפדפן
+  async function saveBlob(blob, name, ext, mime, title) {
+    if (!hasOtz) {
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name + '.' + ext; a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 8000); return true;
+    }
+    const begin = await call('fs.beginBinaryWrite', { purpose: 'user-file', expectedSize: blob.size });
+    if (!begin.success) { toast('לא ניתן לשמור: אין הרשאת שמירת קבצים'); return false; }
+    try { const put = await fetch(begin.data.uploadUrl, { method: 'PUT', headers: { 'Content-Type': mime }, body: blob }); if (!put.ok) throw new Error(put.status); }
+    catch (e) { toast('השמירה נכשלה'); return false; }
+    const res = await call('fs.commitUserFileWrite', { writeToken: begin.data.writeToken, suggestedName: name, extension: ext, title });
+    if (res.success && res.data && !res.data.cancelled) { toast('נשמר: ' + (res.data.name || name + '.' + ext)); return true; }
+    if (!res.success) toast('השמירה נכשלה');
+    return false;
+  }
+
+  // ── 1.3.0 (#3): הורדת חוברת שלמה בלחיצה אחת — PDF אחד או ZIP של תמונות ──
+  // כל עמוד מצויר ב-pdf.js, ומעליו פס הייצוא (מקור, אזהרה, קישורי GitHub וחנות אוצריא). בלי ספריות חיצוניות.
+  let bookBusy = false;
+  async function exportBooklet(kind, partOnly) {
+    if (bookBusy) { toast('הורדת חוברת כבר בעבודה'); return; }
+    const d = V.doc; if (!d) return;
+    const R0 = partOnly && V.range ? V.range.from : 1, R1 = partOnly && V.range ? V.range.to : d.pages;
+    bookBusy = true;
+    try {
+      const pdf = await getPdf(d), pages = [], n = R1 - R0 + 1, PW = 1400;
+      for (let p = R0; p <= R1; p++) {
+        toast('מכין עמוד ' + (p - R0 + 1) + ' מתוך ' + n + '…');
+        const pg = await pdf.getPage(p);
+        const vp = pg.getViewport({ scale: PW / pg.getViewport({ scale: 1 }).width });
+        const W = Math.round(vp.width), H = Math.round(vp.height), band = Math.round(W * .07), pad = Math.round(band * .3);
+        const cv = document.createElement('canvas'); cv.width = W; cv.height = H + band;
+        const g = cv.getContext('2d');
+        g.fillStyle = 'white'; g.fillRect(0, 0, W, H + band);
+        g.fillStyle = '#eeeeee'; g.fillRect(0, 0, W, band);
+        const font = cssVar('--font-ui') || 'sans-serif';
+        g.direction = 'rtl'; g.textAlign = 'right'; g.textBaseline = 'middle'; g.fillStyle = 'black';
+        g.font = `600 ${Math.round(band * .28)}px ${font}`;
+        g.fillText(`${d.title} · עמוד ${p}`, W - pad, band * .24);
+        g.font = `400 ${Math.round(band * .17)}px ${font}`;
+        g.fillText(`מקור: מוקד העירוב (${D.source.phone}). להתמצאות בלבד — יש לוודא מול האחראי המקומי לפני שבת.`, W - pad, band * .54);
+        g.fillText(exportLinks(), W - pad, band * .8);
+        g.save(); g.translate(0, band);
+        await pg.render({ canvasContext: g, viewport: vp }).promise;
+        g.restore();
+        const blob = await new Promise(r => cv.toBlob(r, 'image/jpeg', .85));
+        pages.push({ w: W, h: H + band, bytes: new Uint8Array(await blob.arrayBuffer()), p });
+        cv.width = cv.height = 0; pg.cleanup && pg.cleanup();
+      }
+      toast('אורז את הקובץ…');
+      const base = (d.title.split(' — ').join(' - ') + (partOnly && V.range ? ' - ' + V.range.title : '')).replace(/[\\/:*?"<>|]/g, '');
+      const blob = kind === 'zip' ? makeZip(pages, readmeText(d, R0, R1)) : makePdf(pages, d.title);
+      await saveBlob(blob, base, kind, kind === 'zip' ? 'application/zip' : 'application/pdf', 'שמירת החוברת');
+    } catch (e) { toast('לא ניתן ליצור את הקובץ: ' + ((e && e.message) || e)); }
+    finally { bookBusy = false; }
+  }
+  const readmeText = (d, a, b) => `${d.title}\r\nעמודים ${a}–${b}\r\n\r\nמקור: מוקד העירוב (${D.source.phone}), ${d.url}\r\nלהתמצאות בלבד — יש לוודא מול האחראי המקומי לפני שבת.\r\n\r\n` +
+    `הורד מתוך תוסף "גבולות עירוב" לאוצריא.\r\nהורדת התוסף מ-GitHub: ${REPO}/releases\r\nבחנות התוספים של אוצריא: כלים ← תוספים ← חנות, חיפוש "גבולות עירוב"\r\n`;
+  // PDF 1.4 מינימלי: עמוד לכל תמונה (JPEG כ-DCTDecode), גודל העמוד לפי התמונה ב-72dpi מוקטן לרוחב A4 בערך
+  function makePdf(pages, title) {
+    const enc = new TextEncoder(), parts = [], offs = []; let len = 0;
+    const push = x => { const b = typeof x === 'string' ? enc.encode(x) : x; parts.push(b); len += b.length; };
+    const obj = (i, body) => { offs[i] = len; push(i + ' 0 obj\n'); body(); push('\nendobj\n'); };
+    const N = pages.length, kids = pages.map((_, i) => (3 + i * 3) + ' 0 R').join(' ');
+    push('%PDF-1.4\n%\xE2\xE3\xCF\xD3\n');
+    obj(1, () => push('<< /Type /Catalog /Pages 2 0 R >>'));
+    obj(2, () => push(`<< /Type /Pages /Count ${N} /Kids [${kids}] >>`));
+    pages.forEach((pg, i) => {
+      const o = 3 + i * 3, sc = 595 / pg.w, w = 595, h = +(pg.h * sc).toFixed(2);
+      obj(o, () => push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${w} ${h}] /Resources << /XObject << /Im${i} ${o + 1} 0 R >> >> /Contents ${o + 2} 0 R >>`));
+      obj(o + 1, () => { push(`<< /Type /XObject /Subtype /Image /Width ${pg.w} /Height ${pg.h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${pg.bytes.length} >>\nstream\n`); push(pg.bytes); push('\nendstream'); });
+      const cs = `q ${w} 0 0 ${h} 0 0 cm /Im${i} Do Q`;
+      obj(o + 2, () => push(`<< /Length ${cs.length} >>\nstream\n${cs}\nendstream`));
+    });
+    const info = 3 + N * 3, hex = s => '<FEFF' + [...s].map(c => c.charCodeAt(0).toString(16).padStart(4, '0')).join('') + '>';
+    obj(info, () => push(`<< /Title ${hex(title)} /Creator ${hex('גבולות עירוב לאוצריא — ' + REPO)} >>`));
+    const xref = len, total = info + 1;
+    push(`xref\n0 ${total}\n0000000000 65535 f \n` + offs.slice(1).map(o => String(o).padStart(10, '0') + ' 00000 n \n').join(''));
+    push(`trailer\n<< /Size ${total} /Root 1 0 R /Info ${info} 0 R >>\nstartxref\n${xref}\n%%EOF\n`);
+    return new Blob(parts, { type: 'application/pdf' });
+  }
+  // ZIP בשיטת STORE (JPEG כבר דחוס), שמות UTF-8
+  const CRC_T = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+  const crc32 = b => { let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = CRC_T[(c ^ b[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+  function makeZip(pages, readme) {
+    const enc = new TextEncoder();
+    const files = [{ name: 'קרא-אותי.txt', data: enc.encode(readme) }].concat(pages.map(pg => ({ name: 'עמוד-' + String(pg.p).padStart(3, '0') + '.jpg', data: pg.bytes })));
+    const parts = [], central = []; let off = 0;
+    const hdr = (sz) => { const b = new DataView(new ArrayBuffer(sz)); return b; };
+    for (const f of files) {
+      const nm = enc.encode(f.name), crc = crc32(f.data), h = hdr(30);
+      h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true); h.setUint16(8, 0, true);
+      h.setUint16(10, 0, true); h.setUint16(12, 0x21, true); h.setUint32(14, crc, true); h.setUint32(18, f.data.length, true); h.setUint32(22, f.data.length, true);
+      h.setUint16(26, nm.length, true); h.setUint16(28, 0, true);
+      parts.push(h.buffer, nm, f.data);
+      const c = hdr(46);
+      c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(8, 0x0800, true); c.setUint16(10, 0, true);
+      c.setUint16(12, 0, true); c.setUint16(14, 0x21, true); c.setUint32(16, crc, true); c.setUint32(20, f.data.length, true); c.setUint32(24, f.data.length, true);
+      c.setUint16(28, nm.length, true); c.setUint32(42, off, true);
+      central.push(c.buffer, nm);
+      off += 30 + nm.length + f.data.length;
+    }
+    const csize = central.reduce((a, b) => a + b.byteLength, 0), e = hdr(22);
+    e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true); e.setUint32(12, csize, true); e.setUint32(16, off, true);
+    return new Blob(parts.concat(central, [e.buffer]), { type: 'application/zip' });
   }
   async function exportImage(kind) {
     if (!img.complete) { toast('המפה עדיין נטענת'); return; }

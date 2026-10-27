@@ -483,3 +483,4 @@ html[lang=en] p, html[lang=en] .techum-empty > div, html[lang=en] .who, html[lan
 body.offline [data-url^="http"], body.offline .ext-only { display: none !important; }
 .link-mode { display: flex; flex-wrap: wrap; gap: .4em 1em; align-items: center; }
 .link-mode label { display: inline-flex; gap: .3em; align-items: center; cursor: pointer; }
+#expMenu [hidden] { display: none; }
