@@ -33,7 +33,7 @@
   }
 
   // ── מצב ושמירה ──────────────────────────────────────────────
-  const state = { sec: 'il', view: 'home', city: null, q: '', favs: [], recent: [], docPages: {}, abroadC: '', settings: { toolbar: true }, tab: 'list', mapSel: null, online: true };
+  const state = { sec: 'il', view: 'home', city: null, q: '', favs: [], recent: [], docPages: {}, abroadC: '', settings: { toolbar: true }, tab: 'list', mapSel: null, offline: false, linkMode: 'open' };
   async function loadPrefs() {
     for (const k of ['favs', 'recent']) {
       const r = await call('storage.get', { key: k });
@@ -43,6 +43,8 @@
     if (dp && dp.success && dp.data && typeof dp.data === 'object') state.docPages = dp.data;
     const tb = await call('storage.get', { key: 'hideToolbar' });
     state.settings.toolbar = !(tb && tb.success && tb.data === true);
+    const lm = await call('storage.get', { key: 'linkMode' });
+    if (lm && lm.success && (lm.data === 'copy' || lm.data === 'open')) state.linkMode = lm.data;
   }
   const savePref = k => call('storage.set', { key: k, value: state[k] });
 
@@ -817,9 +819,14 @@
   }
   // ── קישורים: באוצריא קישור רגיל לא נפתח — פותחים בדפדפן החיצוני וגם מעתיקים ללוח ──
   async function openLink(u) {
-    if (!state.online && /^https?:/i.test(u)) { toast('אוצריא במצב מנותק: קישורים חיצוניים כבויים'); return; }
-    if (!(await confirmExternal(u))) return;
+    if (state.offline && /^https?:/i.test(u)) { toast('אוצריא במצב מנותק: קישורים חיצוניים כבויים'); return; }
     let copied = false;
+    // 1.3.0: הגדרה "העתקה" — רק העתקה ללוח, בלי אישור ובלי פתיחה
+    if (state.linkMode === 'copy' && /^https?:/i.test(u)) {
+      try { await navigator.clipboard.writeText(u); copied = true; } catch (e) {}
+      toast(copied ? 'הקישור הועתק ללוח' : u); return;
+    }
+    if (!(await confirmExternal(u))) return;
     try { await navigator.clipboard.writeText(u); copied = true; } catch (e) {}
     let w = null;
     if (hasOtz) { const r = await call('app.openUrl', { url: u }); if (r.success) { toast('נפתח בדפדפן' + (copied ? ' · הקישור גם הועתק' : '')); return; } }
@@ -954,24 +961,26 @@
     const sel = state.mapSel || (state.view === 'city' && CITY_POS[state.city] ? state.city : null);
     $('#viewScope').textContent = map ? (sel || 'כל הארץ') : '';
     if (!map) return;
-    const key = [sel, state.online].join('|');
+    const key = [sel, state.offline].join('|');
     if (key === mapKey && $('#mapTab').firstChild) return; mapKey = key;
     const MC = window.MapCore, UI = window.MapUI;
     if (!MC || !UI) { $('#mapTab').textContent = 'רכיב המפה לא נטען.'; return; }
     const cities = Object.keys(CITY_POS).filter(c => byCity.has(c));
     const pts = cities.map(c => ({ id: c, name: c + ' · ' + byCity.get(c).maps.length + ' מפות', sub: byCity.get(c).maps.length + ' מפות עירוב · ' + byCity.get(c).areas.length + ' שכונות עם אחראי', lat: CITY_POS[c][0], lon: CITY_POS[c][1] }));
-    UI.mount($("#mapTab"), { tab: true, builtinStreets: true, online: state.online, points: pts, layerId: 'eruv', glyph: 'ע', layerName: 'ערי עירוב', selectedId: sel, call, openLink, repo: REPO, forumUrl: 'https://otzaria.org/forum/post/45390', issueUrl: REPO + '/issues/1',
+    UI.mount($("#mapTab"), { tab: true, builtinStreets: true, online: !state.offline, points: pts, layerId: 'eruv', glyph: 'ע', layerName: 'ערי עירוב', selectedId: sel, call, openLink, repo: REPO, forumUrl: 'https://otzaria.org/forum/post/45390', issueUrl: REPO + '/issues/1',
       pickLabel: 'פתיחת העיר', nearbyLabel: 'ערים קרובות', future: ['קווי עירוב על המפה (בקרוב)', 'בדיקת כתובת בתוך העירוב (בקרוב)'],
       onPick: id => { state.tab = 'list'; goCity(id); } });
     $('#mapTab').insertAdjacentHTML('beforeend', '<p class="fine">מיקומי הערים בקירוב. המפות עצמן הן התמונות של מוקד העירוב (בלשונית "רשימה").</p>');
   }
   function openMapDev(sel) { state.mapSel = typeof sel === 'string' && sel ? sel : null; state.tab = 'map'; showTab(); saveView(); }
   // ── מצב מנותק באוצריא: מסתירים כל קישור החוצה (טלפונים ואימיילים נשארים) ──
-  function setOnline(v) { const was = state.online; state.online = v !== false; document.body.classList.toggle('offline', !state.online); if (was !== state.online) { mapKey = ''; showTab(); } }
+  // 1.3.0 (#2): רק לפי ההגדרה "ללא גישה לאינטרנט" (isOfflineMode), לא לפי זיהוי רשת בפועל —
+  // מי שכרגע בלי רשת עדיין יכול להעתיק קישור.
+  function setOffline(v) { const was = state.offline; state.offline = v === true; document.body.classList.toggle('offline', state.offline); if (was !== state.offline) { mapKey = ''; showTab(); } }
   async function recheckOnline(payload) {
-    if (payload && payload.connectivity && payload.connectivity.isOnline != null) return setOnline(payload.connectivity.isOnline);
+    if (payload && payload.connectivity && payload.connectivity.isOfflineMode != null) return setOffline(payload.connectivity.isOfflineMode);
     if (!hasOtz) return;
-    const c = await call('app.getConnectivity'); if (c && c.success && c.data && c.data.isOnline != null) setOnline(c.data.isOnline);
+    const c = await call('app.getConnectivity'); if (c && c.success && c.data && c.data.isOfflineMode != null) setOffline(c.data.isOfflineMode);
   }
   function openInfo() {
     $('#infoScrim').classList.remove('full'); $('#infoScrim').style.top = '';
@@ -988,6 +997,9 @@
       <p>קיצורי מקשים: <b>/</b> חיפוש · במציג: <b>+ / -</b> הגדלה, <b>0</b> התאמה, <b>R</b> סיבוב, <b>PageUp/PageDown</b> דפדוף בחוברת, <b>Esc</b> סגירה.
       בספר פתוח: <b>Ctrl+Alt+E</b> פותח את התוסף (אפשר לשנות בהגדרות → קיצורי מקשים).</p>
       <p><label class="switch"><input type="checkbox" data-toggle-toolbar ${state.settings.toolbar ? 'checked' : ''}> כפתור "גבולות עירוב" בסרגל העיון</label></p>
+      <p class="link-mode">קישור חיצוני:
+        <label><input type="radio" name="linkMode" value="open" ${state.linkMode === 'open' ? 'checked' : ''}> פתיחה בדפדפן</label>
+        <label><input type="radio" name="linkMode" value="copy" ${state.linkMode === 'copy' ? 'checked' : ''}> העתקה</label></p>
       <p>הנתונים עודכנו ב־${esc(D.built)}.</p>
       <h3 class="info-h">שליחת תגובה</h3>
       <textarea id="fbText" rows="3" placeholder="הערה, תיקון או שכונה חסרה — נשלח דרך אוצריא למפתחת"></textarea>
@@ -1009,6 +1021,18 @@
     state.abq = e.target.value; const pos = e.target.selectionStart;
     $('#main').innerHTML = abroadView(); const n = $('#abQ'); n.focus(); try { n.setSelectionRange(pos, pos); } catch (er) {}
   });
+  document.addEventListener('change', e => {
+    if (e.target.name !== 'linkMode') return;
+    state.linkMode = e.target.value === 'copy' ? 'copy' : 'open';
+    call('storage.set', { key: 'linkMode', value: state.linkMode });
+    toast(state.linkMode === 'copy' ? 'קישורים חיצוניים יועתקו ללוח' : 'קישורים חיצוניים ייפתחו בדפדפן אחרי אישור');
+  });
+  // קישור <a> רגיל לא ינווט בתוך ה-iframe ולא ייפתח ב-_blank: הכל עובר דרך openLink (אישור + app.openUrl / העתקה)
+  document.addEventListener('click', e => {
+    const a = e.target.closest && e.target.closest('a[href]'); if (!a) return;
+    const h = a.getAttribute('href'); if (!/^https?:/i.test(h)) return;
+    e.preventDefault(); e.stopPropagation(); openLink(h);
+  }, true);
   document.addEventListener('click', e => {
     const t = e.target.closest('[data-open-map],[data-city],[data-phone],[data-fav],[data-url],[data-add-map],[data-del-map],[data-src],[data-doc],[data-view],[data-abroad],[data-hosp],[data-sec],[data-toggle-toolbar],[data-mapdev]');
     if (!t) return;
@@ -1086,6 +1110,7 @@
     await recheckOnline(payload);
     addEventListener('focus', () => recheckOnline());
     if (hasOtz) Otzaria.on('plugin.resumed', () => recheckOnline());
+    if (hasOtz) Otzaria.on('settings.changed', () => recheckOnline()); // אין אירוע קישוריות ייעודי; isOfflineMode נקרא מחדש בכל קריאה
     if (rs && rs.view) { state.view = rs.view; state.city = byCity.has(rs.city) ? rs.city : null; state.abroadC = rs.abroadC || ''; if (rs.view === 'city' && !state.city) state.view = 'home'; }
     render();
     $('#q').focus();
