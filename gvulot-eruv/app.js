@@ -1014,6 +1014,7 @@
   // בכל ייצוא (תמונה, הדפסה/PDF): קישור לגיטהאב והפניה לחנות התוספים של אוצריא
   const exportLinks = () => `מתוך תוסף "גבולות עירוב" לאוצריא · GitHub: ${REPO.replace('https://', '')}/releases · חנות התוספים של אוצריא: כלים ← תוספים ← חנות, חיפוש "גבולות עירוב"`;
   const CHANGELOG = [
+    ['1.4.0', ["מפה משותפת: במסך המפה, בשורת השכבות, כפתורים \"↗ כיוון תפילה\" ו\"↗ מקוואות\" פותחים את התוסף ההוא באותו מקום במפה (ואם אינו מותקן — קישור לחנות). קוד המפה מגיע עכשיו ממקור אחד המשותף לשלושת התוספים, וכולל מסלול הליכה."]],
     ['1.3.1', ["נוספה לבקשה למוקד העירוב מפת העירוב השכונתי החדש ברמת בית שמש ד'3, שלא נמצאה במקור רשמי מקוון. עד שתתקבל — פונים לאחראי המקומי ולמוקד."]],
     ['1.3.0', ["מצב מנותק נקבע לפי ההגדרה \"ללא גישה לאינטרנט\" באוצריא ולא לפי זיהוי רשת: מי שכרגע בלי רשת עדיין יכול לפתוח או להעתיק קישור. ההסתרה מתעדכנת מיד כשמשנים את ההגדרה.", "הגדרה חדשה באודות: קישור חיצוני — פתיחה בדפדפן (אחרי אישור, כמו קודם) או העתקה ללוח בלבד.", "הורדת חוברת שלמה בלחיצה אחת: בתפריט הייצוא של המציג — החוברת כולה כ-PDF או כ-ZIP של תמונות, או רק החלק הפתוח. בכל עמוד המקור וקישורי ההורדה של התוסף."]],
     ['1.2.1', ["תיקון: קווי הרחובות במפה לא נראו (משתנה צבע שאינו קיים באוצריא). עכשיו הרחובות ברורים."]],
@@ -1052,7 +1053,7 @@
     if (r.success) { $('#fbText').value = ''; toast(r.data === 'queued' ? 'התגובה תישלח כשיהיה חיבור' : 'התגובה נשלחה, תודה!'); }
     else toast('השליחה זמינה בתוך אוצריא');
   }
-  const VERSION = '1.3.1';
+  const VERSION = '1.4.0';
 
   // ── אודות ───────────────────────────────────────────────────
   function openHalacha() {
@@ -1083,11 +1084,13 @@
     if (!MC || !UI) { $('#mapTab').textContent = 'רכיב המפה לא נטען.'; return; }
     const cities = Object.keys(CITY_POS).filter(c => byCity.has(c));
     const pts = cities.map(c => ({ id: c, name: c + ' · ' + byCity.get(c).maps.length + ' מפות', sub: byCity.get(c).maps.length + ' מפות עירוב · ' + byCity.get(c).areas.length + ' שכונות עם אחראי', lat: CITY_POS[c][0], lon: CITY_POS[c][1] }));
-    UI.mount($("#mapTab"), { tab: true, builtinStreets: true, online: !state.offline, points: pts, layerId: 'eruv', glyph: 'ע', layerName: 'ערי עירוב', selectedId: sel, call, openLink, repo: REPO, forumUrl: 'https://otzaria.org/forum/post/45390', issueUrl: REPO + '/issues/1',
+    UI.mount($("#mapTab"), { tab: true, self: 'com.hadabadra.gvulot-eruv', center: state.mapCenter || null, builtinStreets: true, online: !state.offline, points: pts, layerId: 'eruv', glyph: 'ע', layerName: 'ערי עירוב', selectedId: sel, call, openLink, repo: REPO, forumUrl: 'https://otzaria.org/forum/post/45390', issueUrl: REPO + '/issues/1',
       pickLabel: 'פתיחת העיר', nearbyLabel: 'ערים קרובות', future: ['קווי עירוב על המפה (בקרוב)', 'בדיקת כתובת בתוך העירוב (בקרוב)'],
       onPick: id => { state.tab = 'list'; goCity(id); } });
     $('#mapTab').insertAdjacentHTML('beforeend', '<p class="fine">מיקומי הערים בקירוב. המפות עצמן הן התמונות של מוקד העירוב (בלשונית "רשימה").</p>');
   }
+  // תוסף אחר (כיוון תפילה / מקוואות) מבקש לפתוח את המפה באותו מקום (מפה משותפת, Prayer-pointA#11)
+  if (window.MapUI && window.MapUI.onOpenMap) window.MapUI.onOpenMap(p => { state.mapSel = null; state.mapCenter = p.lat != null ? [p.lat, p.lon] : null; state.tab = 'map'; mapKey = ''; showTab(); });
   function openMapDev(sel) { state.mapSel = typeof sel === 'string' && sel ? sel : null; state.tab = 'map'; showTab(); saveView(); }
   // ── מצב מנותק באוצריא: מסתירים כל קישור החוצה (טלפונים ואימיילים נשארים) ──
   // 1.3.0 (#2): רק לפי ההגדרה "ללא גישה לאינטרנט" (isOfflineMode), לא לפי זיהוי רשת בפועל —

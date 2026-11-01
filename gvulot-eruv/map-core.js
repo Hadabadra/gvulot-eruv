@@ -273,6 +273,38 @@
     return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img">${lines}${sel}${labels}${syn}${pts}${me}${north}${scale}${attr}</svg>`;
   }
 
-  return { distM, decodeArea, compactOverpass, findCover, normName, normHe, expandAliases, findWays, searchStreet, findCorner, nearestStreets, placeLabel,
+  // ── מסלול הליכה על גרף הרחובות (בלי אינטרנט) ──
+  // צומת = נקודה בקואורדינטות זהות (כך ב-OSM מתחברים רחובות). Dijkstra עם ערימה בינארית.
+  function walkRoute(area, from, to) {
+    if (!area || !area.w) return null;
+    const id = new Map(), xy = [], adj = [];
+    const node = (la, lo) => { const k = la.toFixed(6) + ',' + lo.toFixed(6); let i = id.get(k); if (i === undefined) { i = xy.length; id.set(k, i); xy.push([la, lo]); adj.push([]); } return i; };
+    for (const [, hw, g] of area.w) {
+      if (hw === 'building' || /^motorway/.test(hw)) continue;
+      let prev = -1;
+      for (let k = 0; k < g.length; k += 2) {
+        const n = node(g[k], g[k + 1]);
+        if (prev >= 0 && prev !== n) { const d = distM(xy[prev], xy[n]); adj[prev].push(n, d); adj[n].push(prev, d); }
+        prev = n;
+      }
+    }
+    if (!xy.length) return null;
+    const near = p => { let b = -1, bd = Infinity; for (let i = 0; i < xy.length; i++) { const d = distM(p, xy[i]); if (d < bd) { bd = d; b = i; } } return [b, bd]; };
+    const [s, ds] = near(from), [t, dt] = near(to);
+    if (ds > 600 || dt > 600) return null;
+    const dist = new Float64Array(xy.length).fill(Infinity), back = new Int32Array(xy.length).fill(-1), h = [];
+    const push = (d, n) => { h.push([d, n]); let i = h.length - 1; while (i) { const p = (i - 1) >> 1; if (h[p][0] <= h[i][0]) break; [h[p], h[i]] = [h[i], h[p]]; i = p; } };
+    const pop = () => { const top = h[0], last = h.pop(); if (h.length) { h[0] = last; let i = 0; for (;;) { const l = 2 * i + 1, r = l + 1; let m = i; if (l < h.length && h[l][0] < h[m][0]) m = l; if (r < h.length && h[r][0] < h[m][0]) m = r; if (m === i) break; [h[m], h[i]] = [h[i], h[m]]; i = m; } } return top; };
+    dist[s] = 0; push(0, s);
+    while (h.length) {
+      const [d, n] = pop(); if (d > dist[n]) continue; if (n === t) break;
+      const a = adj[n]; for (let j = 0; j < a.length; j += 2) { const nd = d + a[j + 1]; if (nd < dist[a[j]]) { dist[a[j]] = nd; back[a[j]] = n; push(nd, a[j]); } }
+    }
+    if (dist[t] === Infinity) return null;
+    const path = []; for (let n = t; n >= 0; n = back[n]) path.push(xy[n]); path.reverse();
+    return { coords: [from, ...path, to], m: Math.round(dist[t] + ds + dt) };
+  }
+
+  return { walkRoute, distM, decodeArea, compactOverpass, findCover, normName, normHe, expandAliases, findWays, searchStreet, findCorner, nearestStreets, placeLabel,
     createView, project, unproject, toLayer, toGeoJSON, renderSVG, overpassUrl };
 });

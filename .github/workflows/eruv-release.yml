@@ -15,6 +15,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Sync shared map (Mikvaot/shared)
+        run: bash tools/sync-shared.sh
       - name: Pack
         run: |
           v="$(node -p "require('./gvulot-eruv/manifest.json').version")"
@@ -37,6 +39,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Sync shared map (Mikvaot/shared)
+        run: bash tools/sync-shared.sh
       - uses: Otzaria/otzaria-plugin-validator@v1
         with:
           path: gvulot-eruv
