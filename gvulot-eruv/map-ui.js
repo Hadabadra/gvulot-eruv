@@ -55,8 +55,8 @@
   // אם התוסף לא מותקן, מוצג קישור לדף החנות. תוסף חדש עם מפה: מוסיפים שורה כאן, ובתוסף מפעילים MapUI.onOpenMap.
   const PLUGINS = [
     { id: 'com.shiachrina.kivuntefila', name: 'כיוון תפילה', store: 'https://otzaria.org/plugins/6ac80057bd083fcc18562fa0' },
-    { id: 'com.hadabadra.mikvaot', name: 'מקוואות', store: 'https://otzaria.org/plugins' },
-    { id: 'com.hadabadra.gvulot-eruv', name: 'גבולות עירוב', store: 'https://otzaria.org/plugins' }
+    { id: 'com.hadabadra.mikvaot', name: 'מקוואות', store: 'https://otzaria.org/plugins/6ad9c9c92917198d739939b7' },
+    { id: 'com.hadabadra.gvulot-eruv', name: 'גבולות עירוב', store: 'https://otzaria.org/plugins/6ad93b5d2917198d73992a9d' }
   ];
   // מקבל בקשה מתוסף אחר לפתוח את המפה במקום מסוים: cb({ lat, lon, from })
   function onOpenMap(cb) {
