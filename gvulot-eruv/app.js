@@ -1014,6 +1014,7 @@
   // בכל ייצוא (תמונה, הדפסה/PDF): קישור לגיטהאב והפניה לחנות התוספים של אוצריא
   const exportLinks = () => `מתוך תוסף "גבולות עירוב" לאוצריא · GitHub: ${REPO.replace('https://', '')}/releases · חנות התוספים של אוצריא: כלים ← תוספים ← חנות, חיפוש "גבולות עירוב"`;
   const CHANGELOG = [
+    ['1.5.0', ["מפה משותפת 2.0, במראה של כיוון תפילה: כפתורים צפים על המפה — זום, סיבוב, מצפן שמחזיר צפון למעלה, מרכוז ומסך מלא. גרירה, צביטה, גלגלת, לחיצה כפולה ומקלדת (חיצים, + ו-−, [ ו-] לסיבוב, N לצפון).", "חיפוש מקום בתוך המפה (#7): עיר, שכונה, רחוב, פינה או כתובת עם מספר בית — למשל \"נחל לכיש 30, בית שמש\". הצעות בזמן ההקלדה; כתובת מדויקת נמצאת ב-OpenStreetMap כשאוצריא מחוברת, ובלי רשת מוצג הרחוב. רחובות העיר נטענים לבד.", "כפתור \"שכבות\": ערי העירוב, רחובות, בתי כנסת ומפת העולם, כל אחת עם מתג; השכבות של כיוון תפילה, מקוואות ועינים למקרא — לחיצה שואלת ופותחת את התוסף ההוא באותו מקום.", "מפת העולם בלי אינטרנט: יבשות, ארצות, ימים, נהרות וערים בעברית, כשמתרחקים בזום — שימושי לעירובין בחו\"ל.", "טעינת שכבה מקובץ GeoJSON (למשל קו עירוב שציירתם), לזמן הפתיחה של המסך.", "באודות: פרק \"המפה המשותפת\" עם [הסבר](https://github.com/Hadabadra/Mikvaot/blob/main/shared/map-core/SHARED-MAP.md), [הקוד של המפה](https://github.com/Hadabadra/Mikvaot/tree/main/shared/map-core) וקישורים ל[כיוון תפילה](https://otzaria.org/plugins/6ac80057bd083fcc18562fa0), [מקוואות](https://otzaria.org/plugins/6ad9c9c92917198d739939b7) ו[עינים למקרא](https://otzaria.org/plugins/6a671db1dd175558ae6f20ac). קישורים ביומן השינויים נפתחים בלחיצה.", "הרשאה חדשה: network.access, רק לחיפוש כתובת עם מספר בית (nominatim.openstreetmap.org). במצב \"ללא גישה לאינטרנט\" לא נשלח כלום."]],
     ['1.4.1', ["כפתורי השכבות במפה מקשרים לדפי החנות הנכונים של מקוואות וגבולות עירוב."]],
     ['1.4.0', ["מפה משותפת: במסך המפה, בשורת השכבות, כפתורים \"↗ כיוון תפילה\" ו\"↗ מקוואות\" פותחים את התוסף ההוא באותו מקום במפה (ואם אינו מותקן — קישור לחנות). קוד המפה מגיע עכשיו ממקור אחד המשותף לשלושת התוספים, וכולל מסלול הליכה."]],
     ['1.3.1', ["נוספה לבקשה למוקד העירוב מפת העירוב השכונתי החדש ברמת בית שמש ד'3, שלא נמצאה במקור רשמי מקוון. עד שתתקבל — פונים לאחראי המקומי ולמוקד."]],
@@ -1054,7 +1055,7 @@
     if (r.success) { $('#fbText').value = ''; toast(r.data === 'queued' ? 'התגובה תישלח כשיהיה חיבור' : 'התגובה נשלחה, תודה!'); }
     else toast('השליחה זמינה בתוך אוצריא');
   }
-  const VERSION = '1.4.1';
+  const VERSION = '1.5.0';
 
   // ── אודות ───────────────────────────────────────────────────
   function openHalacha() {
@@ -1102,6 +1103,8 @@
     if (!hasOtz) return;
     const c = await call('app.getConnectivity'); if (c && c.success && c.data && c.data.isOfflineMode != null) setOffline(c.data.isOfflineMode);
   }
+  // קישורים בסגנון [טקסט](כתובת) ביומן השינויים (מוסתרים במצב מנותק)
+  const mdLinks = t => esc(t).replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, (m, a, u) => state.offline ? a : `<button class="btn text" data-url="${u}">${a}</button>`);
   function openInfo() {
     $('#infoScrim').classList.remove('full'); $('#infoScrim').style.top = '';
     $('#infoTitle').textContent = 'אודות התוסף';
@@ -1111,7 +1114,7 @@
       <div class="levels">
         <div class="level done"><span class="dot">1</span><div><b>מפות ואחראים</b>${D.maps.length} מפות ו־${D.areas.length} אחראים, בלי צורך באינטרנט.</div></div>
         <div class="level"><span class="dot">2</span><div><b>קווי עירוב על מפת רחובות</b>המרת המפות לקווים מדויקים, עם הגדלה עד רמת הבית.</div></div>
-        <div class="level"><span class="dot">3</span><div><b>בדיקת כתובת</b>הקלדת כתובת, וסימון אם היא בתוך העירוב ובאיזה עירוב.</div></div>
+        <div class="level"><span class="dot">3</span><div><b>בדיקת כתובת</b>חלק ראשון קיים (1.5.0): חיפוש כתובת עם מספר בית במפה. הבא: סימון אם היא בתוך העירוב ובאיזה עירוב — אחרי שלב 2.</div></div>
         <div class="level"><span class="dot">4</span><div><b>עדכונים מהמוקד</b>כבר עכשיו: גרסה חדשה בכל שבוע שבו המקורות השתנו. בהמשך: משיכה מתוך התוסף, כשאוצריא תאפשר.</div></div>
       </div>
       <p>קיצורי מקשים: <b>/</b> חיפוש · במציג: <b>+ / -</b> הגדלה, <b>0</b> התאמה, <b>R</b> סיבוב, <b>PageUp/PageDown</b> דפדוף בחוברת, <b>Esc</b> סגירה.
@@ -1126,9 +1129,12 @@
       <div class="sheet-actions"><button class="btn filled" id="fbSend">שליחה</button></div>
       <h3 class="info-h">בתכנון</h3>
       <ul class="tasks">${OPEN_TASKS.map(t => `<li>${esc(t)}</li>`).join('')}</ul>
-      <details class="cl"><summary><b>יומן שינויים</b> · גרסה ${VERSION}: ${esc(CHANGELOG[0][1].join('; '))}</summary>
-        ${CHANGELOG.slice(1).map(c => `<p><b>${esc(c[0])}</b> — ${esc(c[1].join('; '))}</p>`).join('')}</details>
-      <p><button class="btn tonal" data-mapdev>מפה (בפיתוח)</button></p>
+      <h3 class="info-h">המפה המשותפת</h3>
+      <p>לשונית המפה משותפת לארבעה תוספים: כיוון תפילה, מקוואות, גבולות עירוב ועינים למקרא. הקוד במקום אחד (Hadabadra/Mikvaot, תיקייה shared), וכל תיקון מגיע לכולם. בכפתור השכבות שעל המפה פותחים את השכבות של התוספים האחרים באותו מקום.</p>
+      ${state.offline ? '' : `<p>${[['הסבר על המפה המשותפת', 'https://github.com/Hadabadra/Mikvaot/blob/main/shared/map-core/SHARED-MAP.md'], ['הקוד של המפה', 'https://github.com/Hadabadra/Mikvaot/tree/main/shared/map-core'], ['כיוון תפילה בחנות', 'https://otzaria.org/plugins/6ac80057bd083fcc18562fa0'], ['מקוואות בחנות', 'https://otzaria.org/plugins/6ad9c9c92917198d739939b7'], ['עינים למקרא בחנות', 'https://otzaria.org/plugins/6a671db1dd175558ae6f20ac']].map(([a, u]) => `<button class="btn text" data-url="${u}">${a}</button>`).join(' ')}</p>`}
+      <details class="cl" open><summary><b>יומן שינויים</b> · גרסה ${VERSION}</summary>
+        ${CHANGELOG.map((c, i) => `<p><b>${esc(c[0])}</b></p><ul>${c[1].map(t => `<li>${mdLinks(t)}</li>`).join('')}</ul>`).join('')}</details>
+      <p><button class="btn tonal" data-mapdev>מפה</button></p>
       <p><button class="btn text" data-url="${REPO}/blob/main/gvulot-eruv-docs/PLAN.md">התכנון המלא בגיטהאב</button>
       <button class="btn text" data-url="${REPO}/releases">כל הגרסאות</button></p>`;
     $('#fbSend').onclick = sendFeedback;

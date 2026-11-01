@@ -1,5 +1,5 @@
 /* map-core: בסיס משותף למפה ולחיפוש בתוספי אוצריא (מקוואות, גבולות עירוב, כיוון תפילה).
-   נגזר מ-streets.js של כיוון תפילה. סטטוס: בפיתוח, עדיין לא מחובר לממשק של התוספים.
+   נגזר מ-streets.js של כיוון תפילה. גרסה 2.0 (01.11.2026): בסיס עולמי, סגנון מסלול. מחובר למקוואות ולגבולות עירוב דרך map-ui.js.
    אין תלות ב-DOM: הפונקציות מקבלות נתונים ומחזירות נתונים או מחרוזת SVG, ולכן אפשר לבדוק אותן ב-Node.
 
    פורמט אזור (כמו בכיוון תפילה):
@@ -217,12 +217,67 @@
     };
   }
 
+
+  /* ── בסיס עולמי (2.0): יבשות, ארצות, נהרות, ימות ותוויות בעברית, מתוך Natural Earth (כמו בעינים למקרא).
+     NE: { world, region, lakes, rivers, worldlines, regionlines, labels:[{he,lat,lng,z,size,kind}] }. ── */
+  // רמת זום שקולה ל-Leaflet (לבחירת תוויות): zoom 1 כאן ≈ 16.4
+  const leafZoom = v => Math.log2(Math.max(1e-9, v.zoom) * 88700);
+  function geoPath(v, rings, close) {
+    let d = '';
+    for (const ring of rings) {
+      let prev = null;
+      for (let i = 0; i < ring.length; i++) {
+        const c = ring[i];
+        if (prev && Math.abs(c[0] - prev[0]) > 180) { d += ''; }   // קפיצת קו התאריך
+        const p = project(v, c[1], c[0]);
+        d += (i && !(prev && Math.abs(c[0] - prev[0]) > 180) ? 'L' : 'M') + p[0].toFixed(1) + ',' + p[1].toFixed(1);
+        prev = c;
+      }
+      if (close) d += 'Z';
+    }
+    return d;
+  }
+  function geomRings(g) {
+    if (!g) return [];
+    if (g.type === 'Polygon') return g.coordinates;
+    if (g.type === 'MultiPolygon') return g.coordinates.flat();
+    if (g.type === 'LineString') return [g.coordinates];
+    if (g.type === 'MultiLineString') return g.coordinates;
+    if (g.type === 'GeometryCollection') return g.geometries.flatMap(geomRings);
+    return [];
+  }
+  function renderBase(v, NE, o) {
+    if (!NE) return '';
+    o = o || {};
+    const lz = leafZoom(v), f = n => n.toFixed(1);
+    const fc = x => (x && x.features ? x.features.map(t => t.geometry) : x ? [x] : []);
+    let s = '';
+    // ים כרקע, יבשה מעליו. כל פוליגון בנתיב משלו (כיווני הטבעות בעולם ובאזור הפוכים, ובנתיב אחד נוצרים "חורים").
+    s += `<rect x="0" y="0" width="${v.width}" height="${v.height}" fill="var(--color-primary)" fill-opacity=".07"/>`;
+    const land = lz >= 5 && NE.region ? [...fc(NE.world), ...fc(NE.region)] : fc(NE.world);
+    s += land.map(g => `<path d="${geoPath(v, geomRings(g), true)}" fill="var(--color-surface, #fff)" fill-rule="evenodd" stroke="none"/>`).join('');
+    const bl = lz >= 5 && NE.regionlines ? NE.regionlines : NE.worldlines;
+    if (bl) s += `<path d="${geomRings(bl).map(r => geoPath(v, [r], false)).join('')}" fill="none" stroke="var(--color-outline, #888)" stroke-opacity=".55" stroke-width=".8" stroke-dasharray="3 2"/>`;
+    if (NE.lakes) s += `<path d="${fc(NE.lakes).map(g => geoPath(v, geomRings(g), true)).join('')}" fill="var(--color-primary)" fill-opacity=".14" stroke="none"/>`;
+    if (NE.rivers && lz >= 4) s += `<path d="${fc(NE.rivers).map(g => geoPath(v, geomRings(g), false)).join('')}" fill="none" stroke="var(--color-primary)" stroke-opacity=".4" stroke-width="1"/>`;
+    if (o.labels !== false) for (const L of NE.labels || []) {
+      if ((L.z || 0) > lz + .5) continue;
+      const p = project(v, L.lat, L.lng);
+      if (p[0] < -40 || p[0] > v.width + 40 || p[1] < -10 || p[1] > v.height + 10) continue;
+      const city = L.kind === 'city';
+      s += (city ? `<circle cx="${f(p[0])}" cy="${f(p[1])}" r="2.2" fill="var(--color-on-surface)"/>` : '')
+        + `<text x="${f(p[0])}" y="${f(p[1] + (city ? -5 : 4))}" text-anchor="middle" font-size="${Math.min(13, (L.size || 11) * .9).toFixed(1)}" fill="var(--color-on-surface${city ? '' : '-variant, #5f6368'})" paint-order="stroke" stroke="var(--color-surface)" stroke-width="3"${L.kind === 'water' ? ' font-style="italic"' : ''}>${esc(L.he)}</text>`;
+    }
+    return s;
+  }
+
   /* ── ציור SVG (מחרוזת). צבעים כמשתני CSS של אוצריא, כמו בכיוון תפילה. ── */
   const widthLabel = m => m >= 2000 ? (m >= 20000 ? Math.round(m / 1000) : (m / 1000).toFixed(1)) + ' ק"מ' : Math.round(m) + " מ'";
   function renderSVG(o) {
     const v = o.view, area = o.area, f = n => n.toFixed(1), W = v.width, H = v.height;
     let lines = '', labels = '', pts = '';
-    if (o.outline) lines += `<path d="${OUTLINE.map((c, i) => { const p = project(v, c[0], c[1]); return (i ? 'L' : 'M') + f(p[0]) + ',' + f(p[1]); }).join('')}Z" fill="var(--color-on-surface-variant, #5f6368)" fill-opacity=".07" stroke="var(--color-on-surface-variant, #5f6368)" stroke-opacity=".5" stroke-width="1.5" stroke-linejoin="round"><title>קו מתאר מקורב</title></path>`;
+    const base = o.base ? renderBase(v, o.base, { labels: o.baseLabels }) : '';
+    if (o.outline && !o.base) lines += `<path d="${OUTLINE.map((c, i) => { const p = project(v, c[0], c[1]); return (i ? 'L' : 'M') + f(p[0]) + ',' + f(p[1]); }).join('')}Z" fill="var(--color-on-surface-variant, #5f6368)" fill-opacity=".07" stroke="var(--color-on-surface-variant, #5f6368)" stroke-opacity=".5" stroke-width="1.5" stroke-linejoin="round"><title>קו מתאר מקורב</title></path>`;
     const inView = (x, y, m) => x > -m && x < W + m && y > -m && y < H + m;
     if (area && o.streets !== false) {
       for (const [name, hw, g] of area.w) {
@@ -245,7 +300,8 @@
     for (const layer of o.layers || []) {
       for (const ln of layer.lines || []) {   // קווים ופוליגונים (למשל גבול עירוב)
         const d = ln.coords.map((c, i) => { const p = project(v, c[0], c[1]); return (i ? 'L' : 'M') + f(p[0]) + ',' + f(p[1]); }).join('') + (ln.closed ? 'Z' : '');
-        lines += `<path d="${d}" fill="${ln.closed ? 'var(--color-primary)' : 'none'}" fill-opacity=".08" stroke="var(--color-primary)" stroke-width="2.5" stroke-dasharray="7 4" stroke-linejoin="round"><title>${esc(ln.label || layer.id)}</title></path>`;
+        const solid = ln.style === 'route';
+        lines += `<path d="${d}" fill="${ln.closed ? 'var(--color-primary)' : 'none'}" fill-opacity=".08" stroke="var(--color-primary)" stroke-width="${solid ? 5 : 2.5}"${solid ? ' stroke-opacity=".85" stroke-linecap="round"' : ' stroke-dasharray="7 4"'} stroke-linejoin="round"><title>${esc(ln.label || layer.id)}</title></path>`;
       }
       for (const pt of layer.points || []) {
         const p = project(v, pt.lat, pt.lon); if (!inView(p[0], p[1], 20)) continue;
@@ -266,11 +322,11 @@
       const g = area.w[o.selected.i][2], k = o.selected.k, q = project(v, g[k], g[k + 1]), p = project(v, g[k + 2], g[k + 3]);
       sel = `<line x1="${f(q[0])}" y1="${f(q[1])}" x2="${f(p[0])}" y2="${f(p[1])}" stroke="var(--color-primary)" stroke-width="7" stroke-linecap="round"/>`;
     }
-    const north = `<g transform="translate(${W - 20},30) rotate(${f(v.rot)})"><path d="M0,-12 L6,7 L0,3 L-6,7Z" fill="var(--color-on-surface)" stroke="var(--color-surface)" stroke-width="1.5"/><text y="-15" text-anchor="middle" font-size="11" fill="var(--color-on-surface)" paint-order="stroke" stroke="var(--color-surface)" stroke-width="3">צ N</text></g>`;
+    const north = o.chrome === false ? '' : `<g transform="translate(${W - 20},30) rotate(${f(v.rot)})"><path d="M0,-12 L6,7 L0,3 L-6,7Z" fill="var(--color-on-surface)" stroke="var(--color-surface)" stroke-width="1.5"/><text y="-15" text-anchor="middle" font-size="11" fill="var(--color-on-surface)" paint-order="stroke" stroke="var(--color-surface)" stroke-width="3">צ N</text></g>`;
     // טקסט עברי מתיישר מימין: מעוגן ב-rtl ליד חץ הצפון, ומתפרש שמאלה (כמו בכיוון תפילה)
-    const scale = `<text x="${W - 38}" y="18" direction="rtl" text-anchor="start" font-size="12" fill="var(--color-on-surface-variant, #5f6368)">${widthLabel(v.hw * 2)} לרוחב</text>`;
-    const attr = area && o.streets !== false ? `<text x="8" y="${H - 8}" direction="ltr" font-size="10" fill="var(--color-on-surface-variant, #5f6368)">© OpenStreetMap contributors${area.d ? ' · ' + esc(area.d) : ''}</text>` : '';
-    return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img">${lines}${sel}${labels}${syn}${pts}${me}${north}${scale}${attr}</svg>`;
+    const scale = o.chrome === false ? '' : `<text x="${W - 38}" y="18" direction="rtl" text-anchor="start" font-size="12" fill="var(--color-on-surface-variant, #5f6368)">${widthLabel(v.hw * 2)} לרוחב</text>`;
+    const attr = o.chrome !== false && area && o.streets !== false ? `<text x="8" y="${H - 8}" direction="ltr" font-size="10" fill="var(--color-on-surface-variant, #5f6368)">© OpenStreetMap contributors${area.d ? ' · ' + esc(area.d) : ''}</text>` : '';
+    return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img">${base}${lines}${sel}${labels}${syn}${pts}${me}${north}${scale}${attr}</svg>`;
   }
 
   // ── מסלול הליכה על גרף הרחובות (בלי אינטרנט) ──
@@ -306,5 +362,5 @@
   }
 
   return { walkRoute, distM, decodeArea, compactOverpass, findCover, normName, normHe, expandAliases, findWays, searchStreet, findCorner, nearestStreets, placeLabel,
-    createView, project, unproject, toLayer, toGeoJSON, renderSVG, overpassUrl };
+    createView, project, unproject, renderBase, leafZoom, widthLabel, toLayer, toGeoJSON, renderSVG, overpassUrl };
 });

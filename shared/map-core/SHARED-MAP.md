@@ -1,4 +1,19 @@
-# מפה משותפת אחת — מקוואות · גבולות עירוב · כיוון תפילה
+# מפה משותפת אחת — כיוון תפילה · מקוואות · גבולות עירוב · עינים למקרא
+
+> **גרסה 2.0 (01.11.2026)** — מסך המפה נבנה מחדש במראה של כיוון תפילה. התוכנית המלאה וההבהרה של המפתחת: [PLAN-2.0.md](PLAN-2.0.md).
+>
+> | מה | איפה |
+> |---|---|
+> | חישובים (הטלה, סיבוב, רחובות, פינה, מסלול הליכה, מפת העולם) | `map-core/map-core.js` |
+> | מסך המפה: כפתורים צפים, תפריט שכבות, חיפוש עם הצעות וכתובת עם מספר בית, כרטיס, מסלול | `map-core/map-ui.js` (`MapUI.mount`) |
+> | תפריט השכבות בלבד, למפה עם מנוע משלה (כיוון תפילה) | `MapUI.layersButton` |
+> | מפת העולם (יבשות, ארצות, ערים, נהרות בעברית) | `basemap/world-basemap.js` ← עינים למקרא, `tools/sync-basemap.sh` |
+> | רשימת התוספים עם מפה | `MapUI.PLUGINS` (כיוון תפילה, מקוואות, גבולות עירוב, עינים למקרא) |
+>
+> **אפשרויות לכל תוסף** ב-`MapUI.mount`: `jerusalem: true` (כפתור ירושלים, רק בכיוון תפילה), `layers` (שכבות נוספות), `builtinStreets`, `online`, `future`.
+> **חיפוש כתובת עם מספר בית** נעשה ב-`https://nominatim.openstreetmap.org/search` — צריך הרשאת `network.access` והכתובת ב-allowlist. במצב מנותק מוצג הרחוב.
+> **סנכרון:** מקוואות `tools/sync-shared.sh`; גבולות עירוב — ה-CI מוריד לפני האריזה; כיוון תפילה — `kivun-tefila-build/sync-shared.sh` (מעתיק את map-ui.js לתוסף); עינים למקרא — תפריט שכבות משלו (Leaflet) עם אותה רשימת תוספים.
+
 
 מעקב: [Prayer-pointA#11](https://github.com/Hadabadra/Prayer-pointA/issues/11) · נפתח 01.11.2026 לפי רעיון המפתחת.
 
@@ -8,7 +23,7 @@
   - מקוואות: `tools/sync-shared.sh` (מעתיק `shared/` אל `mikvaot/`).
   - גבולות עירוב: `tools/sync-shared.sh` שם מוריד מ-`raw.githubusercontent.com/Hadabadra/Mikvaot/main/shared/...`. ה-CI של העירוב מריץ אותו לפני האריזה, כך שכל גרסה של העירוב מקבלת את המפה העדכנית.
   - כיוון תפילה: המפה שלו (streets.js / globe.js) עדיין עצמאית. בשלב הזה הוא מקבל רק את כפתורי השכבות (`kivun-tefila/maplink.js`), והמעבר המלא ל-map-core הוא שלב 3.
-- **קבצים משותפים:** `map-core/map-core.js` (נתונים, חיפוש, ציור, מסלול הליכה), `map-core/map-ui.js` (מסך המפה), `streets/streets-cities.js` (רשימת הערים שהרחובות שלהן מובנים).
+- **קבצים משותפים:** `map-core/map-core.js`, `map-core/map-ui.js`, `basemap/world-basemap.js`, `streets/streets-cities.js` (רשימת הערים שהרחובות שלהן מובנים).
 
 ## כפתור שכבות בין תוספים
 - `MapUI.PLUGINS` ב-map-ui.js היא רשימת התוספים עם מפה: מזהה, שם וקישור לחנות.
