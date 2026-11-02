@@ -11,17 +11,18 @@
      layers: [{id, name, glyph, points, lines, on}],   // שכבות נוספות של התוסף עצמו
      call(method, params), openLink(url), onPick(id), pickLabel, nearby, nearbyLabel,
      builtinStreets, online, tab, jerusalem, onJerusalem, repo, forumUrl, issueUrl, future: [...] })
-   MapUI.layersButton(element, { self, getPos, call, openLink, online })   // אותו תפריט שכבות למפה שאינה map-ui (כיוון תפילה)
+   MapUI.layersButton(element, { self, getPos, call, openLink, online, extraHTML, onExtra(pop) })   // אותו תפריט שכבות למפה שאינה map-ui (כיוון תפילה, עינים למקרא)
    MapUI.onOpenMap(cb)             // תוסף אחר ביקש לפתוח את המפה כאן: cb({lat, lon, from}) */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory(require('./map-core.js'));
   else root.MapUI = factory(root.MapCore);
 })(this, function (MC) {
   'use strict';
-  const VERSION = '2.0.0';
+  const VERSION = '2.1.0';
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const W = 400, H = 300, ZMIN = 0.00004, ZMAX = 10;
+  const W = 400, ZMIN = 0.00004, ZMAX = 10;
   const JERUSALEM = [31.7767, 35.2345];
+  let H = 300;   // 2.1: גובה ה-viewBox מחושב לפי יחס הרוחב-גובה של המיכל, כדי שהמפה תמלא את החלון בלי גלילה
   const SHARED_URL = 'https://github.com/Hadabadra/Mikvaot/tree/main/shared/map-core';
   const SHARED_DOC = 'https://github.com/Hadabadra/Mikvaot/blob/main/shared/map-core/SHARED-MAP.md';
 
@@ -71,9 +72,13 @@
 .mapui .mu-view svg { display: block; width: 100%; height: auto; max-height: 58vh; cursor: grab; }
 .mapui .mu-view svg:active { cursor: grabbing; }
 .mapui .mu-view svg g[data-id] { cursor: pointer; }
-.mapui.mapui-tab .mu-view svg { max-height: calc(100vh - 13em); min-height: 20em; }
-.mapui.mu-full { position: fixed; inset: 0; z-index: 9000; background: var(--color-surface, #fff); padding: .6em; overflow: auto; }
-.mapui.mu-full .mu-view svg { max-height: calc(100vh - 2em); min-height: calc(100vh - 2em); }
+.mapui.mapui-tab, .mapui.mu-full { display: flex; flex-direction: column; overflow: hidden; min-height: 0; box-sizing: border-box; }
+.mapui.mapui-tab > .mu-stage, .mapui.mu-full > .mu-stage { flex: 1 1 auto; min-height: 14em; }
+.mapui.mapui-tab .mu-view, .mapui.mu-full .mu-view { position: absolute; inset: 0; }
+.mapui.mapui-tab .mu-view svg, .mapui.mu-full .mu-view svg { width: 100%; height: 100%; max-height: none; }
+.mapui.mapui-tab > :not(.mu-stage), .mapui.mu-full > :not(.mu-stage) { flex: none; }
+.mapui.mapui-tab > details.mu-more[open], .mapui.mu-full > details.mu-more[open] { max-height: 38%; overflow: auto; }
+.mapui.mu-full { position: fixed; inset: 0; z-index: 9000; background: var(--color-surface, #fff); padding: .6em; }
 .mapui .mu-glass { background: var(--color-surface, #fff); color: var(--color-on-surface, inherit); box-shadow: var(--mu-sh); border-radius: var(--radius-pill, 2em); }
 .mapui .mu-search { position: absolute; top: .6em; inset-inline: .6em 3.6em; display: flex; align-items: center; gap: .3em; padding: .15em .25em .15em .7em; z-index: 3; }
 .mapui .mu-search input { flex: 1; min-width: 0; font: inherit; border: 0; outline: 0; background: transparent; color: inherit; padding: .45em .2em; }
@@ -91,28 +96,28 @@
 .mapui .mu-grp .mu-ib + .mu-ib { border-top: 1px solid var(--color-outline-variant, rgba(128,128,128,.25)); }
 .mapui .mu-scale { position: absolute; bottom: .55em; inset-inline-start: .7em; font-size: .78em; padding: .2em .65em; z-index: 2; pointer-events: none; }
 .mapui .mu-scale i { display: inline-block; height: .45em; border: 1.5px solid currentColor; border-top: 0; margin-inline-end: .4em; vertical-align: middle; }
-.mapui .mu-pop { position: absolute; top: .6em; inset-inline-end: 3.75em; width: min(21em, calc(100% - 5em)); max-height: calc(100% - 1.2em); overflow: auto; z-index: 4; border-radius: var(--radius-md, 1em); padding: .7em .8em; animation: mu-in .16s ease-out; }
+.mapui .mu-pop { position: absolute; top: .6em; inset-inline-end: 3.75em; width: min(21em, calc(100% - 5em)); max-height: calc(100% - 1.2em); overflow: auto; z-index: 6; border-radius: var(--radius-md, 1em); padding: .7em .8em; animation: mu-in .16s ease-out; }
 @keyframes mu-in { from { opacity: 0; transform: translateY(-4px) scale(.98); } }
 .mapui .mu-pop h5 { margin: .3em 0 .35em; font-size: .82em; letter-spacing: .02em; opacity: .75; font-weight: 600; }
 .mapui .mu-row { display: flex; align-items: center; gap: .6em; padding: .4em .45em; border-radius: .7em; cursor: pointer; }
 .mapui .mu-row:hover { background: var(--color-secondary-container, rgba(128,128,128,.12)); }
-.mapui .mu-row .mu-g { width: 1.75em; height: 1.75em; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: .85em; background: var(--color-primary); color: var(--color-on-primary, #fff); flex: none; }
+.mapui .mu-row .mu-g { width: 1.75em; height: 1.75em; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: .85em; background: var(--color-primary, #3f6fa8); color: var(--color-on-primary, #fff); flex: none; }
 .mapui .mu-row .mu-g.alt { background: var(--color-surface-container-high, rgba(128,128,128,.2)); color: var(--color-on-surface, inherit); }
 .mapui .mu-row .mu-t { flex: 1; min-width: 0; line-height: 1.25; }
 .mapui .mu-row .mu-t small { display: block; opacity: .7; font-size: .8em; }
 .mapui .mu-row.off { opacity: .5; cursor: default; }
 .mapui .mu-sw { appearance: none; -webkit-appearance: none; width: 2.2em; height: 1.25em; border-radius: 1em; background: var(--color-outline-variant, rgba(128,128,128,.4)); position: relative; cursor: pointer; flex: none; margin: 0; transition: background .15s; }
 .mapui .mu-sw::after { content: ''; position: absolute; top: .15em; inset-inline-start: .15em; width: .95em; height: .95em; border-radius: 50%; background: var(--color-surface, #fff); transition: inset-inline-start .15s; }
-.mapui .mu-sw:checked { background: var(--color-primary); }
+.mapui .mu-sw:checked { background: var(--color-primary, #3f6fa8); }
 .mapui .mu-sw:checked::after { inset-inline-start: 1.1em; }
 .mapui .mu-ask { margin: .2em 2.3em .4em 0; font-size: .9em; display: flex; flex-wrap: wrap; gap: .4em; align-items: center; }
 .mapui button.mu { font: inherit; cursor: pointer; padding: .38em .95em; border-radius: var(--radius-pill, 2em); border: 0; background: var(--color-secondary-container, rgba(128,128,128,.15)); color: var(--color-on-secondary-container, inherit); display: inline-flex; align-items: center; gap: .35em; transition: filter .15s, transform .15s; }
 .mapui button.mu:hover { filter: brightness(.96); }
 .mapui button.mu:active { transform: scale(.97); }
-.mapui button.mu.pri { background: var(--color-primary); color: var(--color-on-primary, #fff); }
+.mapui button.mu.pri { background: var(--color-primary, #3f6fa8); color: var(--color-on-primary, #fff); }
 .mapui button.mu svg { width: 1.05em; height: 1.05em; }
 .mapui button.mu[aria-disabled="true"] { opacity: .55; cursor: help; }
-.mapui .mu-card { position: absolute; bottom: .6em; inset-inline: .6em; z-index: 3; border-radius: var(--radius-md, 1em); padding: .7em .9em; animation: mu-in .16s ease-out; max-height: 45%; overflow: auto; }
+.mapui .mu-card { position: absolute; bottom: .6em; inset-inline: .6em; z-index: 3; border-radius: var(--radius-md, 1em); padding: .7em .9em; animation: mu-in .16s ease-out; max-height: 32%; overflow: auto; }
 .mapui .mu-card .mu-x { position: absolute; top: .35em; inset-inline-end: .35em; width: 2em; height: 2em; }
 .mapui .mu-card strong { display: block; padding-inline-end: 2em; }
 .mapui .mu-card .sub { opacity: .8; font-size: .9em; }
@@ -182,13 +187,22 @@
     css();
     const box = document.createElement('span'); box.className = 'mapui mu-lbtn';
     box.innerHTML = `<button type="button" class="mu-ib mu-glass" title="שכבות" aria-label="שכבות" aria-expanded="false">${ic('layers')}</button>
-      <div class="mu-pop mu-glass" hidden role="dialog" aria-label="שכבות"><h5>שכבות מתוספים אחרים</h5>${otherRows(opt.self)}
+      <div class="mu-pop mu-glass" hidden role="dialog" aria-label="שכבות">${opt.extraHTML || ''}<h5>שכבות מתוספים אחרים</h5>${otherRows(opt.self)}
       <p class="msg">כל תוסף מציג את השכבה שלו. הלחיצה פותחת אותו באותו מקום במפה.</p></div>`;
     el.append(box);
     const btn = box.firstElementChild, pop = box.lastElementChild;
-    btn.addEventListener('click', () => { pop.hidden = !pop.hidden; btn.setAttribute('aria-expanded', String(!pop.hidden)); });
-    document.addEventListener('pointerdown', e => { if (!box.contains(e.target)) { pop.hidden = true; btn.setAttribute('aria-expanded', 'false'); } });
+    // התפריט עובר לגוף הדף: אב עם transform/overflow (למשל פקדי Leaflet) לא יזיז ולא יחתוך אותו
+    const host = document.createElement('div'); host.className = 'mapui mu-float'; document.body.append(host); host.append(pop);
+    btn.addEventListener('click', () => {
+      pop.hidden = !pop.hidden; btn.setAttribute('aria-expanded', String(!pop.hidden));
+      if (!pop.hidden) {   // מיקום קבוע מעל הכול, כדי שמיכל עם overflow לא יחתוך את התפריט
+        const r = btn.getBoundingClientRect(), w = Math.min(336, innerWidth - 16);
+        Object.assign(pop.style, { position: 'fixed', top: (r.bottom + 6) + 'px', left: Math.max(8, Math.min(innerWidth - w - 8, r.left)) + 'px', width: w + 'px', maxHeight: (innerHeight - r.bottom - 20) + 'px', zIndex: 9500 });
+      }
+    });
+    document.addEventListener('pointerdown', e => { if (!box.contains(e.target) && !host.contains(e.target)) { pop.hidden = true; btn.setAttribute('aria-expanded', 'false'); } });
     wireOthers(pop, opt, () => (opt.getPos ? opt.getPos() : null));
+    if (opt.onExtra) opt.onExtra(pop);
     return box;
   }
 
@@ -280,8 +294,13 @@
     // ── ציור ──
     let raf = 0;
     const draw = () => { if (raf) return; raf = requestAnimationFrame(() => { raf = 0; drawNow(); }); };
+    function sizeH() {   // 2.1: יחס ה-viewBox לפי המיכל (מסך מלא / לשונית ממלאים את הגובה)
+      if (!el.classList.contains('mapui-tab') && !el.classList.contains('mu-full')) { H = 300; return; }
+      const r = view.getBoundingClientRect();
+      if (r.width > 50 && r.height > 50) H = Math.max(150, Math.min(1600, Math.round(W * r.height / r.width)));
+    }
     function drawNow() {
-      setTimeout(updDl, 0);
+      setTimeout(updDl, 0); sizeH();
       const v = MC.createView({ lat: S.lat, lon: S.lon, zoom: S.zoom, rot: S.rot, width: W, height: H });
       const layers = [];
       if (S.route && S.show.route) layers.push({ id: 'route', lines: [{ coords: S.route.coords, label: 'מסלול הליכה', style: 'route' }], points: [] });
