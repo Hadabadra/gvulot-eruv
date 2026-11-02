@@ -12,6 +12,7 @@
 >
 > **אפשרויות לכל תוסף** ב-`MapUI.mount`: `jerusalem: true` (כפתור ירושלים, רק בכיוון תפילה), `layers` (שכבות נוספות), `builtinStreets`, `online`, `future`.
 > **חיפוש כתובת עם מספר בית** נעשה ב-`https://nominatim.openstreetmap.org/search` — צריך הרשאת `network.access` והכתובת ב-allowlist. במצב מנותק מוצג הרחוב.
+> **המיקום שלי (2.1):** הכפתור מופיע תמיד. אם התוסף לא העביר `me`, המפה מחפשת בעצמה: `o.locate()`, אחר כך כל `window.*_BRIDGE` עם `location()` (הגשר "אחת שאלתי", ‎/sys/location‎ — דורש `127.0.0.1` ו-`localhost` ב-allowlist), ואחר כך `navigator.geolocation`.
 > **סנכרון:** מקוואות `tools/sync-shared.sh`; גבולות עירוב — ה-CI מוריד לפני האריזה; כיוון תפילה — `kivun-tefila-build/sync-shared.sh` (מעתיק את map-ui.js לתוסף); עינים למקרא — תפריט שכבות משלו (Leaflet) עם אותה רשימת תוספים.
 
 

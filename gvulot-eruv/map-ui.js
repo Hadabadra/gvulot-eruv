@@ -224,6 +224,21 @@
     return box;
   }
 
+  /* 2.1: "המיקום שלי" בכל תוסף עם המפה המשותפת — דרך הגשר "אחת שאלתי" (כל window.*_BRIDGE עם location(), כמו MIKVE_BRIDGE / ERUV_BRIDGE),
+     או o.locate() של התוסף, ואם אין — מיקום המחשב (navigator.geolocation). מחזיר [lat, lon] (עם .how) או null. */
+  async function locate(o) {
+    try { if (o && o.locate) { const p = await o.locate(); if (p && p[0] != null) return p; } } catch (e) {}
+    if (typeof window !== 'undefined') for (const k of Object.keys(window).filter(k => /_BRIDGE$/.test(k))) {
+      const B = window[k];
+      try { if (B && B.location && (!B.available || await B.available())) { const d = await B.location(); if (d && d.lat != null) return Object.assign([+d.lat, +d.lon], { how: 'מהגשר (Windows)' }); } } catch (e) {}
+    }
+    if (typeof navigator !== 'undefined' && navigator.geolocation) {
+      const p = await new Promise(res => navigator.geolocation.getCurrentPosition(g => res([g.coords.latitude, g.coords.longitude]), () => res(null), { timeout: 12000, maximumAge: 300000 }));
+      if (p) return Object.assign(p, { how: 'מהמחשב' });
+    }
+    return null;
+  }
+
   function mount(el, o) {
     if (!MC) { el.innerHTML = '<p>רכיב המפה לא נטען.</p>'; return; }
     css();
@@ -261,7 +276,7 @@
         <div class="mu-ctl">
           <div class="mu-grp mu-glass"><button type="button" class="mu-ib" data-mu="in" title="זום פנימה" aria-label="זום פנימה">${ic('plus')}</button><button type="button" class="mu-ib" data-mu="out" title="זום החוצה" aria-label="זום החוצה">${ic('minus')}</button></div>
           <div class="mu-grp mu-glass"><button type="button" class="mu-ib" data-mu="rotl" title="סיבוב שמאלה" aria-label="סיבוב שמאלה">${ic('rotl')}</button><button type="button" class="mu-ib" data-mu="north" id="mu-north" title="צפון למעלה" aria-label="צפון למעלה">${compass(0)}</button><button type="button" class="mu-ib" data-mu="rotr" title="סיבוב ימינה" aria-label="סיבוב ימינה">${ic('rotr')}</button></div>
-          <div class="mu-grp mu-glass">${o.me ? `<button type="button" class="mu-ib" data-mu="me" title="המיקום שלי" aria-label="המיקום שלי">${ic('me')}</button>` : ''}<button type="button" class="mu-ib" data-mu="fit" title="מרכוז" aria-label="מרכוז">${ic('fit')}</button><button type="button" class="mu-ib" data-mu="full" id="mu-fullb" title="מסך מלא" aria-label="מסך מלא" aria-pressed="false">${ic('full')}</button></div>
+          <div class="mu-grp mu-glass"><button type="button" class="mu-ib" data-mu="me" title="המיקום שלי" aria-label="המיקום שלי">${ic('me')}</button><button type="button" class="mu-ib" data-mu="fit" title="מרכוז" aria-label="מרכוז">${ic('fit')}</button><button type="button" class="mu-ib" data-mu="full" id="mu-fullb" title="מסך מלא" aria-label="מסך מלא" aria-pressed="false">${ic('full')}</button></div>
           ${o.jerusalem ? `<div class="mu-grp mu-glass"><button type="button" class="mu-ib" data-mu="jer" id="mu-jer" title="ירושלים" aria-label="ירושלים" aria-pressed="false">${ic('jer')}</button></div>` : ''}
           <div class="mu-grp mu-glass"><button type="button" class="mu-ib" data-mu="guide" title="הדרכה שלב אחר שלב" aria-label="הדרכה">${ic('help')}</button></div>
           <div class="mu-grp mu-glass"><button type="button" class="mu-ib" data-mu="layers" id="mu-lb" title="שכבות" aria-label="שכבות" aria-expanded="false">${ic('layers')}</button></div>
@@ -583,7 +598,12 @@ ${svg ? `<figure>${svg}<figcaption>המפה כפי שהייתה בזמן שמי�
       else if (a === 'rotl') { S.rot = (S.rot + 345) % 360; draw(); }
       else if (a === 'rotr') { S.rot = (S.rot + 15) % 360; draw(); }
       else if (a === 'north') { S.rot = 0; draw(); }
-      else if (a === 'me') { if (o.me) { S.lat = o.me[0]; S.lon = o.me[1]; S.zoom = Math.max(S.zoom, 2); S.from = o.me.slice(); draw(); nearList(o.me); } }
+      else if (a === 'me') {
+        const go = () => { S.lat = o.me[0]; S.lon = o.me[1]; S.zoom = Math.max(S.zoom, 2); S.from = o.me.slice(); refresh(); nearList(o.me); };
+        if (o.me) return go();
+        say('מאתר את המיקום…');
+        locate(o).then(p => { if (!p) return say('המיקום לא נמצא. בלי הגשר "אחת שאלתי" — חפשו את הכתובת בשורת החיפוש.'); o.me = p; say(p.how ? 'המיקום ' + p.how : ''); go(); });
+      }
       else if (a === 'fit') { S.sel = null; S.street = null; S.mark = null; fit(); refresh(); }
       else if (a === 'full') { const f = el.classList.toggle('mu-full'); b.setAttribute('aria-pressed', String(f)); draw(); }
       else if (a === 'layers') togglePop();
@@ -632,5 +652,5 @@ ${svg ? `<figure>${svg}<figcaption>המפה כפי שהייתה בזמן שמי�
     return { state: S, refresh, select: selectPt, goTo };
   }
 
-  return { mount, layersButton, onOpenMap, PLUGINS, EN, CSS, VERSION, JERUSALEM };
+  return { mount, layersButton, onOpenMap, locate, PLUGINS, EN, CSS, VERSION, JERUSALEM };
 });
