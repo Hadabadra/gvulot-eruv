@@ -12,6 +12,7 @@
      call(method, params), openLink(url), onPick(id), pickLabel, nearby, nearbyLabel,
      builtinStreets, online, tab, jerusalem, onJerusalem, repo, forumUrl, issueUrl, future: [...] })
    MapUI.layersButton(element, { self, getPos, call, openLink, online, extraHTML, onExtra(pop) })   // אותו תפריט שכבות למפה שאינה map-ui (כיוון תפילה, עינים למקרא)
+   guide: [{t, d}]                 // 2.1: שלבים של התוסף עצמו בהדרכה (לפני שלבי המפה המשותפים). links מגיעים מ-repo ומ-PLUGINS.
    MapUI.onOpenMap(cb)             // תוסף אחר ביקש לפתוח את המפה כאן: cb({lat, lon, from}) */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory(require('./map-core.js'));
@@ -49,6 +50,7 @@
     'לא נמצא': 'Not found', 'הרחובות לא נפגשים באזור הזה': 'The streets do not meet in this area', 'הקובץ לא נקרא': 'The file could not be read',
     'בקובץ אין רחובות': 'The file has no streets', 'הקובץ נטען': 'File loaded', 'פתיחה ברשימה': 'Open in the list', 'ניווט ב-Waze': 'Navigate with Waze',
     'פתיחה ב-Google Maps': 'Open in Google Maps', 'אין נקודות עם מיקום להצגה': 'No points with a location to show', 'לרוחב': 'across', 'ממני': 'from me',
+    'הדרכה': 'Guide', 'הדרכה שלב אחר שלב': 'Step-by-step guide', 'הקודם': 'Previous', 'הבא': 'Next', 'סיום': 'Done', 'הורדת ההדרכה': 'Download the guide', 'מחיקת המסלול': 'Remove the route',
     'מספר בית מדויק נמצא בחיפוש ברשת': 'Exact house number found online', 'מוצג הרחוב; מספר בית מדויק דורש חיבור לאינטרנט': 'Showing the street; an exact house number needs internet'
   };
 
@@ -60,6 +62,7 @@
     layers: '<path d="M12 3 2.5 8 12 13l9.5-5z"/><path d="M2.5 12.5 12 17.5l9.5-5"/><path d="M2.5 16.5 12 21.5l9.5-5" opacity=".6"/>',
     search: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="m20 20-4.8-4.8"/>', close: '<path d="M6 6l12 12M18 6 6 18"/>',
     jer: '<path d="M4 20h16M6 20v-7l6-5 6 5v7"/><path d="M10 20v-4h4v4"/><path d="M12 8V4"/>', ext: '<path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v6H4V6h6"/>',
+    help: '<circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 1 1 3.4 2.3c-.7.3-1 .8-1 1.5v.4"/><path d="M12 16.8v.2"/>',
     route: '<circle cx="6" cy="18" r="2.2"/><circle cx="18" cy="6" r="2.2"/><path d="M8 18h6a3 3 0 0 0 0-6h-4a3 3 0 0 1 0-6h6"/>'
   };
   const ic = (n, extra) => `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"${extra || ''}>${ICO[n]}</svg>`;
@@ -134,6 +137,15 @@
 .mapui details.mu-more { margin-top: .6em; border-radius: var(--radius-md, .9em); background: var(--color-surface-container-low, rgba(128,128,128,.06)); padding: .35em .8em; }
 .mapui details.mu-more summary { cursor: pointer; padding: .3em 0; font-weight: 600; }
 .mapui h4 { margin: .8em 0 .2em; font-size: .95em; }
+.mapui .mu-guide { position: absolute; inset: 0; z-index: 8; display: grid; place-items: center; background: rgba(0,0,0,.28); padding: .8em; }
+.mapui .mu-guide > div { width: min(30em, 100%); max-height: 100%; overflow: auto; border-radius: var(--radius-lg, 1.1em); padding: 1em 1.1em .9em; animation: mu-in .16s ease-out; position: relative; }
+.mapui .mu-guide h3 { margin: 0 0 .15em; font-size: 1.05em; padding-inline-end: 2em; }
+.mapui .mu-guide .mu-step { font-size: .8em; opacity: .7; }
+.mapui .mu-guide p { margin: .55em 0 .2em; line-height: 1.5; }
+.mapui .mu-guide .mu-dots { display: flex; gap: .3em; justify-content: center; margin: .6em 0 .2em; }
+.mapui .mu-guide .mu-dots i { width: .45em; height: .45em; border-radius: 50%; background: var(--color-outline-variant, rgba(128,128,128,.4)); }
+.mapui .mu-guide .mu-dots i.on { background: var(--color-primary, #3f6fa8); }
+.mapui .mu-guide .mu-x { position: absolute; top: .45em; inset-inline-end: .45em; width: 2em; height: 2em; }
 .mu-lbtn { position: relative; display: inline-block; }
 .mu-lbtn > .mu-pop { position: absolute; top: calc(100% + .4em); inset-inline-end: 0; inset-inline-start: auto; width: min(21em, 90vw); }
 @media (max-width: 520px) { .mapui .mu-search { inset-inline-end: 3.4em; } .mapui .mu-ib { width: 2.25em; height: 2.25em; } }
@@ -251,12 +263,14 @@
           <div class="mu-grp mu-glass"><button type="button" class="mu-ib" data-mu="rotl" title="סיבוב שמאלה" aria-label="סיבוב שמאלה">${ic('rotl')}</button><button type="button" class="mu-ib" data-mu="north" id="mu-north" title="צפון למעלה" aria-label="צפון למעלה">${compass(0)}</button><button type="button" class="mu-ib" data-mu="rotr" title="סיבוב ימינה" aria-label="סיבוב ימינה">${ic('rotr')}</button></div>
           <div class="mu-grp mu-glass">${o.me ? `<button type="button" class="mu-ib" data-mu="me" title="המיקום שלי" aria-label="המיקום שלי">${ic('me')}</button>` : ''}<button type="button" class="mu-ib" data-mu="fit" title="מרכוז" aria-label="מרכוז">${ic('fit')}</button><button type="button" class="mu-ib" data-mu="full" id="mu-fullb" title="מסך מלא" aria-label="מסך מלא" aria-pressed="false">${ic('full')}</button></div>
           ${o.jerusalem ? `<div class="mu-grp mu-glass"><button type="button" class="mu-ib" data-mu="jer" id="mu-jer" title="ירושלים" aria-label="ירושלים" aria-pressed="false">${ic('jer')}</button></div>` : ''}
+          <div class="mu-grp mu-glass"><button type="button" class="mu-ib" data-mu="guide" title="הדרכה שלב אחר שלב" aria-label="הדרכה">${ic('help')}</button></div>
           <div class="mu-grp mu-glass"><button type="button" class="mu-ib" data-mu="layers" id="mu-lb" title="שכבות" aria-label="שכבות" aria-expanded="false">${ic('layers')}</button></div>
         </div>
         <div class="mu-pop mu-glass" id="mu-pop" hidden role="dialog" aria-label="שכבות"></div>
         <div class="mu-scale mu-glass" id="mu-scale"></div>
         <div class="mu-card mu-glass" id="mu-sel" hidden></div>
         <div class="mu-toast mu-glass" id="mu-msg" hidden role="status"></div>
+        <div class="mu-guide" id="mu-guide" hidden role="dialog" aria-modal="true" aria-label="הדרכה"></div>
       </div>
       <div class="mu-near" id="mu-near"></div>
       <details class="mu-more"><summary>רחובות, נתונים ועזרה</summary>
@@ -504,10 +518,56 @@
       else if (k === 'n' || k === 'N' || k === 'מ') S.rot = 0;
       else if (k === 'ArrowLeft') panBy(st, 0, S); else if (k === 'ArrowRight') panBy(-st, 0, S);
       else if (k === 'ArrowUp') panBy(0, st, S); else if (k === 'ArrowDown') panBy(0, -st, S);
+      else if (k === 'Escape' && !$('mu-guide').hidden) guide(null);
       else if (k === 'Escape' && el.classList.contains('mu-full')) { el.classList.remove('mu-full'); $('mu-fullb').setAttribute('aria-pressed', 'false'); }
       else return;
       e.preventDefault(); draw();
     });
+
+    // ── הדרכה שלב אחר שלב + הורדה (2.1) ──
+    const me = PLUGINS.find(p => p.id === o.self) || { name: o.layerName || 'התוסף', store: '' };
+    const gLinks = () => [o.repo ? ['הורדה מ-GitHub', o.repo + '/releases/latest'] : null, me.store ? ['חנות התוספים של אוצריא', me.store] : null].filter(Boolean);
+    const STEPS = () => (o.guide || []).concat([
+      { t: 'הזזה וזום', d: 'גוררים את המפה בעכבר (או באצבע). גלגלת, צביטה או כפתורי + ו-− לזום. במקלדת: חיצים, + ו-−.' },
+      { t: 'סיבוב וצפון', d: 'כפתורי החצים המעוגלים מסובבים את המפה. המצפן מחזיר את הצפון למעלה. במקלדת: [ ו-] לסיבוב, N לצפון.' },
+      { t: 'חיפוש', d: 'בשורת החיפוש כותבים מקום, עיר, רחוב, פינה ("הרצל פינת בן יהודה") או כתובת עם מספר בית ("רבי עקיבא 12, בני ברק"). בוחרים מהצעות בחצים ו-Enter.' },
+      { t: (o.layerName || 'נקודות') + ' במפה', d: 'לחיצה על נקודה פותחת כרטיס עם הפרטים' + (o.onPick ? ' וכפתור "' + (o.pickLabel || 'פתיחה ברשימה') + '"' : '') + (off ? '.' : ', וניווט ב-Waze או ב-Google Maps.') + ' ✕ סוגר את הכרטיס.' },
+      routeOn ? { t: 'מסלול הליכה (בלי אינטרנט)', d: 'מחפשים קודם את נקודת המוצא (רחוב, פינה או כתובת) או "המיקום שלי", בוחרים נקודה ולוחצים "מסלול הליכה". המסלול מצויר על הרחובות עם מרחק וזמן משוער, ונשאר גם אחרי סגירת הכרטיס.' } : null,
+      { t: 'רחובות', d: o.builtinStreets ? 'רחובות של ערים רבות מובנים בתוסף ונטענים לבד כשמתקרבים לעיר בזום. לעיר אחרת: "רחובות, נתונים ועזרה" ← טעינת רחובות מקובץ.' : 'מתקרבים לעיר ומורידים את קובץ הרחובות שלה, ואז "טעינת רחובות מקובץ" (מתחת למפה).' },
+      { t: 'שכבות ותוספים אחרים', d: 'כפתור השכבות מדליק ומכבה שכבות (רחובות, בתי כנסת, מפת העולם, המסלול), ופותח תוספים אחרים — כיוון תפילה, מקוואות, גבולות עירוב, עינים למקרא — באותו מקום במפה.' },
+      { t: 'מסך מלא ומרכוז', d: 'כפתור המסך המלא מגדיל את המפה לכל החלון (Esc חוזר). כפתור המרכוז מראה שוב את כל הנקודות.' },
+      { t: 'שמירת ההדרכה', d: 'הכפתור "הורדת ההדרכה" שומר קובץ עם כל השלבים, צילום של המפה כפי שהיא עכשיו וקישורי ההורדה של התוסף.' }
+    ]).filter(Boolean);
+    let gi = 0;
+    function guide(i) {
+      const L = STEPS(), g = $('mu-guide'); if (i == null) { g.hidden = true; return; }
+      gi = Math.max(0, Math.min(L.length - 1, i)); const st = L[gi];
+      g.hidden = false;
+      g.innerHTML = `<div class="mu-glass"><button type="button" class="mu-ib mu-x" data-mu="gclose" title="סגירה" aria-label="סגירה">${ic('close')}</button>
+        <div class="mu-step">הדרכה · שלב ${gi + 1} מתוך ${L.length}</div><h3>${esc(st.t)}</h3><p>${esc(st.d)}</p>
+        <div class="mu-dots">${L.map((x, k) => `<i class="${k === gi ? 'on' : ''}"></i>`).join('')}</div>
+        <div class="bar"><button class="mu" data-mu="gprev"${gi ? '' : ' disabled'}>הקודם</button>${gi < L.length - 1 ? '<button class="mu pri" data-mu="gnext">הבא</button>' : '<button class="mu pri" data-mu="gclose">סיום</button>'}<button class="mu" data-mu="gdl" style="margin-inline-start:auto">הורדת ההדרכה</button></div></div>`;
+      const f = g.querySelector('[data-mu="gnext"],[data-mu="gclose"]'); if (f) f.focus();
+    }
+    function guideFile() {
+      const L = STEPS(), links = gLinks();
+      const svg = (view.querySelector('svg') || {}).outerHTML || '';
+      const html = `<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><title>הדרכה למפה · ${esc(me.name)}</title>
+<style>:root{--color-primary:#3f6fa8;--color-on-primary:#fff;--color-surface:#fff;--color-on-surface:#1b1b1f;--color-on-surface-variant:#5f6368;--color-outline:#888;--color-error:#c62828}
+body{font-family:system-ui,"Segoe UI",Arial,sans-serif;max-width:46em;margin:2em auto;padding:0 1em;line-height:1.6;color:#1b1b1f}
+h1{font-size:1.4em}figure{margin:1em 0;border:1px solid #ccc;border-radius:12px;overflow:hidden}figure svg{display:block;width:100%;height:auto;background:#f5f6f8}
+figcaption{font-size:.85em;color:#555;padding:.4em .8em}ol li{margin:.5em 0}footer{margin-top:2em;border-top:1px solid #ccc;padding-top:1em;font-size:.95em}</style></head><body>
+<h1>הדרכה למפה — ${esc(me.name)}</h1><p>מפה משותפת לתוספי אוצריא (גרסת מפה ${VERSION}). עובדת בלי אינטרנט.</p>
+${svg ? `<figure>${svg}<figcaption>המפה כפי שהייתה בזמן שמירת ההדרכה${S.areaName ? ' · ' + esc(S.areaName) : ''}${S.route ? ' · ' + routeMsg(S.route) : ''}</figcaption></figure>` : ''}
+<ol>${L.map(x => `<li><strong>${esc(x.t)}</strong> — ${esc(x.d)}</li>`).join('')}</ol>
+<footer><strong>להורדת התוסף ${esc(me.name)}:</strong><ul>${links.map(([a, u]) => `<li>${esc(a)}: <a href="${esc(u)}">${esc(u)}</a></li>`).join('')}</ul>
+<p>התקנה: באוצריא ← כלים ← תוספים ← התקן תוסף חדש. © OpenStreetMap contributors · Natural Earth.</p></footer></body></html>`;
+      try {
+        const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }));
+        a.download = 'הדרכה למפה - ' + me.name + '.html'; document.body.append(a); a.click(); a.remove();
+        say('ההדרכה נשמרה (קובץ HTML עם המפה וקישורי ההורדה).');
+      } catch (e) { say('השמירה לא הצליחה'); }
+    }
 
     // ── לחיצות ──
     el.addEventListener('click', e => {
@@ -527,6 +587,11 @@
       else if (a === 'fit') { S.sel = null; S.street = null; S.mark = null; fit(); refresh(); }
       else if (a === 'full') { const f = el.classList.toggle('mu-full'); b.setAttribute('aria-pressed', String(f)); draw(); }
       else if (a === 'layers') togglePop();
+      else if (a === 'guide') guide(0);
+      else if (a === 'gnext') guide(gi + 1);
+      else if (a === 'gprev') guide(gi - 1);
+      else if (a === 'gclose') guide(null);
+      else if (a === 'gdl') guideFile();
       else if (a === 'jer') {
         if (o.onJerusalem) return o.onJerusalem();
         S.jer = !S.jer; b.setAttribute('aria-pressed', String(S.jer));
