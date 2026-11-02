@@ -1086,7 +1086,8 @@
     if (!MC || !UI) { $('#mapTab').textContent = 'רכיב המפה לא נטען.'; return; }
     const cities = Object.keys(CITY_POS).filter(c => byCity.has(c));
     const pts = cities.map(c => ({ id: c, name: c + ' · ' + byCity.get(c).maps.length + ' מפות', sub: byCity.get(c).maps.length + ' מפות עירוב · ' + byCity.get(c).areas.length + ' שכונות עם אחראי', lat: CITY_POS[c][0], lon: CITY_POS[c][1] }));
-    UI.mount($("#mapTab"), { tab: true, self: 'com.hadabadra.gvulot-eruv', center: state.mapCenter || null, builtinStreets: true, online: !state.offline, points: pts, layerId: 'eruv', glyph: 'ע', layerName: 'ערי עירוב', selectedId: sel, call, openLink, repo: REPO, forumUrl: 'https://otzaria.org/forum/post/45390', issueUrl: REPO + '/issues/1',
+    // מסלול הליכה כבוי: הנקודות כאן הן ערים (מיקום בקירוב), לא יעד הליכה. ניווט ב-Waze / Google Maps נשאר.
+    UI.mount($("#mapTab"), { tab: true, route: false, self: 'com.hadabadra.gvulot-eruv', center: state.mapCenter || null, builtinStreets: true, online: !state.offline, points: pts, layerId: 'eruv', glyph: 'ע', layerName: 'ערי עירוב', selectedId: sel, call, openLink, repo: REPO, forumUrl: 'https://otzaria.org/forum/post/45390', issueUrl: REPO + '/issues/1',
       pickLabel: 'פתיחת העיר', nearbyLabel: 'ערים קרובות', future: ['קווי עירוב על המפה (בקרוב)', 'בדיקת כתובת בתוך העירוב (בקרוב)'],
       onPick: id => { state.tab = 'list'; goCity(id); } });
     $('#mapTab').insertAdjacentHTML('beforeend', '<p class="fine">מיקומי הערים בקירוב. המפות עצמן הן התמונות של מוקד העירוב (בלשונית "רשימה").</p>');
