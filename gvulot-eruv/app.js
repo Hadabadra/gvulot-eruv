@@ -1125,6 +1125,7 @@
         <label><input type="radio" name="linkMode" value="open" ${state.linkMode === 'open' ? 'checked' : ''}> פתיחה בדפדפן</label>
         <label><input type="radio" name="linkMode" value="copy" ${state.linkMode === 'copy' ? 'checked' : ''}> העתקה</label></p>
       <p>הנתונים עודכנו ב־${esc(D.built)}.</p>
+      ${window.AchatPromo ? '<h3 class="info-h">המלצה</h3>' + AchatPromo.aboutHtml() + AchatPromo.settingsHtml() : ''}
       <h3 class="info-h">שליחת תגובה</h3>
       <textarea id="fbText" rows="3" placeholder="הערה, תיקון או שכונה חסרה — נשלח דרך אוצריא למפתחת"></textarea>
       <div class="sheet-actions"><button class="btn filled" id="fbSend">שליחה</button></div>
@@ -1139,6 +1140,7 @@
       <p><button class="btn text" data-url="${REPO}/blob/main/gvulot-eruv-docs/PLAN.md">התכנון המלא בגיטהאב</button>
       <button class="btn text" data-url="${REPO}/releases">כל הגרסאות</button></p>`;
     $('#fbSend').onclick = sendFeedback;
+    if (window.AchatPromo) AchatPromo.bind($('#infoBody'));
     $('#infoScrim').hidden = false; $('#infoClose').focus();
   }
 
@@ -1241,6 +1243,8 @@
     if (rs && rs.view) { state.view = rs.view; state.city = byCity.has(rs.city) ? rs.city : null; state.abroadC = rs.abroadC || ''; if (rs.view === 'city' && !state.city) state.view = 'home'; }
     render();
     $('#q').focus();
+    // המלצה על "אחת שאלתי" (רכיב משותף מ-KLI-MULON shared/promo): פופאפ בפתיחה מתפריט הכלים, לכל היותר פעם בשבוע
+    if (window.AchatPromo) { try { AchatPromo.init({ call, plugin: 'גבולות עירוב', links: { gh: REPO + '/releases/latest', store: 'https://otzaria.org/plugins/6ad93b5d2917198d73992a9d' } }); AchatPromo.maybeShow(); } catch (e) {} }
   }
   if (hasOtz) {
     Otzaria.on('plugin.boot', start);
