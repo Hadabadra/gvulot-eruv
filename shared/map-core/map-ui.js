@@ -162,6 +162,7 @@
 .mapui .mu-steps li b { flex: none; width: 1.6em; height: 1.6em; border-radius: 50%; display: grid; place-items: center; background: var(--color-primary-container, rgba(128,128,128,.18)); font-size: .85em; }
 .mapui .mu-addpop { position: absolute; top: .6em; inset-inline-end: 3.75em; z-index: 6; border-radius: var(--radius-md, 1em); padding: .45em; display: flex; flex-direction: column; gap: .3em; animation: mu-in .16s ease-out; }
 .mapui .mu-addpop button { justify-content: flex-start; }
+.mapui .mu-drawbar { top: 3.7em; bottom: auto; }
 .mu-lbtn { position: relative; display: inline-block; }
 .mu-lbtn > .mu-pop { position: absolute; top: calc(100% + .4em); inset-inline-end: 0; inset-inline-start: auto; width: min(21em, 90vw); }
 @media (max-width: 520px) { .mapui .mu-search { inset-inline-end: 3.4em; } .mapui .mu-ib { width: 2.25em; height: 2.25em; } }
@@ -300,10 +301,11 @@
           <div class="mu-grp mu-glass"><button type="button" class="mu-ib" data-mu="layers" id="mu-lb" title="שכבות" aria-label="שכבות" aria-expanded="false">${ic('layers')}</button></div>
         </div>
         <div class="mu-pop mu-glass" id="mu-pop" hidden role="dialog" aria-label="שכבות"></div>
-        <div class="mu-addpop mu-glass" id="mu-add" hidden role="menu" aria-label="הוספת קובץ"><button class="mu" data-mu="load" role="menuitem">טעינת רחובות מקובץ</button><button class="mu" data-mu="loadgeo" role="menuitem">טעינת שכבה מקובץ (GeoJSON)</button>${off || o.builtinStreets ? '' : '<button class="mu" data-mu="url" role="menuitem">הורדת רחובות לאזור (דפדפן)</button>'}</div>
+        <div class="mu-addpop mu-glass" id="mu-add" hidden role="menu" aria-label="הוספת קובץ"><button class="mu" data-mu="load" role="menuitem">טעינת רחובות מקובץ</button><button class="mu" data-mu="loadgeo" role="menuitem">טעינת שכבה מקובץ (GeoJSON)</button><button class="mu" data-mu="draw" role="menuitem">שרטוט קו או שטח על המפה</button>${off || o.builtinStreets ? '' : '<button class="mu" data-mu="url" role="menuitem">הורדת רחובות לאזור (דפדפן)</button>'}</div>
         <div class="mu-scale mu-glass" id="mu-scale"></div>
         <div class="mu-card mu-glass" id="mu-sel" hidden></div>
         <div class="mu-toast mu-glass" id="mu-msg" hidden role="status"></div>
+        <div class="mu-card mu-glass mu-drawbar" id="mu-draw" hidden></div>
         <div class="mu-guide" id="mu-guide" hidden role="dialog" aria-modal="true" aria-label="הדרכה"></div>
       </div>
       <div class="mu-near" id="mu-near"></div>
@@ -360,6 +362,7 @@
       if (S.route && S.show.route) layers.push({ id: 'route', lines: [{ coords: S.route.coords, label: 'מסלול הליכה', style: 'route' }], points: [] });
       if (S.jer && o.me) layers.push({ id: 'jer', lines: [{ coords: [o.me, JERUSALEM], label: 'הכיוון לירושלים', style: 'route' }], points: [{ lat: JERUSALEM[0], lon: JERUSALEM[1], label: 'ירושלים', id: '__jer' }], glyph: 'י' });
       for (const L of extra) if (S.show['x-' + L.id]) layers.push({ id: L.id, glyph: L.glyph || '•', points: L.points || [], lines: L.lines || [] });
+      if (S.draw && S.draw.pts.length) layers.push({ id: 'draw', glyph: '•', points: S.draw.pts.map((c, i) => ({ lat: c[0], lon: c[1], id: '__d' + i, label: '' })), lines: S.draw.pts.length > 1 ? [{ coords: S.draw.closed ? [...S.draw.pts, S.draw.pts[0]] : S.draw.pts, closed: S.draw.closed, label: 'שרטוט' }] : [] });
       if (S.mark) layers.push({ id: 'mark', glyph: '★', points: [{ lat: S.mark.lat, lon: S.mark.lon, label: S.mark.label, id: '__mark' }], lines: [] });
       if (S.show.pts) layers.push(ptsLayer());
       const base = S.show.base && NE() && (!S.area || S.zoom < 0.35) ? NE() : null;
@@ -621,7 +624,7 @@ ${svg ? `<figure>${svg}</figure>` : ''}
       routeOn ? { t: 'מסלול הליכה (בלי אינטרנט)', d: 'מחפשים קודם את נקודת המוצא (רחוב, פינה או כתובת) או "המיקום שלי", בוחרים נקודה ולוחצים "מסלול הליכה". המסלול מצויר על הרחובות עם מרחק וזמן משוער, ונשאר גם אחרי סגירת הכרטיס. "הוראות שלב אחר שלב" מראה לאן לפנות בכל רחוב, ו"הורדת הסבר המסלול" שומרת את המפה וההוראות לקובץ. אפשר גם ללחוץ על רחוב ← "נקודת מוצא מכאן" או "מסלול הליכה לכאן".' } : null,
       { t: 'בחירת רחוב', d: 'לחיצה על רחוב במפה מסמנת אותו ומראה את שמו ואורכו, עם "נקודת מוצא מכאן" ו"מסלול הליכה לכאן".' },
       { t: 'רחובות', d: o.builtinStreets ? 'רחובות של ערים רבות מובנים בתוסף ונטענים לבד כשמתקרבים לעיר בזום. לעיר אחרת: "רחובות, נתונים ועזרה" ← טעינת רחובות מקובץ.' : 'מתקרבים לעיר ומורידים את קובץ הרחובות שלה, ואז "טעינת רחובות מקובץ" (מתחת למפה).' },
-      { t: 'הוספת קבצים', d: 'כפתור + פותח טעינת קובץ רחובות לעיר שאינה מובנית, או שכבה מקובץ GeoJSON (נקודות, קווים ופוליגונים — למשל קו עירוב).' },
+      { t: 'הוספת קבצים ושרטוט', d: 'כפתור + פותח טעינת קובץ רחובות לעיר שאינה מובנית, שכבה מקובץ GeoJSON (נקודות, קווים ופוליגונים — למשל קו עירוב), ו"שרטוט קו או שטח": לוחצים על המפה נקודה אחר נקודה, ושומרים כשכבה וכקובץ.' },
       { t: 'שכבות ותוספים אחרים', d: 'כפתור השכבות מדליק ומכבה שכבות (רחובות, בתי כנסת, מפת העולם, מפה צבעונית, המסלול), ופותח תוספים אחרים — כיוון תפילה, מקוואות, גבולות עירוב, עינים למקרא — באותו מקום במפה.' },
       { t: 'מסך מלא ומרכוז', d: 'כפתור המסך המלא מגדיל את המפה לכל החלון (Esc חוזר). כפתור המרכוז מראה שוב את כל הנקודות.' },
       { t: 'שמירת ההדרכה', d: 'הכפתור "הורדת ההדרכה" שומר קובץ עם כל השלבים, צילום של המפה כפי שהיא עכשיו וקישורי ההורדה של התוסף.' }
@@ -657,6 +660,23 @@ ${svg ? `<figure>${svg}<figcaption>המפה כפי שהייתה בזמן שמי�
       } catch (e) { say('השמירה לא הצליחה'); }
     }
 
+    // ── שרטוט קו / שטח (2.2): לחיצות על המפה מוסיפות נקודות; שמירה כשכבה וכקובץ GeoJSON ──
+    function drawBar() {
+      const d = $('mu-draw'); if (!S.draw) { d.hidden = true; return; }
+      const n = S.draw.pts.length; let len = 0; for (let i = 1; i < n; i++) len += MC.distM(S.draw.pts[i - 1], S.draw.pts[i]);
+      d.hidden = false;
+      d.innerHTML = `<strong>שרטוט ${S.draw.closed ? 'שטח' : 'קו'}</strong><div class="sub">לחצו על המפה כדי להוסיף נקודות · ${n} נקודות${n > 1 ? ' · ' + MC.widthLabel(len) : ''}</div>
+        <div class="bar"><button class="mu" data-mu="dundo"${n ? '' : ' disabled'}>ביטול נקודה</button><button class="mu" data-mu="dclose" aria-pressed="${S.draw.closed}">${S.draw.closed ? 'קו פתוח' : 'סגירה לשטח'}</button><button class="mu pri" data-mu="dsave"${n > 1 ? '' : ' disabled'}>שמירה כשכבה וכקובץ</button><button class="mu" data-mu="dend">יציאה</button></div>`;
+    }
+    function drawSave() {
+      const L = S.draw, coords = L.pts.map(c => [+c[1].toFixed(6), +c[0].toFixed(6)]);
+      const gj = { type: 'FeatureCollection', features: [{ type: 'Feature', properties: { name: 'שרטוט ' + (extra.length + 1), source: me.name }, geometry: L.closed ? { type: 'Polygon', coordinates: [[...coords, coords[0]]] } : { type: 'LineString', coordinates: coords } }] };
+      const lay = MC.toLayer(gj, 'draw-' + (extra.length + 1), '◆');
+      extra.push({ id: lay.id, name: 'שרטוט ' + (extra.length + 1), sub: L.closed ? 'שטח' : 'קו', glyph: '◆', points: [], lines: lay.lines, on: true }); S.show['x-' + lay.id] = true;
+      try { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(gj, null, 1)], { type: 'application/geo+json' })); a.download = 'שרטוט - ' + me.name + '.geojson'; document.body.append(a); a.click(); a.remove(); } catch (e) {}
+      S.draw = null; drawBar(); refresh(); say('השרטוט נשמר כשכבה וכקובץ GeoJSON. אפשר לטעון אותו שוב בכפתור +.');
+    }
+
     // ── לחיצות ──
     el.addEventListener('click', e => {
       const t = e.target;
@@ -664,6 +684,10 @@ ${svg ? `<figure>${svg}<figcaption>המפה כפי שהייתה בזמן שמי�
       if (g && !(drag && drag.moved)) { if (g.dataset.id && g.dataset.id.indexOf('__') !== 0) return selectPt(g.dataset.id); return; }
       const stp = t.closest && t.closest('[data-mu-step]');
       if (stp && S.route) { const st = S.route.steps[+stp.dataset.muStep]; if (st && st.at) { S.lat = st.at[0]; S.lon = st.at[1]; S.zoom = Math.max(S.zoom, 3); S.mark = { lat: st.at[0], lon: st.at[1], label: st.text.split(' · ')[0] }; draw(); } return; }
+      if (S.draw && t.closest && t.closest('#mu-view') && !(drag && drag.moved) && view._v) {   // 2.2: שרטוט
+        const svg = view.querySelector('svg'), r = svg.getBoundingClientRect();
+        S.draw.pts.push(MC.unproject(view._v, (e.clientX - r.left) * W / r.width, (e.clientY - r.top) * H / r.height)); drawBar(); draw(); return;
+      }
       // 2.1: לחיצה על רחוב בוחרת אותו (כמו בכיוון תפילה)
       if (t.closest && t.closest('#mu-view') && !(drag && drag.moved) && S.area && S.show.streets && view._v) {
         const svg = view.querySelector('svg'), r = svg.getBoundingClientRect(), v = view._v;
@@ -705,6 +729,11 @@ ${svg ? `<figure>${svg}<figcaption>המפה כפי שהייתה בזמן שמי�
       else if (a === 'unpick') { S.pick = null; S.street = null; refresh(); }
       else if (a === 'from-here') { const w = S.pick; if (w) { S.from = [w.lat, w.lon]; S.fromLabel = w.name; S.mark = { lat: w.lat, lon: w.lon, label: 'מוצא: ' + w.name }; say('נקודת המוצא: ' + w.name + '. עכשיו בחרו יעד ולחצו "מסלול הליכה".'); S.pick = null; refresh(); nearList([w.lat, w.lon]); } }
       else if (a === 'route-street') { const w = S.pick; if (w) makeRoute([w.lat, w.lon], '__street', w.name); }
+      else if (a === 'draw') { $('mu-add').hidden = true; S.draw = { pts: [], closed: false }; S.pick = null; drawBar(); showSel(); }
+      else if (a === 'dundo') { S.draw.pts.pop(); drawBar(); draw(); }
+      else if (a === 'dclose') { S.draw.closed = !S.draw.closed; drawBar(); draw(); }
+      else if (a === 'dsave') drawSave();
+      else if (a === 'dend') { S.draw = null; drawBar(); draw(); }
       else if (a === 'steps') { S.showSteps = !S.showSteps; showSel(); }
       else if (a === 'routedl') routeFile();
       else if (a === 'add') { const ap = $('mu-add'); ap.hidden = !ap.hidden; b.setAttribute('aria-expanded', String(!ap.hidden)); }
