@@ -22,3 +22,6 @@
 .ap-set{display:flex;justify-content:space-between;align-items:center;gap:1em;cursor:pointer}
 .ap-set small{display:block;font-size:.82em;color:var(--color-on-surface-variant)}
 @media (prefers-reduced-motion:reduce){.ap-pop,.ap-pop.ap-out{animation:none}}
+
+/* 1.1.0 */
+.ap-by{margin:.1em 0 0;font-size:.8em;color:var(--color-on-surface-variant)}

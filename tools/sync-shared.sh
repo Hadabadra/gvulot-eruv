@@ -5,9 +5,9 @@
 set -e
 cd "$(dirname "$0")/.."
 RAW="https://raw.githubusercontent.com/Hadabadra/Mikvaot/main/shared"
-for f in map-core/map-core.js map-core/map-ui.js map-core/README.md map-core/SHARED-MAP.md map-core/test.js streets/streets-cities.js streets/cities.json basemap/world-basemap.js report/crash-report.js; do
+for f in map-core/map-core.js map-core/map-ui.js map-core/README.md map-core/SHARED-MAP.md map-core/test.js streets/streets-cities.js streets/cities.json basemap/world-basemap.js report/crash-report.js promo/achat-promo.js promo/achat-promo.css; do
   mkdir -p "shared/$(dirname "$f")"; curl -fsSL "$RAW/$f" -o "shared/$f.tmp" && mv "shared/$f.tmp" "shared/$f"
 done
 for f in map-core/map-core.js map-core/map-ui.js streets/streets-cities.js basemap/world-basemap.js; do cp "shared/$f" "gvulot-eruv/$(basename "$f")"; done
-mkdir -p gvulot-eruv/shared/report && cp shared/report/crash-report.js gvulot-eruv/shared/report/
+mkdir -p gvulot-eruv/shared/report gvulot-eruv/shared/promo && cp shared/report/crash-report.js gvulot-eruv/shared/report/ && cp shared/promo/achat-promo.js shared/promo/achat-promo.css gvulot-eruv/shared/promo/
 echo "סונכרן מ-Mikvaot/shared"

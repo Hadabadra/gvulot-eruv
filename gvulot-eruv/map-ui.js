@@ -12,6 +12,7 @@
      call(method, params), openLink(url), onPick(id), pickLabel, nearby, nearbyLabel,
      builtinStreets, online, tab, jerusalem, onJerusalem, repo, forumUrl, issueUrl, future: [...] })
    MapUI.layersButton(element, { self, getPos, call, openLink, online, extraHTML, onExtra(pop) })   // אותו תפריט שכבות למפה שאינה map-ui (כיוון תפילה, עינים למקרא)
+   guideExtra: async (selectedId) => html  // 2.2: HTML נוסף בקובץ ההדרכה שיורד (למשל מפת העירוב של העיר)
    guide: [{t, d}]                 // 2.1: שלבים של התוסף עצמו בהדרכה (לפני שלבי המפה המשותפים). links מגיעים מ-repo ומ-PLUGINS.
    MapUI.onOpenMap(cb)             // תוסף אחר ביקש לפתוח את המפה כאן: cb({lat, lon, from}) */
 (function (root, factory) {
@@ -640,8 +641,9 @@ ${svg ? `<figure>${svg}</figure>` : ''}
         <div class="bar"><button class="mu" data-mu="gprev"${gi ? '' : ' disabled'}>הקודם</button>${gi < L.length - 1 ? '<button class="mu pri" data-mu="gnext">הבא</button>' : '<button class="mu pri" data-mu="gclose">סיום</button>'}<button class="mu" data-mu="gdl" style="margin-inline-start:auto">הורדת ההדרכה</button></div></div>`;
       const f = g.querySelector('[data-mu="gnext"],[data-mu="gclose"]'); if (f) f.focus();
     }
-    function guideFile() {
+    async function guideFile() {
       const L = STEPS(), links = gLinks();
+      let more = ''; try { if (o.guideExtra) more = await o.guideExtra(S.sel) || ''; } catch (e) {}   // 2.2: תוכן נוסף מהתוסף (למשל מפת העירוב של העיר)
       const svg = (view.querySelector('svg') || {}).outerHTML || '';
       const html = `<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><title>הדרכה למפה · ${esc(me.name)}</title>
 <style>:root{--color-primary:#3f6fa8;--color-on-primary:#fff;--color-surface:#fff;--color-on-surface:#1b1b1f;--color-on-surface-variant:#5f6368;--color-outline:#888;--color-error:#c62828}
@@ -651,6 +653,7 @@ figcaption{font-size:.85em;color:#555;padding:.4em .8em}ol li{margin:.5em 0}foot
 <h1>הדרכה למפה — ${esc(me.name)}</h1><p>מפה משותפת לתוספי אוצריא (גרסת מפה ${VERSION}). עובדת בלי אינטרנט.</p>
 ${svg ? `<figure>${svg}<figcaption>המפה כפי שהייתה בזמן שמירת ההדרכה${S.areaName ? ' · ' + esc(S.areaName) : ''}${S.route ? ' · ' + routeMsg(S.route) : ''}</figcaption></figure>` : ''}
 <ol>${L.map(x => `<li><strong>${esc(x.t)}</strong> — ${esc(x.d)}</li>`).join('')}</ol>
+${more}
 <footer><strong>להורדת התוסף ${esc(me.name)}:</strong><ul>${links.map(([a, u]) => `<li>${esc(a)}: <a href="${esc(u)}">${esc(u)}</a></li>`).join('')}</ul>
 <p>התקנה: באוצריא ← כלים ← תוספים ← התקן תוסף חדש. © OpenStreetMap contributors · Natural Earth.</p></footer></body></html>`;
       try {

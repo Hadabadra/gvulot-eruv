@@ -1093,6 +1093,14 @@
     const pts = cities.map(c => ({ id: c, name: c + ' · ' + byCity.get(c).maps.length + ' מפות', sub: byCity.get(c).maps.length + ' מפות עירוב · ' + byCity.get(c).areas.length + ' שכונות עם אחראי', lat: CITY_POS[c][0], lon: CITY_POS[c][1] }));
     // מסלול הליכה כבוי: הנקודות כאן הן ערים (מיקום בקירוב), לא יעד הליכה. ניווט ב-Waze / Google Maps נשאר.
     UI.mount($("#mapTab"), { tab: true, route: false, self: 'com.hadabadra.gvulot-eruv', center: state.mapCenter || null, builtinStreets: true, online: !state.offline, points: pts, layerId: 'eruv', glyph: 'ע', layerName: 'ערי עירוב', selectedId: sel, call, openLink, repo: REPO, forumUrl: 'https://otzaria.org/forum/post/45390', issueUrl: REPO + '/issues/1',
+      // 2.2: בהדרכה שיורדת — גם מפות העירוב של העיר שנבחרה (תמונות מוקד העירוב, מוטמעות בקובץ)
+      guideExtra: async id => {
+        const c = byCity.get(id || state.city); if (!c || !c.maps.length) return '';
+        const toData = async m => { try { const b = await (await fetch(srcOf(m))).blob(); return await new Promise(r => { const f = new FileReader(); f.onload = () => r(f.result); f.onerror = () => r(''); f.readAsDataURL(b); }); } catch (e) { return ''; } };
+        let h = `<h2>מפות העירוב — ${esc(id || state.city)}</h2><p>מקור: מוקד העירוב (${esc(D.source.phone)}). להתמצאות בלבד — יש לוודא מול האחראי המקומי לפני שבת.</p>`;
+        for (const m of c.maps.slice(0, 6)) { const u = await toData(m); if (u) h += `<figure><img src="${u}" alt="${esc(m.title)}" style="width:100%;height:auto;display:block"><figcaption>${esc(m.title)}</figcaption></figure>`; }
+        return h;
+      },
       guide: [{ t: 'ערי העירוב במפה', d: 'כל נקודה היא עיר עם מפות עירוב (מיקום בקירוב). "פתיחת העיר" מציגה את מפות מוקד העירוב והאחראים. קווי העירוב עצמם עדיין לא מצוירים על המפה.' }], pickLabel: 'פתיחת העיר', nearbyLabel: 'ערים קרובות', future: ['קווי עירוב על המפה (בקרוב)', 'בדיקת כתובת בתוך העירוב (בקרוב)'],
       onPick: id => { state.tab = 'list'; goCity(id); } });
     $('#mapTab').insertAdjacentHTML('beforeend', '<p class="fine">מיקומי הערים בקירוב. המפות עצמן הן התמונות של מוקד העירוב (בלשונית "רשימה").</p>');
