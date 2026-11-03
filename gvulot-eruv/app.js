@@ -5,6 +5,8 @@
   'use strict';
   const D = window.ERUV_DATA;
   // אחראי נוסף שנמסר על ידי מפתח התוסף (לא מהמוקד הארצי): ועד העירובים השכונתיים בבני ברק
+  // קישורים מהאתר של העירוב עצמו, לפי דיווח משתמש (#10 — פסגת זאב מרכז). מוצגים רק כשאוצריא מחוברת.
+  const AREA_LINKS = { 'ירושלים|פסגת זאב מרכז': [['אתר העירוב', 'https://eruvpzm.yisroelk.link/'], ['מפות העירוב (Google Drive)', 'https://drive.google.com/drive/folders/1BAn0sp5qWmEUx2STEwHPhApw-qT0RhjQ']] };
   if (!D.areas.some(a => a.phones && a.phones.includes('050-4154005'))) D.areas.push({ city: 'בני ברק', n: '', area: 'ועד העירובים השכונתיים (מסר מפתח התוסף)', names: ['רפאל סטפנסקי (אחראי בפ"כ)'], phones: ['050-4154005'], emails: [['ועד העירובים השכונתיים', 'eruv.bbc@gmail.com']], maps: [] });
   const $ = (s, r = document) => r.querySelector(s);
   const hasOtz = typeof window.Otzaria !== 'undefined';
@@ -117,13 +119,14 @@
     const gm = !opts.noMaps && !a.maps.length && !own.length && generalMap(a.city);
     if (gm) mapsChips += `<button class="chip map" data-open-map="${gm.id}" title="השכונה מסומנת במפה הכללית של העיר">${ICON.map}מפה כללית</button>`;
     const phones = a.phones.map(p => `<button class="chip" data-phone="${esc(p)}" title="העתקת המספר">${ICON.phone}${esc(fmtPhone(p))}</button>`).join('');
+    const links = (AREA_LINKS[a.city + '|' + a.area] || []).map(([t, u]) => `<button class="chip ext-only" data-url="${esc(u)}" title="קישור מאתר העירוב (לפי דיווח משתמש)">↗ ${esc(t)}</button>`).join('');
     const mails = (a.emails || []).map(([t, m]) => `<button class="chip" data-url="mailto:${esc(m)}" title="${esc(m)} · הכתובת גם מועתקת">✉ ${esc(t)}</button>`).join('');
     return `<div class="area${opts.hl ? ' hl' : ''}">
       <span class="area-num">${esc(a.n || '•')}</span>
       <div class="area-body">
         <div class="area-title">${opts.withCity ? esc(a.city) + ' · ' : ''}${hl(a.area || 'כל השכונה', q)}</div>
         <div class="area-names">${a.names.length ? hl(a.names.join(' · '), q) : 'שם האחראי לא צוין'}</div>
-        <div class="area-actions">${phones}${mails}${mapsChips}</div>
+        <div class="area-actions">${phones}${mails}${mapsChips}${links}</div>
       </div></div>`;
   }
   function mapCardHTML(m) {
@@ -581,7 +584,8 @@
       pdfLib = window.pdfjsLib; if (!pdfLib) throw new Error('pdf.js missing');
       pdfLib.GlobalWorkerOptions.workerSrc = './pdfjs/pdf.worker.min.js';
     }
-    if (!pdfDocs.has(d.id)) pdfDocs.set(d.id, loadPdfData(d.id).then(data => pdfLib.getDocument({ data, isEvalSupported: false, enableXfa: false,
+    if (!pdfDocs.has(d.id)) pdfDocs.set(d.id, loadPdfData(d.id).then(data => pdfLib.getDocument({ data, isEvalSupported: false, enableXfa: false, disableFontFace: true, // #9: בלי זה גופני Word העבריים מצוירים משובשים בחוברת שיורדת (כמו בשיח רינה)
+      
       standardFontDataUrl: new URL('pdfjs/standard_fonts/', document.baseURI).href }).promise));
     return pdfDocs.get(d.id);
   }
