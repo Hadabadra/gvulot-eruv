@@ -1051,7 +1051,7 @@
   async function sendFeedback() {
     const t = ($('#fbText').value || '').trim();
     if (!t) { $('#fbText').focus(); return; }
-    const r = await call('feedback.report', { details: '[גבולות עירוב ' + VERSION + '] ' + t, reportType: 'feedback' });
+    const r = await call('feedback.report', { details: '[גבולות עירוב ' + VERSION + '] ' + t, reportType: 'other' });
     if (r.success && r.data === 'cancelled') return;
     if (r.success) { $('#fbText').value = ''; toast(r.data === 'queued' ? 'התגובה תישלח כשיהיה חיבור' : 'התגובה נשלחה, תודה!'); }
     else toast('השליחה זמינה בתוך אוצריא');
@@ -1244,6 +1244,8 @@
     if (rs && rs.view) { state.view = rs.view; state.city = byCity.has(rs.city) ? rs.city : null; state.abroadC = rs.abroadC || ''; if (rs.view === 'city' && !state.city) state.view = 'home'; }
     render();
     $('#q').focus();
+    // דיווח תקלות אוטומטי (רכיב משותף shared/report): תקלה שלא טופלה ← הצעה לשלוח דיווח קריסה דרך מערכת הדיווחים של אוצריא
+    if (window.CrashReport) CrashReport.init({ call, plugin: 'גבולות עירוב', version: VERSION });
     // המלצה על "אחת שאלתי" (רכיב משותף מ-KLI-MULON shared/promo): פופאפ בפתיחה מתפריט הכלים, לכל היותר פעם בשבוע
     if (window.AchatPromo) { try { AchatPromo.init({ call, plugin: 'גבולות עירוב', links: { gh: REPO + '/releases/latest', store: 'https://otzaria.org/plugins/6ad93b5d2917198d73992a9d' } }); AchatPromo.maybeShow(); } catch (e) {} }
   }
