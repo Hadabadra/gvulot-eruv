@@ -175,3 +175,14 @@ t('overpassUrl, ציור שכבת בתי כנסת, מיקום שלי והדגש�
 });
 
 console.log('\n' + n + ' בדיקות עברו');
+
+// 2.2: הוראות הליכה ובחירת רחוב
+{
+  const MC = require('./map-core.js');
+  const area = { lat: 32, lon: 35, w: [['א', 'residential', [32.000, 35.000, 32.001, 35.000, 32.002, 35.000]], ['ב', 'residential', [32.002, 35.000, 32.002, 35.0015]]] };
+  const r = MC.walkRoute(area, [32.000, 35.000], [32.002, 35.0015]);
+  if (!r || r.steps.length !== 3 || !/ימינה/.test(r.steps[1].text) || r.steps[2].turn !== 'arrive') { console.error('FAIL steps', r && r.steps); process.exit(1); }
+  const w = MC.nearestWay(area, [32.0015, 35.00003], 20);
+  if (!w || w.name !== 'א') { console.error('FAIL nearestWay', w); process.exit(1); }
+  console.log('ok  הוראות הליכה (פנייה ימינה) ובחירת רחוב בלחיצה');
+}
