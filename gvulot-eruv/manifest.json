@@ -1,13 +1,13 @@
 {
   "id": "com.hadabadra.gvulot-eruv",
   "name": "גבולות עירוב",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "description": "מפות העירובים השכונתיים והאחראים, תחום שבת והחוברות \"דרך התחומין\", ספריית עירובין ועירובין בחו\"ל — מתוך מוקד העירוב ובאישורו.",
   "author": "לזש\"ק לרמב\"ר ומבק\"י",
   "schemaVersion": 1,
   "sdkVersion": "1.x",
   "stability": "beta",
-  "minAppVersion": "0.9.98",
+  "minAppVersion": "0.9.98.3",
   "entrypoint": "index.html",
   "permissions": [
     "app.open_url",
@@ -27,7 +27,8 @@
     "app.shortcuts",
     "navigation.write",
     "plugin.open_other",
-    "network.access"
+    "network.access",
+    "search.field_actions"
   ],
   "network": {
     "enabled": true,
@@ -70,6 +71,19 @@
           "label": "פתיחת גבולות עירוב",
           "key": "ctrl+alt+e",
           "command": "open"
+        }
+      ],
+      "searchFieldActions": [
+        {
+          "id": "find-eruv",
+          "title": "חיפוש עירוב לפי העיר, השכונה או הרחוב שבשדה",
+          "icon": "map_24_regular",
+          "activeIcon": "map_24_filled",
+          "fields": [
+            "library",
+            "fullText"
+          ],
+          "visibleWhen": "nonEmptyText"
         }
       ]
     }
