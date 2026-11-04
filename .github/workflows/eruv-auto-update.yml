@@ -28,6 +28,8 @@ jobs:
         id: upd
         working-directory: gvulot-eruv-build
         run: python3 auto_update.py ../gvulot-eruv
+      - name: Eruv lines still match the moked maps (level 4)
+        run: python3 gvulot-eruv-build/eruv_lines.py --check
       - name: Commit
         if: steps.upd.outputs.changed == 'true' || steps.upd.outputs.changed == 'baseline'
         run: |

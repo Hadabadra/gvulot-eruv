@@ -12,10 +12,16 @@
 עם קישור למפה המקורית ולאחראי. הקובע הוא המפה המקורית והאחראי המקומי — לא הקו.
 
 הרצה:  python3 gvulot-eruv-build/eruv_lines.py [--debug DIR]
+בדיקה שבועית (רמה 4, בלי OpenCV):  python3 gvulot-eruv-build/eruv_lines.py --check
+   אם המוקד החליף את תמונת המפה (sha1 שונה מ-'sha' שנבדק), הקו של אותה מפה יורד מ-eruv-lines.js עד שיסורטט ויאומת מחדש —
+   כדי שלא יוצג קו ישן ליד מפה חדשה.
 עיר חדשה: מוסיפים רשומה ל-PILOTS (מזהה המפה, קובץ הרחובות, מסגרת המפה בתמונה, צבע הקו, 2 נקודות עיגון). """
-import json, math, os, re, subprocess, sys
-import numpy as np, cv2
-from PIL import Image
+import hashlib, json, math, os, re, subprocess, sys
+try:
+    import numpy as np, cv2
+    from PIL import Image
+except ImportError:   # מצב --check (ב-CI השבועי) לא צריך אותם
+    np = cv2 = Image = None
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 APP = os.path.join(HERE, '..', 'gvulot-eruv')
@@ -25,10 +31,10 @@ if not os.path.exists(CORE): CORE = os.path.join(APP, 'map-core.js')
 # frame = [x0, y0, x1, y1] של אזור המפה בתמונה המלאה; anchors = [((x, y), (lat, lon)), ...]
 # line = 'orange' או 'red'; inner = ריבועים להסתרה (מקרא, חותמת) בתוך המסגרת
 PILOTS = [
-    {'map': '02443b14', 'city': 'קרית אתא', 'name': 'שכונת שביט', 'streets': 'kiryat-ata', 'line': 'orange', 'resp': 'הרב משה ערערא · 053-316-0985',
+    {'map': '02443b14', 'city': 'קרית אתא', 'name': 'שכונת שביט', 'streets': 'kiryat-ata', 'line': 'orange', 'resp': 'הרב משה ערערא · 053-316-0985', 'sha': 'f8f20ce7415b6b82cc3b5a60ebc6cc7486f256a1',
      'frame': [114, 576, 1580, 1822], 'hide': [[180, 1690, 570, 1822]],
      'anchors': [((750, 1806), (32.80772, 35.11668)), ((262, 600), (32.81395, 35.11415))]},
-    {'map': '947bcab2', 'city': 'חדרה', 'name': 'שכונות שלמה, קלרין ופאר (העירוב השכונתי)', 'streets': 'hadera', 'line': 'orange',
+    {'map': '947bcab2', 'city': 'חדרה', 'name': 'שכונות שלמה, קלרין ופאר (העירוב השכונתי)', 'streets': 'hadera', 'line': 'orange', 'sha': '99acc87c3374d5886856c56a9adbc8e5caacaa62',
      'frame': [50, 25, 1590, 1383], 'hide': [],
      'anchors': [((370, 908), (32.42883, 34.91573)), ((1358, 928), (32.43300, 34.91572))]},
 ]
@@ -118,13 +124,27 @@ def simplify(ll, tol_m=3):
     idx = [int(np.argmin(((xy - p) ** 2).sum(1))) for p in ap]
     return ll[sorted(set(idx))]
 
+def sha(mid):
+    return hashlib.sha1(open(os.path.join(APP, 'maps', mid + '.webp'), 'rb').read()).hexdigest()
+
+def check():
+    out = os.path.join(APP, 'eruv-lines.js'); txt = open(out, encoding='utf-8').read()
+    head, data = txt[:txt.index('window.ERUV_LINES')], json.loads(txt[txt.index('{'):txt.rindex(';')])
+    drop = [P['map'] for P in PILOTS if P['map'] in data and P.get('sha') and sha(P['map']) != P['sha']]
+    for mid in drop: print('::warning::מפת המוקד', mid, 'השתנתה — הקו הוסר עד שיסורטט מחדש'); data.pop(mid)
+    if drop:
+        with open(out, 'w', encoding='utf-8') as f: f.write(head + 'window.ERUV_LINES = ' + json.dumps(data, ensure_ascii=False, separators=(',', ':')) + ';\n')
+    print('בדיקת קווים: תקין' if not drop else f'הוסרו {len(drop)} קווים')
+
 def main():
+    if '--check' in sys.argv: return check()
     dbg = sys.argv[sys.argv.index('--debug') + 1] if '--debug' in sys.argv else None
     if dbg: os.makedirs(dbg, exist_ok=True)
     data = {}
     for P in PILOTS:
         img = np.array(Image.open(os.path.join(APP, 'maps', P['map'] + '.webp')).convert('RGB'))
         road, line = masks(img, P)
+        if P.get('sha') and sha(P['map']) != P['sha']: print('  המפה השתנתה מאז האימות — מדלגים:', P['map']); continue
         to_ll, cc = georef(P, img, road, area(P['streets']), dbg)
         px, closed = trace(line)
         ll = simplify(to_ll(px))
