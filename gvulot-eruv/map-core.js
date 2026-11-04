@@ -28,6 +28,20 @@
     return [q1[0] + u * dx, q1[1] + u * dy];
   }
 
+  function inPoly(p, ring) {                  // 3.1: נקודה [lat, lon] בתוך מצולע [[lat, lon], ...] (ray casting)
+    let inside = false;
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      const a = ring[i], b = ring[j];
+      if ((a[0] > p[0]) !== (b[0] > p[0]) && p[1] < (b[1] - a[1]) * (p[0] - a[0]) / (b[0] - a[0]) + a[1]) inside = !inside;
+    }
+    return inside;
+  }
+  function distToRing(p, ring) {             // מרחק במטרים מנקודה לקו המצולע
+    const k = [M_LAT, mLon(p[0])], P = [p[0] * k[0], p[1] * k[1]]; let best = Infinity;
+    for (let i = 0; i < ring.length; i++) { const a = ring[i], b = ring[(i + 1) % ring.length]; const q = nearOnSegment(P, [a[0] * k[0], a[1] * k[1]], [b[0] * k[0], b[1] * k[1]]); best = Math.min(best, Math.hypot(q[0] - P[0], q[1] - P[1])); }
+    return best;
+  }
+
   /* ── נתוני אזור ── */
   function decodeArea(a) {
     if (!a || a.z !== 2) return a;
@@ -361,8 +375,9 @@
       for (const ln of layer.lines || []) {   // קווים ופוליגונים (למשל גבול עירוב)
         const cs = v.globe && ln.coords.length === 2 && !ln.closed ? greatCircle(ln.coords[0], ln.coords[1]) : ln.coords;
         let pen = false; const d = cs.map(c => { const p = project(v, c[0], c[1]); if (p[2] < 0) { pen = false; return ''; } const r = (pen ? 'L' : 'M') + f(p[0]) + ',' + f(p[1]); pen = true; return r; }).join('') + (ln.closed && !v.globe ? 'Z' : '');
-        const solid = ln.style === 'route';
-        lines += `<path d="${d}" fill="${ln.closed ? 'var(--color-primary)' : 'none'}" fill-opacity=".08" stroke="var(--color-primary)" stroke-width="${solid ? 5 : 2.5}"${solid ? ' stroke-opacity=".85" stroke-linecap="round"' : ' stroke-dasharray="7 4"'} stroke-linejoin="round"><title>${esc(ln.label || layer.id)}</title></path>`;
+        const solid = ln.style === 'route', col = ln.color || 'var(--color-primary)';   // 3.1: צבע לקו (עט, קווי עירוב) וקו רציף
+        if (ln.color && ln.halo !== false) lines += `<path d="${d}" fill="none" stroke="var(--color-surface, #fff)" stroke-opacity=".75" stroke-width="${ln.solid ? 6 : 5}" stroke-linejoin="round"/>`;
+        lines += `<path d="${d}" fill="${ln.closed ? col : 'none'}" fill-opacity="${ln.color ? .12 : .08}" stroke="${col}" stroke-width="${solid ? 5 : ln.solid ? 3.2 : 2.5}"${solid ? ' stroke-opacity=".85" stroke-linecap="round"' : ln.solid ? ' stroke-linecap="round"' : ' stroke-dasharray="7 4"'} stroke-linejoin="round"><title>${esc(ln.label || layer.id)}</title></path>`;
       }
       for (const pt of layer.points || []) {
         const p = project(v, pt.lat, pt.lon); if (!inView(p[0], p[1], 20)) continue;
@@ -470,6 +485,6 @@
     best.len = Math.round(len); return best;
   }
 
-  return { greatCircle, globeXY, walkRoute, routeSteps, nearestWay, distM, decodeArea, compactOverpass, findCover, normName, normHe, expandAliases, findWays, searchStreet, findCorner, nearestStreets, placeLabel,
+  return { inPoly, distToRing, greatCircle, globeXY, walkRoute, routeSteps, nearestWay, distM, decodeArea, compactOverpass, findCover, normName, normHe, expandAliases, findWays, searchStreet, findCorner, nearestStreets, placeLabel,
     createView, project, unproject, renderBase, leafZoom, widthLabel, toLayer, toGeoJSON, renderSVG, overpassUrl };
 });

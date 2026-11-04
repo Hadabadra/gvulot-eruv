@@ -1,6 +1,7 @@
 /* גבולות עירוב — עיצוב לפי מדריך העיצוב של אוצריא (M3): צבעים רק כמשתני :root שמתעדכנים מה-API,
    גדלים ביחידות יחסיות, ו-px רק בפס העליון (topbar) כנדרש. */
 :root {
+  --eruv-line: #d84315;   /* 1.9.0: קווי עירוב בקירוב במפה */
   --color-primary: #3F6B4F;
   --color-on-primary: #FFFFFF;
   --color-primary-container: #C1ECCD;

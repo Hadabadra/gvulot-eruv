@@ -21,6 +21,24 @@
   D.maps.forEach(m => byCity.get(m.city).maps.push(m));
   D.areas.forEach(a => byCity.get(a.city).areas.push(a));
   const areasOfMap = id => D.areas.filter(a => a.maps.includes(id));
+  // ── 1.9.0 (ו׳/ז׳): קווי עירוב בקירוב, משורטטים מתוך מפות המוקד (gvulot-eruv-build/eruv_lines.py) ──
+  const LINES = window.ERUV_LINES || {};
+  const LINE_LAYER = 'קווי עירוב (בקירוב — לפי מפת המוקד)';
+  const lineResp = id => { const ar = areasOfMap(id); return ar.length ? ar.map(a => (a.names.join(', ') || 'אחראי') + (a.phones[0] ? ' ' + a.phones[0] : '')).join(' · ') : (LINES[id].resp || ''); };
+  const lineCenter = L => { const c = L.coords; return [c.reduce((s, p) => s + p[0], 0) / c.length, c.reduce((s, p) => s + p[1], 0) / c.length]; };
+  function insideMsg(lat, lon) {
+    const MC = window.MapCore; if (!MC || !MC.inPoly) return '';
+    let near = null;
+    for (const [id, L] of Object.entries(LINES)) {
+      if (!L.closed) continue;
+      const d = MC.distToRing([lat, lon], L.coords), inn = MC.inPoly([lat, lon], L.coords);
+      if (inn && d > 40) return `בתוך קו העירוב בקירוב (${L.city} · ${L.name}). לוודא במפת המוקד ומול האחראי: ${lineResp(id)}`;
+      if (d <= 40) return `על גבול העירוב (כ-${Math.round(d)} מ' מהקו בקירוב, ${L.city}) — רק המפה המקורית והאחראי קובעים: ${lineResp(id)}`;
+      if (d < 3000 && (!near || d < near.d)) near = { d, L };
+    }
+    return near ? `מחוץ לקו העירוב בקירוב של ${near.L.name} (${near.L.city}), כ-${Math.round(near.d)} מ' ממנו` : '';
+  }
+  function openLine(id) { const L = LINES[id]; if (!L) return; closeMap(); state.mapSel = null; state.mapCenter = lineCenter(L); state.mapZoom = 0.6; state.tab = 'map'; mapKey = ''; showTab(); saveView(); }
   const srcOf = (m, thumb) => m.src ? (thumb ? m.thumb : m.src) : m.user ? m.url : `maps/${m.id}${thumb ? '.t' : ''}.webp`;
   // חוברות ומאמרי תחום שבת (docs.js), ספרייה וחו"ל (extra.js)
   const DOCS = window.ERUV_DOCS || [];
@@ -132,7 +150,7 @@
   function mapCardHTML(m) {
     return `<button class="map-card" data-open-map="${m.id}">
       <img src="${esc(srcOf(m, true))}" alt="" loading="lazy">
-      <div class="meta"><strong>${esc(m.title)}</strong>${m.user ? '<span class="own">שלי</span>' : ''}<span>${areasOfMap(m.id).length || ''}${areasOfMap(m.id).length ? ' אחראים' : ''}</span></div>
+      <div class="meta"><strong>${esc(m.title)}</strong>${m.user ? '<span class="own">שלי</span>' : ''}<span>${areasOfMap(m.id).length || ''}${areasOfMap(m.id).length ? ' אחראים' : ''}</span>${LINES[m.id] ? '<span class="own" title="יש קו עירוב בקירוב בלשונית המפה">〰 קו במפה</span>' : ''}</div>
     </button>`;
   }
 
@@ -532,8 +550,9 @@
     const side = $('#vSidePanel');
     if (pm) side.innerHTML = m.side; else side.innerHTML = `<h3>אחראים במפה זו</h3>` +
       (ar.length ? ar.map(a => areaHTML(a, '', { noMaps: true })).join('') : `<p class="area-names">לא שויכו אחראים למפה זו. בדף העיר ${esc(m.city)} יש רשימה מלאה.</p>`) +
+      (LINES[m.id] ? `<button class="btn" data-line="${m.id}">${ICON.map} קו העירוב בקירוב במפה</button><p class="fine">הקו שורטט מתוך מפה זו ומוצג בקירוב בלבד. הקובע: המפה הזו והאחראי.</p>` : '') +
       (m.user ? `<button class="btn text" data-del-map="${m.id}">הסרת המפה שהוספתי</button>` : `<button class="btn text" data-url="${esc(m.pageUrl)}">פתיחת הדף באתר המוקד</button>`);
-    $('#viewer').classList.toggle('side-off', pm ? (V.sideOff || innerWidth < 760) : (!ar.length && !m.user) || innerWidth < 760);
+    $('#viewer').classList.toggle('side-off', pm ? (V.sideOff || innerWidth < 760) : (!ar.length && !m.user && !LINES[m.id]) || innerWidth < 760);
     $('#vSide').classList.toggle('on', !$('#viewer').classList.contains('side-off'));
     $('#viewer').hidden = false;
     img.style.transform = ''; img.onload = () => { if (!V.w || m.user) { V.w = m.w = img.naturalWidth; V.h = m.h = img.naturalHeight; } fit(false); };
@@ -1094,7 +1113,10 @@
     const cities = Object.keys(CITY_POS).filter(c => byCity.has(c));
     const pts = cities.map(c => ({ id: c, name: c + ' · ' + byCity.get(c).maps.length + ' מפות', sub: byCity.get(c).maps.length + ' מפות עירוב · ' + byCity.get(c).areas.length + ' שכונות עם אחראי', lat: CITY_POS[c][0], lon: CITY_POS[c][1] }));
     // מסלול הליכה כבוי: הנקודות כאן הן ערים (מיקום בקירוב), לא יעד הליכה. ניווט ב-Waze / Google Maps נשאר.
-    UI.mount($("#mapTab"), { tab: true, route: false, self: 'com.hadabadra.gvulot-eruv', center: state.mapCenter || null, builtinStreets: true, online: !state.offline, points: pts, layerId: 'eruv', glyph: 'ע', layerName: 'ערי עירוב', selectedId: sel, call, openLink, repo: REPO, forumUrl: 'https://otzaria.org/forum/post/45390', issueUrl: REPO + '/issues/1',
+    const lineIds = Object.keys(LINES), lineCities = [...new Set(lineIds.map(i => LINES[i].city))];
+    const lineLayer = lineIds.length ? [{ id: 'eruv-lines', name: LINE_LAYER, glyph: '〰', sub: lineIds.length + ' עירובים · ' + lineCities.join(', '), points: lineIds.map(i => { const c = lineCenter(LINES[i]); return { lat: c[0], lon: c[1], id: '__line-' + i, label: LINES[i].name }; }),
+      lines: lineIds.map(i => ({ coords: LINES[i].coords, closed: LINES[i].closed, solid: true, color: 'var(--eruv-line, #d84315)', label: `קו עירוב בקירוב — ${LINES[i].city} · ${LINES[i].name} · המקור: מפת מוקד העירוב · בירורים: ${lineResp(i)}` })) }] : [];
+    UI.mount($("#mapTab"), { tab: true, route: false, draw: true, zoom: state.mapZoom || null, inside: insideMsg, layers: lineLayer, self: 'com.hadabadra.gvulot-eruv', center: state.mapCenter || null, builtinStreets: true, online: !state.offline, points: pts, layerId: 'eruv', glyph: 'ע', layerName: 'ערי עירוב', selectedId: sel, call, openLink, repo: REPO, forumUrl: 'https://otzaria.org/forum/post/45390', issueUrl: REPO + '/issues/1',
       // 2.2: בהדרכה שיורדת — גם מפות העירוב של העיר שנבחרה (תמונות מוקד העירוב, מוטמעות בקובץ)
       guideExtra: async id => {
         const c = byCity.get(id || state.city); if (!c || !c.maps.length) return '';
@@ -1103,9 +1125,12 @@
         for (const m of c.maps.slice(0, 6)) { const u = await toData(m); if (u) h += `<figure><img src="${u}" alt="${esc(m.title)}" style="width:100%;height:auto;display:block"><figcaption>${esc(m.title)}</figcaption></figure>`; }
         return h;
       },
-      guide: [{ t: 'ערי העירוב במפה', d: 'כל נקודה היא עיר עם מפות עירוב (מיקום בקירוב). "פתיחת העיר" מציגה את מפות מוקד העירוב והאחראים. קווי העירוב עצמם עדיין לא מצוירים על המפה.' }], pickLabel: 'פתיחת העיר', nearbyLabel: 'ערים קרובות', future: ['קווי עירוב על המפה (בקרוב)', 'בדיקת כתובת בתוך העירוב (בקרוב)'],
+      guide: [{ t: 'ערי העירוב במפה', d: 'כל נקודה היא עיר עם מפות עירוב (מיקום בקירוב). "פתיחת העיר" מציגה את מפות מוקד העירוב והאחראים.' },
+        { t: LINE_LAYER, d: `בחלק מהערים (${lineCities.join(', ') || 'בקרוב'}) קו העירוב משורטט על המפה בקירוב, מתוך מפת המוקד. חיפוש כתובת מראה אם היא בתוך הקו, סמוכה לו או מחוצה לו. הקובע תמיד: המפה המקורית של המוקד והאחראי המקומי.` },
+        { t: 'עט — שרטוט ידני', d: 'כפתור העט פותח סרגל קטן: קו או שטח, ביטול נקודה (Ctrl+Z), ניקוי, צבע ושמירה (Enter). השרטוט נשמר כשכבה שנטענת לבד וכקובץ GeoJSON.' }],
+      pickLabel: 'פתיחת העיר', nearbyLabel: 'ערים קרובות', future: ['קווי עירוב לעוד ערים (לפי מפות המוקד)', 'עדכון אוטומטי של הקווים כשהמוקד מעדכן מפה'],
       onPick: id => { state.tab = 'list'; goCity(id); } });
-    $('#mapTab').insertAdjacentHTML('beforeend', '<p class="fine">מיקומי הערים בקירוב. המפות עצמן הן התמונות של מוקד העירוב (בלשונית "רשימה").</p>');
+    $('#mapTab').insertAdjacentHTML('beforeend', `<p class="fine">מיקומי הערים בקירוב. ${lineIds.length ? 'קווי העירוב המשורטטים (' + lineCities.join(', ') + ') הם קירוב בלבד, מתוך מפות המוקד — לא לסמוך עליהם להלכה. ' : ''}המפות עצמן הן התמונות של מוקד העירוב (בלשונית "רשימה").</p>`);
   }
   // תוסף אחר (כיוון תפילה / מקוואות) מבקש לפתוח את המפה באותו מקום (מפה משותפת, Prayer-pointA#11)
   if (window.MapUI && window.MapUI.onOpenMap) window.MapUI.onOpenMap(p => { state.mapSel = null; state.mapCenter = p.lat != null ? [p.lat, p.lon] : null; state.tab = 'map'; mapKey = ''; showTab(); });
@@ -1179,8 +1204,9 @@
     e.preventDefault(); e.stopPropagation(); openLink(h);
   }, true);
   document.addEventListener('click', e => {
-    const t = e.target.closest('[data-open-map],[data-city],[data-phone],[data-fav],[data-url],[data-add-map],[data-del-map],[data-src],[data-doc],[data-view],[data-abroad],[data-hosp],[data-sec],[data-toggle-toolbar],[data-mapdev]');
+    const t = e.target.closest('[data-open-map],[data-city],[data-phone],[data-fav],[data-url],[data-add-map],[data-del-map],[data-src],[data-doc],[data-view],[data-abroad],[data-hosp],[data-sec],[data-toggle-toolbar],[data-mapdev],[data-line]');
     if (!t) return;
+    if (t.dataset.line) return openLine(t.dataset.line);
     if (t.dataset.doc) { $('#infoScrim').hidden = true; openDoc(t.dataset.doc, 0, t.dataset.from ? { from: +t.dataset.from, to: +t.dataset.to, title: t.dataset.part } : null); }
     else if (t.dataset.sec) goSec(t.dataset.sec);
     else if (t.dataset.view) goView(t.dataset.view);

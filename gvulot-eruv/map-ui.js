@@ -14,13 +14,15 @@
    MapUI.layersButton(element, { self, getPos, call, openLink, online, extraHTML, onExtra(pop) })   // אותו תפריט שכבות למפה שאינה map-ui (כיוון תפילה, עינים למקרא)
    guideExtra: async (selectedId) => html  // 2.2: HTML נוסף בקובץ ההדרכה שיורד (למשל מפת העירוב של העיר)
    guide: [{t, d}]                 // 2.1: שלבים של התוסף עצמו בהדרכה (לפני שלבי המפה המשותפים). links מגיעים מ-repo ומ-PLUGINS.
+   draw: true                      // 3.1: כפתור "עט" (שרטוט קו / שטח) — רק בגבולות עירוב
+   inside: (lat, lon) => 'טקסט'    // 3.1: הודעה אחרי חיפוש כתובת (למשל "בתוך קו העירוב בקירוב")
    MapUI.onOpenMap(cb)             // תוסף אחר ביקש לפתוח את המפה כאן: cb({lat, lon, from}) */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory(require('./map-core.js'));
   else root.MapUI = factory(root.MapCore);
 })(this, function (MC) {
   'use strict';
-  const VERSION = '3.0.0';
+  const VERSION = '3.1.0';
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const W = 400, ZMIN = 0.00004, ZMAX = 10;
   const JERUSALEM = [31.7767, 35.2345];
@@ -33,7 +35,7 @@
   const PLUGINS = [
     { id: 'com.shiachrina.kivuntefila', name: 'כיוון תפילה', glyph: '✡', desc: 'כיוון לירושלים, בתי כנסת, רחובות, דרכים ונהרות', store: 'https://otzaria.org/plugins/6ac80057bd083fcc18562fa0' },
     { id: 'com.hadabadra.mikvaot', name: 'מקוואות', glyph: 'מ', desc: 'מקוואות נשים, גברים וכלים ומסלול הליכה', store: 'https://otzaria.org/plugins/6ad9c9c92917198d739939b7' },
-    { id: 'com.hadabadra.gvulot-eruv', name: 'גבולות עירוב', glyph: 'ע', desc: 'מפות העירובים והאחראים בכל עיר', store: 'https://otzaria.org/plugins/6ad93b5d2917198d73992a9d' },
+    { id: 'com.hadabadra.gvulot-eruv', name: 'גבולות עירוב', glyph: 'ע', desc: 'מפות העירובים והאחראים בכל עיר', layers: ['קווי עירוב (בקירוב — לפי מפת המוקד)'], store: 'https://otzaria.org/plugins/6ad93b5d2917198d73992a9d' },
     { id: 'com.chadbedera.madaeihatanach', name: 'עינים למקרא', glyph: 'ת', desc: 'מקומות מהתנ״ך ומחז״ל, לפי תקופות', store: 'https://otzaria.org/plugins/6a671db1dd175558ae6f20ac' }
   ];
 
@@ -67,6 +69,9 @@
     add: '<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>', dl: '<path d="M12 4v11M7 10l5 5 5-5"/><path d="M5 20h14"/>',
     info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5.5"/><path d="M12 7.6v.2"/>',
     help: '<circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 1 1 3.4 2.3c-.7.3-1 .8-1 1.5v.4"/><path d="M12 16.8v.2"/>',
+    pen: '<path d="M4 20l4-1 11-11-3-3L5 16z"/><path d="M14 6l3 3"/>', pline: '<path d="M4 18 9 9l5 6 6-10"/><circle cx="4" cy="18" r="1.3"/><circle cx="20" cy="5" r="1.3"/>',
+    parea: '<path d="M5 17 8 6l9 2 2 9z"/>', undo: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/>',
+    trash: '<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>', save: '<path d="M5 4h11l3 3v13H5z"/><path d="M8 4v5h7V4M8 20v-6h8v6"/>',
     route: '<circle cx="6" cy="18" r="2.2"/><circle cx="18" cy="6" r="2.2"/><path d="M8 18h6a3 3 0 0 0 0-6h-4a3 3 0 0 1 0-6h6"/>'
   };
   const ic = (n, extra) => `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"${extra || ''}>${ICO[n]}</svg>`;
@@ -174,7 +179,16 @@
 .mapui .mu-info { position: absolute; top: .6em; inset-inline-end: 3.75em; z-index: 7; width: min(24em, calc(100% - 5em)); max-height: calc(100% - 1.2em); overflow: auto; border-radius: var(--radius-md, 1em); padding: .6em .8em; font-size: .9em; animation: mu-in .16s ease-out; }
 .mapui .mu-info h4 { margin: .2em 0 .3em; padding-inline-end: 2em; }
 .mapui .mu-info .mu-x { position: absolute; top: .35em; inset-inline-end: .35em; width: 1.9em; height: 1.9em; }
-.mapui .mu-drawbar { top: 3.7em; bottom: auto; }
+.mapui .mu-drawbar { position: absolute; top: auto; bottom: 2.9em; inset-inline: auto; inset-inline-start: 50%; transform: translateX(50%); z-index: 6; display: flex; align-items: center; gap: .15em; flex-wrap: wrap; justify-content: center; border-radius: var(--radius-pill, 2em); padding: .25em .4em; max-width: calc(100% - 8em); max-height: none; overflow: visible; }
+[dir="ltr"] .mapui .mu-drawbar, .mapui[dir="ltr"] .mu-drawbar { transform: translateX(-50%); }
+.mapui .mu-drawbar .mu-ib { width: 2.1em; height: 2.1em; border-radius: 50%; }
+.mapui .mu-drawbar .mu-ib:disabled { opacity: .35; cursor: default; }
+.mapui .mu-drawbar .sep { width: 1px; align-self: stretch; margin: .3em .2em; background: var(--color-outline-variant, rgba(128,128,128,.35)); }
+.mapui .mu-drawbar .cnt { font-size: .78em; opacity: .8; padding-inline: .35em; white-space: nowrap; }
+.mapui .mu-drawbar .sw { width: 1.15em; height: 1.15em; border-radius: 50%; border: 2px solid var(--color-surface, #fff); box-shadow: 0 0 0 1px var(--color-outline-variant, rgba(128,128,128,.5)); cursor: pointer; padding: 0; }
+.mapui .mu-drawbar .sw[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--color-on-surface, #222); }
+.mapui .mu-drawbar .sw1 { background: var(--mu-pen1, #c62828); } .mapui .mu-drawbar .sw2 { background: var(--mu-pen2, #1565c0); } .mapui .mu-drawbar .sw3 { background: var(--mu-pen3, #2e7d32); } .mapui .mu-drawbar .sw4 { background: var(--mu-pen4, #ef6c00); } .mapui .mu-drawbar .sw5 { background: var(--mu-pen5, #6a1b9a); }
+.mapui.mu-drawing .mu-view svg { cursor: crosshair; }
 .mu-lbtn { position: relative; display: inline-block; }
 .mu-lbtn > .mu-pop { position: absolute; top: calc(100% + .4em); inset-inline-end: 0; inset-inline-start: auto; width: min(21em, 90vw); }
 @media (max-width: 520px) { .mapui .mu-search { inset-inline-end: 3.4em; } .mapui .mu-ib { width: 2.25em; height: 2.25em; } }
@@ -207,7 +221,7 @@
     });
   }
   function otherRows(self) {
-    return PLUGINS.filter(p => p.id !== self).map(p => `<div class="mu-row" data-mu-other="${esc(p.id)}" role="button" tabindex="0" title="פתיחת התוסף ${esc(p.name)} באותו מקום במפה"><span class="mu-g alt">${esc(p.glyph)}</span><span class="mu-t">${esc(p.name)}<small>${esc(p.desc)}</small></span>${ic('ext', ' style="width:1.1em;height:1.1em;opacity:.7"')}</div><div class="mu-ask" data-mu-ask="${esc(p.id)}" hidden></div>`).join('');
+    return PLUGINS.filter(p => p.id !== self).map(p => `<div class="mu-row" data-mu-other="${esc(p.id)}" role="button" tabindex="0" title="פתיחת התוסף ${esc(p.name)} באותו מקום במפה"><span class="mu-g alt">${esc(p.glyph)}</span><span class="mu-t">${esc(p.name)}<small>${esc(p.desc)}</small></span>${ic('ext', ' style="width:1.1em;height:1.1em;opacity:.7"')}</div>${(p.layers || []).map(n => `<div class="mu-row" data-mu-other="${esc(p.id)}" role="button" tabindex="0" title="פתיחת ${esc(n)} בתוסף ${esc(p.name)}"><span class="mu-g alt">〰</span><span class="mu-t">${esc(n)}<small>בתוסף ${esc(p.name)}</small></span>${ic('ext', ' style="width:1.1em;height:1.1em;opacity:.7"')}</div>`).join('')}<div class="mu-ask" data-mu-ask="${esc(p.id)}" hidden></div>`).join('');
   }
   function openOther(p, at, opt, ask) {
     const fail = () => { ask.innerHTML = `התוסף "${esc(p.name)}" לא נפתח. אם אינו מותקן, אפשר להתקין אותו מחנות התוספים.` + (opt.online === false ? '' : ` <button class="mu pri" data-mu-store="${esc(p.store)}">לחנות</button>`); };
@@ -273,6 +287,9 @@
   function mount(el, o) {
     if (!MC) { el.innerHTML = '<p>רכיב המפה לא נטען.</p>'; return; }
     css();
+    // 3.1: טעינה חוזרת לאותו אלמנט מנתקת את המאזינים של הטעינה הקודמת (אחרת כל לחיצה טופלה פעמיים — למשל מסך מלא שנפתח ונסגר)
+    if (el.__muAC) try { el.__muAC.abort(); } catch (e) {}
+    const AC = el.__muAC = typeof AbortController !== 'undefined' ? new AbortController() : null, LO = AC ? { signal: AC.signal } : undefined;
     const pts = (o.points || []).filter(p => p.lat != null && p.lon != null);
     const extra = (o.layers || []).map(L => Object.assign({ on: true }, L));
     // 2.2.1: שכבות שהמשתמש שרטט או טען מקובץ נשמרות ב-storage של התוסף ונטענות לבד בכל פתיחה (דיווח גבולות עירוב 04.11)
@@ -314,7 +331,7 @@
       S.lat = lat; S.lon = lon; S.zoom = Math.max(ZMIN, Math.min(4, 300 / (far * 1.25)));
     }
     const selPt = () => (S.sel != null ? byId.get(S.sel) : null);
-    if (selPt()) { S.lat = selPt().lat; S.lon = selPt().lon; S.zoom = 3; } else if (o.center && o.center[0] != null) { S.lat = o.center[0]; S.lon = o.center[1]; S.zoom = 2; } else fit();
+    if (selPt()) { S.lat = selPt().lat; S.lon = selPt().lon; S.zoom = 3; } else if (o.center && o.center[0] != null) { S.lat = o.center[0]; S.lon = o.center[1]; S.zoom = o.zoom || 2; } else fit();
 
     const future = o.future || [];
     const join = off ? '' : [o.repo ? `<button class="mu" data-mu-open="${esc(o.repo + '/issues/new')}">הצטרפות</button>` : '', o.issueUrl ? `<button class="mu" data-mu-open="${esc(o.issueUrl)}">הבקשה בגיטהאב</button>` : '', o.forumUrl ? `<button class="mu" data-mu-open="${esc(o.forumUrl)}">השרשור בפורום</button>` : ''].join(' ');
@@ -332,16 +349,17 @@
           <div class="mu-grp mu-glass"><button type="button" class="mu-ib" data-mu="rotl" title="סיבוב שמאלה" aria-label="סיבוב שמאלה">${ic('rotl')}</button><button type="button" class="mu-ib" data-mu="north" id="mu-north" title="צפון למעלה" aria-label="צפון למעלה">${compass(0)}</button><button type="button" class="mu-ib" data-mu="rotr" title="סיבוב ימינה" aria-label="סיבוב ימינה">${ic('rotr')}</button></div>
           <div class="mu-grp mu-glass"><button type="button" class="mu-ib" data-mu="me" title="המיקום שלי" aria-label="המיקום שלי">${ic('me')}</button><button type="button" class="mu-ib" data-mu="fit" title="מרכוז" aria-label="מרכוז">${ic('fit')}</button><button type="button" class="mu-ib" data-mu="full" id="mu-fullb" title="מסך מלא" aria-label="מסך מלא" aria-pressed="false">${ic('full')}</button></div>
           ${o.jerusalem ? `<div class="mu-grp mu-glass"><button type="button" class="mu-ib" data-mu="jer" id="mu-jer" title="ירושלים" aria-label="ירושלים" aria-pressed="false">${ic('jer')}</button></div>` : ''}
+          ${o.draw ? `<div class="mu-grp mu-glass"><button type="button" class="mu-ib" data-mu="pen" id="mu-penb" title="עט — שרטוט קו או שטח" aria-label="עט — שרטוט קו או שטח" aria-pressed="false">${ic('pen')}</button></div>` : ''}
           <div class="mu-grp mu-glass"><button type="button" class="mu-ib" data-mu="add" id="mu-addb" title="הוספת קובץ: רחובות או שכבה" aria-label="הוספת קובץ" aria-expanded="false">${ic('add')}</button></div>
           <div class="mu-grp mu-glass"><button type="button" class="mu-ib" data-mu="guide" title="הדרכה שלב אחר שלב" aria-label="הדרכה">${ic('help')}</button><button type="button" class="mu-ib" data-mu="info" id="mu-infob" title="רחובות, נתונים ועזרה" aria-label="רחובות, נתונים ועזרה" aria-expanded="false">${ic('info')}</button></div>
           <div class="mu-grp mu-glass"><button type="button" class="mu-ib" data-mu="layers" id="mu-lb" title="שכבות" aria-label="שכבות" aria-expanded="false">${ic('layers')}</button></div>
         </div>
         <div class="mu-pop mu-glass" id="mu-pop" hidden role="dialog" aria-label="שכבות"></div>
-        <div class="mu-addpop mu-glass" id="mu-add" hidden role="menu" aria-label="הוספת קובץ"><button class="mu" data-mu="load" role="menuitem">טעינת רחובות מקובץ</button><button class="mu" data-mu="loadgeo" role="menuitem">טעינת שכבה מקובץ (GeoJSON)</button><button class="mu" data-mu="draw" role="menuitem">שרטוט קו או שטח על המפה</button>${off || o.builtinStreets ? '' : '<button class="mu" data-mu="url" role="menuitem">הורדת רחובות לאזור (דפדפן)</button>'}</div>
+        <div class="mu-addpop mu-glass" id="mu-add" hidden role="menu" aria-label="הוספת קובץ"><button class="mu" data-mu="load" role="menuitem">טעינת רחובות מקובץ</button><button class="mu" data-mu="loadgeo" role="menuitem">טעינת שכבה מקובץ (GeoJSON)</button>${o.draw ? '<button class="mu" data-mu="draw" role="menuitem">שרטוט קו או שטח (עט)</button>' : ''}${off || o.builtinStreets ? '' : '<button class="mu" data-mu="url" role="menuitem">הורדת רחובות לאזור (דפדפן)</button>'}</div>
         <div class="mu-scale mu-glass" id="mu-scale"></div>
         <div class="mu-card mu-glass" id="mu-sel" hidden></div>
         <div class="mu-toast mu-glass" id="mu-msg" hidden role="status"></div>
-        <div class="mu-card mu-glass mu-drawbar" id="mu-draw" hidden></div>
+        <div class="mu-drawbar mu-glass" id="mu-draw" hidden role="toolbar" aria-label="עט"></div>
         <div class="mu-info mu-glass" id="mu-info" hidden role="dialog" aria-label="רחובות, נתונים ועזרה"><button type="button" class="mu-ib mu-x" data-mu="infox" title="סגירה" aria-label="סגירה">✕</button><h4>רחובות, נתונים ועזרה</h4>
         <div class="bar">${off || o.builtinStreets ? '' : '<button class="mu" data-mu="dl" id="mu-dl">הורדת רחובות לעיר</button>'}<button class="mu" data-mu="load">טעינת רחובות מקובץ</button><button class="mu" data-mu="loadgeo">טעינת שכבה מקובץ (GeoJSON)</button></div>
         ${o.builtinStreets ? `<p class="msg">הרחובות של ${Object.keys((typeof window !== 'undefined' && window.STREET_CITIES) || {}).length || 76} ערים מובנים בתוסף ונטענים לבד כשמתקרבים לעיר בזום, בלי אינטרנט. לעיר אחרת: טעינת קובץ רחובות.</p>` : off ? '<p class="msg">אוצריא במצב "ללא גישה לאינטרנט": אפשר לטעון קובץ רחובות שכבר שמור במחשב.</p>' : `<p class="msg">מורידים את קובץ העיר (נפתח בדפדפן), ואז "טעינת רחובות מקובץ". <button class="mu" data-mu="url">מקור חלופי 1</button> <button class="mu" data-mu="url2">מקור חלופי 2</button></p>`}
@@ -360,7 +378,9 @@
     const view = $('mu-view');
 
     let toastT = 0;
-    const say = t => { const m = $('mu-msg'); clearTimeout(toastT); if (!t) { m.hidden = true; return; } m.textContent = t; m.hidden = false; toastT = setTimeout(() => { m.hidden = true; }, 5200); };
+    const say = t => { const m = $('mu-msg'); clearTimeout(toastT); if (!t) { m.hidden = true; return; }
+      // 3.1: בדיקה "בתוך העירוב?" (גבולות עירוב מעביר o.inside) — אחרי כל חיפוש כתובת / רחוב שנמצא
+      if (o.inside && S.mark && /^(נמצא|מוצג)/.test(t)) { try { const r = o.inside(S.mark.lat, S.mark.lon); if (r) t += ' · ' + r; } catch (e) {} } m.textContent = t; m.hidden = false; toastT = setTimeout(() => { m.hidden = true; }, 5200); };
 
     // רחובות מובנים בתוסף (streets/<slug>.js): נטענים לבד כשמתקרבים לעיר
     const BUILT = o.builtinStreets ? (window.STREETS = window.STREETS || {}) : null;
@@ -401,7 +421,7 @@
       if (S.route && S.show.route) layers.push({ id: 'route', lines: [{ coords: S.route.coords, label: 'מסלול הליכה', style: 'route' }], points: [] });
       if (S.jer && o.me) layers.push({ id: 'jer', lines: [{ coords: [o.me, JERUSALEM], label: 'הכיוון לירושלים', style: 'route' }], points: [{ lat: JERUSALEM[0], lon: JERUSALEM[1], label: 'ירושלים', id: '__jer' }], glyph: 'י' });
       for (const L of extra) if (S.show['x-' + L.id]) layers.push({ id: L.id, glyph: L.glyph || '•', points: L.points || [], lines: L.lines || [] });
-      if (S.draw && S.draw.pts.length) layers.push({ id: 'draw', glyph: '•', points: S.draw.pts.map((c, i) => ({ lat: c[0], lon: c[1], id: '__d' + i, label: '' })), lines: S.draw.pts.length > 1 ? [{ coords: S.draw.closed ? [...S.draw.pts, S.draw.pts[0]] : S.draw.pts, closed: S.draw.closed, label: 'שרטוט' }] : [] });
+      if (S.draw && S.draw.pts.length) layers.push({ id: 'draw', glyph: '•', points: S.draw.pts.map((c, i) => ({ lat: c[0], lon: c[1], id: '__d' + i, label: '' })), lines: S.draw.pts.length > 1 ? [{ coords: S.draw.closed ? [...S.draw.pts, S.draw.pts[0]] : S.draw.pts, closed: S.draw.closed, label: 'שרטוט', solid: true, color: `var(--mu-pen${S.draw.col}, ${['', '#c62828', '#1565c0', '#2e7d32', '#ef6c00', '#6a1b9a'][S.draw.col]})` }] : [] });
       if (S.mark) layers.push({ id: 'mark', glyph: '★', points: [{ lat: S.mark.lat, lon: S.mark.lon, label: S.mark.label, id: '__mark' }], lines: [] });
       if (S.show.pts) layers.push(ptsLayer());
       const base = NE() && (glb || (S.show.base && (!S.area || S.zoom < 0.35))) ? NE() : null;
@@ -717,19 +737,35 @@ ${more}
     }
 
     // ── שרטוט קו / שטח (2.2): לחיצות על המפה מוסיפות נקודות; שמירה כשכבה וכקובץ GeoJSON ──
+    // 3.1: סרגל "עט" קומפקטי — קו / שטח / ביטול / ניקוי / צבע / שמירה (בלי חלונית גדולה). Ctrl+Z ביטול, Enter שמירה, Esc יציאה.
+    const PENS = 5;
     function drawBar() {
-      const d = $('mu-draw'); if (!S.draw) { d.hidden = true; return; }
+      const d = $('mu-draw'), pb = $('mu-penb'); el.classList.toggle('mu-drawing', !!S.draw); if (pb) pb.setAttribute('aria-pressed', String(!!S.draw));
+      if (!S.draw) { d.hidden = true; return; }
       const n = S.draw.pts.length; let len = 0; for (let i = 1; i < n; i++) len += MC.distM(S.draw.pts[i - 1], S.draw.pts[i]);
+      const b = (a, icn, t, dis, pr) => `<button type="button" class="mu-ib" data-mu="${a}" title="${t}" aria-label="${t}"${dis ? ' disabled' : ''}${pr != null ? ` aria-pressed="${pr}"` : ''}>${ic(icn)}</button>`;
+      let sw = ''; for (let i = 1; i <= PENS; i++) sw += `<button type="button" class="sw sw${i}" data-mu="dcol" data-col="${i}" title="צבע ${i}" aria-label="צבע ${i}" aria-pressed="${S.draw.col === i}"></button>`;
       d.hidden = false;
-      d.innerHTML = `<strong>שרטוט ${S.draw.closed ? 'שטח' : 'קו'}</strong><div class="sub">לחצו על המפה כדי להוסיף נקודות · ${n} נקודות${n > 1 ? ' · ' + MC.widthLabel(len) : ''}</div>
-        <div class="bar"><button class="mu" data-mu="dundo"${n ? '' : ' disabled'}>ביטול נקודה</button><button class="mu" data-mu="dclose" aria-pressed="${S.draw.closed}">${S.draw.closed ? 'קו פתוח' : 'סגירה לשטח'}</button><button class="mu pri" data-mu="dsave"${n > 1 ? '' : ' disabled'}>שמירה כשכבה וכקובץ</button><button class="mu" data-mu="dend">יציאה</button></div>`;
+      d.innerHTML = b('dline', 'pline', 'קו', false, !S.draw.closed) + b('darea', 'parea', 'שטח', false, S.draw.closed) + '<span class="sep"></span>'
+        + b('dundo', 'undo', 'ביטול נקודה (Ctrl+Z)', !n) + b('dclear', 'trash', 'ניקוי', !n) + '<span class="sep"></span>' + sw + '<span class="sep"></span>'
+        + `<span class="cnt">${n ? n + ' נק׳' + (n > 1 ? ' · ' + esc(MC.widthLabel(len)) : '') : 'לחצו על המפה'}</span>`
+        + b('dsave', 'save', 'שמירה כשכבה וכקובץ (Enter)', n < 2) + b('dend', 'close', 'סגירת העט (Esc)');
     }
+    el.addEventListener('keydown', e => {
+      if (!S.draw || (e.target && /^(INPUT|TEXTAREA)$/.test(e.target.tagName))) return;
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z' || e.key === 'ז')) { e.preventDefault(); S.draw.pts.pop(); drawBar(); draw(); }
+      else if (e.key === 'Enter') { e.preventDefault(); drawSave(); }
+      else if (e.key === 'Escape') { e.preventDefault(); S.draw = null; drawBar(); draw(); }
+    }, LO);
     function drawSave() {
-      const L = S.draw, coords = L.pts.map(c => [+c[1].toFixed(6), +c[0].toFixed(6)]);
-      const gj = { type: 'FeatureCollection', features: [{ type: 'Feature', properties: { name: 'שרטוט ' + (extra.length + 1), source: me.name }, geometry: L.closed ? { type: 'Polygon', coordinates: [[...coords, coords[0]]] } : { type: 'LineString', coordinates: coords } }] };
+      const L = S.draw; if (!L || L.pts.length < 2) return;
+      const coords = L.pts.map(c => [+c[1].toFixed(6), +c[0].toFixed(6)]), HEX = ['', '#c62828', '#1565c0', '#2e7d32', '#ef6c00', '#6a1b9a'];
+      const nm = 'שרטוט ' + (extra.filter(x => /^draw-/.test(x.id)).length + 1);
+      const gj = { type: 'FeatureCollection', features: [{ type: 'Feature', properties: { name: nm, source: me.name, stroke: HEX[L.col] }, geometry: L.closed ? { type: 'Polygon', coordinates: [[...coords, coords[0]]] } : { type: 'LineString', coordinates: coords } }] };
       const lay = MC.toLayer(gj, 'draw-' + Date.now().toString(36), '◆');
-      extra.push({ id: lay.id, name: 'שרטוט ' + (extra.length + 1), sub: L.closed ? 'שטח' : 'קו', glyph: '◆', points: [], lines: lay.lines, on: true }); S.show['x-' + lay.id] = true;
-      try { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(gj, null, 1)], { type: 'application/geo+json' })); a.download = 'שרטוט - ' + me.name + '.geojson'; document.body.append(a); a.click(); a.remove(); } catch (e) {}
+      for (const ln of lay.lines) { ln.color = `var(--mu-pen${L.col}, ${HEX[L.col]})`; ln.solid = true; }
+      extra.push({ id: lay.id, name: nm, sub: L.closed ? 'שטח' : 'קו', glyph: '◆', points: [], lines: lay.lines, on: true }); S.show['x-' + lay.id] = true;
+      try { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(gj, null, 1)], { type: 'application/geo+json' })); a.download = nm + ' - ' + me.name + '.geojson'; document.body.append(a); a.click(); a.remove(); } catch (e) {}
       S.draw = null; drawBar(); saveUser(); refresh(); say('השרטוט נשמר כשכבה (תיטען לבד בפתיחה הבאה) וכקובץ GeoJSON.');
     }
 
@@ -786,9 +822,11 @@ ${more}
       else if (a === 'unpick') { S.pick = null; S.street = null; refresh(); }
       else if (a === 'from-here') { const w = S.pick; if (w) { S.from = [w.lat, w.lon]; S.fromLabel = w.name; S.mark = { lat: w.lat, lon: w.lon, label: 'מוצא: ' + w.name }; say('נקודת המוצא: ' + w.name + '. עכשיו בחרו יעד ולחצו "מסלול הליכה".'); S.pick = null; refresh(); nearList([w.lat, w.lon]); } }
       else if (a === 'route-street') { const w = S.pick; if (w) makeRoute([w.lat, w.lon], '__street', w.name); }
-      else if (a === 'draw') { $('mu-add').hidden = true; S.draw = { pts: [], closed: false }; S.pick = null; drawBar(); showSel(); }
+      else if (a === 'draw' || a === 'pen') { $('mu-add').hidden = true; if (a === 'pen' && S.draw) { S.draw = null; drawBar(); draw(); return; } let col = 1; try { col = +localStorage.getItem('mapui-pen') || 1; } catch (er) {} S.draw = { pts: [], closed: false, col }; S.pick = null; drawBar(); showSel(); say('עט: לחצו על המפה נקודה אחר נקודה'); }
+      else if (a === 'dline' || a === 'darea') { S.draw.closed = a === 'darea'; drawBar(); draw(); }
+      else if (a === 'dclear') { S.draw.pts = []; drawBar(); draw(); }
+      else if (a === 'dcol') { S.draw.col = +b.dataset.col || 1; try { localStorage.setItem('mapui-pen', String(S.draw.col)); } catch (er) {} drawBar(); draw(); }
       else if (a === 'dundo') { S.draw.pts.pop(); drawBar(); draw(); }
-      else if (a === 'dclose') { S.draw.closed = !S.draw.closed; drawBar(); draw(); }
       else if (a === 'dsave') drawSave();
       else if (a === 'dend') { S.draw = null; drawBar(); draw(); }
       else if (a === 'steps') { S.showSteps = !S.showSteps; showSel(); }
@@ -803,14 +841,14 @@ ${more}
       else if (a === 'route') { const p = selPt(); if (p) makeRoute([p.lat, p.lon], S.sel, p.name); }
       else if (a === 'pick') { const p = selPt(); if (p && o.onPick) o.onPick(p.id); }
       else if (a === 'soon') say('בפיתוח: הפעולה הזו עדיין לא קיימת. מחכה לעזרה.');
-    });
+    }, LO);
     document.addEventListener('pointerdown', e => {
       if (!el.isConnected) return;
       if (!pop.hidden && !pop.contains(e.target) && !lb.contains(e.target)) togglePop(false);
       const ip = $('mu-info'); if (ip && !ip.hidden && !ip.contains(e.target) && !$('mu-infob').contains(e.target)) { ip.hidden = true; $('mu-infob').setAttribute('aria-expanded', 'false'); }
       const ap = $('mu-add'); if (ap && !ap.hidden && !ap.contains(e.target) && !$('mu-addb').contains(e.target)) ap.hidden = true;
       const sf = $('mu-sf'); if (sf && !sf.contains(e.target)) $('mu-sug').hidden = true;
-    });
+    }, LO);
     if (typeof ResizeObserver !== 'undefined') new ResizeObserver(() => draw()).observe(view);
     refresh();
     restoreUser();
