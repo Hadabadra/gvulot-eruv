@@ -120,7 +120,14 @@
     phone: '<svg viewBox="0 0 24 24"><path d="M6.6 3.5l2.6.4 1.3 4-1.9 1.5a11 11 0 0 0 6 6l1.5-1.9 4 1.3.4 2.6c-.2 1.5-1.6 2.6-3.1 2.6A15.6 15.6 0 0 1 4 6.6C4 5.1 5.1 3.7 6.6 3.5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>',
     map: '<svg viewBox="0 0 24 24"><path d="M9 4L3 6.5v13L9 17l6 2.5 6-2.5v-13L15 6.5 9 4zM9 4v13M15 6.5v13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>',
     search: '<svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M15 15l5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
-    star: '★',
+    star: '<svg viewBox="0 0 24 24"><path d="M12 4l2.4 5 5.4.6-4 3.7 1.1 5.3L12 16l-4.9 2.6 1.1-5.3-4-3.7L9.6 9z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    starFill: '<svg viewBox="0 0 24 24"><path d="M12 4l2.4 5 5.4.6-4 3.7 1.1 5.3L12 16l-4.9 2.6 1.1-5.3-4-3.7L9.6 9z" fill="currentColor" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>',
+    mail: '<svg viewBox="0 0 24 24"><path d="M4 6.5h16v11H4zM4.5 7l7.5 6 7.5-6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    ext: '<svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-8.5 8.5M18 14v5H5V6h5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    pin: '<svg viewBox="0 0 24 24"><path d="M12 21s-6.5-6.2-6.5-11a6.5 6.5 0 0 1 13 0c0 4.8-6.5 11-6.5 11zM12 12.3a2.3 2.3 0 1 0 0-4.6 2.3 2.3 0 0 0 0 4.6z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    mapAdd: '<svg viewBox="0 0 24 24"><path d="M9 4L3 6.5v13L9 17l3 1.2M9 4l6 2.5 6-2.5v7M9 4v13M15 6.5V12M18 15v6M15 18h6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    hospital: '<svg viewBox="0 0 24 24"><path d="M4 20V8l8-4 8 4v12M3 20h18M12 9v6M9 12h6M10 20v-3h4v3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    line: '<svg viewBox="0 0 24 24"><path d="M3 14c2.5-4 4.5-4 6 0s3.5 4 6 0 4.5-4 6 0" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     book: '<svg viewBox="0 0 24 24"><path d="M5 4.5h5.5a2 2 0 0 1 2 2V20a1.6 1.6 0 0 0-1.6-1.6H5zM19 4.5h-5.5a1 1 0 0 0-1 1V20a1.6 1.6 0 0 1 1.6-1.6H19z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>',
     globe: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3.5 12h17M12 3.5c2.6 2.4 3.8 5.2 3.8 8.5s-1.2 6.1-3.8 8.5c-2.6-2.4-3.8-5.2-3.8-8.5S9.4 5.9 12 3.5z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>',
     link: '<svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>'
@@ -137,8 +144,8 @@
     const gm = !opts.noMaps && !a.maps.length && !own.length && generalMap(a.city);
     if (gm) mapsChips += `<button class="chip map" data-open-map="${gm.id}" title="השכונה מסומנת במפה הכללית של העיר">${ICON.map}מפה כללית</button>`;
     const phones = a.phones.map(p => `<button class="chip" data-phone="${esc(p)}" title="העתקת המספר">${ICON.phone}${esc(fmtPhone(p))}</button>`).join('');
-    const links = (AREA_LINKS[a.city + '|' + a.area] || []).map(([t, u]) => `<button class="chip ext-only" data-url="${esc(u)}" title="קישור מאתר העירוב (לפי דיווח משתמש)">↗ ${esc(t)}</button>`).join('');
-    const mails = (a.emails || []).map(([t, m]) => `<button class="chip" data-url="mailto:${esc(m)}" title="${esc(m)} · הכתובת גם מועתקת">✉ ${esc(t)}</button>`).join('');
+    const links = (AREA_LINKS[a.city + '|' + a.area] || []).map(([t, u]) => `<button class="chip ext-only" data-url="${esc(u)}" title="קישור מאתר העירוב (לפי דיווח משתמש)">${ICON.ext}${esc(t)}</button>`).join('');
+    const mails = (a.emails || []).map(([t, m]) => `<button class="chip" data-url="mailto:${esc(m)}" title="${esc(m)} · הכתובת גם מועתקת">${ICON.mail}${esc(t)}</button>`).join('');
     return `<div class="area${opts.hl ? ' hl' : ''}">
       <span class="area-num">${esc(a.n || '•')}</span>
       <div class="area-body">
@@ -163,7 +170,7 @@
       const n = byCity.get(c);
       const on = !state.q.trim() && state.view === 'city' && state.city === c;
       return `<button class="rail-item${on ? ' on' : ''}" data-city="${esc(c)}">
-        ${state.favs.includes(c) ? `<span class="star">${ICON.star}</span>` : ''}
+        ${state.favs.includes(c) ? `<span class="star">${ICON.starFill}</span>` : ''}
         <span class="name">${esc(c)}</span>${docsOfCity(c).length ? '<span class="tag" title="יש מאמר תחום שבת">תחום</span>' : ''}<span class="badge">${n.maps.length || ''}</span></button>`;
     };
     const cs = [...new Map(X.abroad.map(a => [a.c, a.ch])).entries()].sort((a, b) => a[1].localeCompare(b[1], 'he'));
@@ -216,7 +223,7 @@
       const n = byCity.get(c); const m = n.maps[0];
       const thumb = m ? `<div class="city-thumb" style="background-image:url('${esc(srcOf(m, true))}')"></div>`
         : `<div class="city-thumb empty">${ICON.phone}</div>`;
-      const fav = state.favs.includes(c) ? `<span class="fav-pin">${ICON.star}</span>` : '';
+      const fav = state.favs.includes(c) ? `<span class="fav-pin">${ICON.starFill}</span>` : '';
       return `<button class="city-card" data-city="${esc(c)}">${fav}${thumb}
         <div class="city-meta"><strong>${esc(c)}</strong>
         <span>${n.maps.length ? n.maps.length + ' מפות' : 'אחראים בלבד'}${n.areas.length ? ' · ' + n.areas.length + ' שכונות' : ''}</span></div></button>`;
@@ -225,14 +232,14 @@
     return `<div class="wrap">
       <div class="hero"><div class="grow"><h2>גבולות העירובים השכונתיים</h2>
       <p>${D.maps.length} מפות ו־${D.areas.length} אחראים ב־${D.cities.length} ערים. בחרו עיר או חפשו שכונה, רחוב או שם רב.</p></div>
-      <button class="btn tonal" data-add-map="">${ICON.map} הוספת מפה משלי</button></div>
+      <button class="btn tonal" data-add-map="">${ICON.mapAdd} הוספת מפה משלי</button></div>
       ${recent.length ? `<div class="section-title">נצפו לאחרונה</div><div class="city-grid">${recent.map(card).join('')}</div>` : ''}
       <div class="section-title">כל הערים</div>
       <div class="city-grid">${D.cities.map(card).join('')}</div>
       ${DOCS.length ? `<div class="section-title">תחום שבת וחוברות</div><div class="doc-grid">${DOCS.filter(d => d.kind === 'booklet').map(docCardHTML).join('')}</div>
         <div class="row-links"><button class="btn text" data-view="docs">${ICON.book} כל מאמרי התחום והספרייה</button>
         <button class="btn text" data-view="abroad">${ICON.globe} עירובין בחו"ל</button>
-        <button class="btn text" data-view="hosps">${ICON.map} בתי חולים</button></div>` : ''}
+        <button class="btn text" data-view="hosps">${ICON.hospital} בתי חולים</button></div>` : ''}
       ${sourceCard()}</div>`;
   }
 
@@ -242,9 +249,9 @@
     return `<div class="wrap">
       <div class="hero"><div class="grow"><h2>${esc(c)}</h2>
         <p>${n.maps.length ? n.maps.length + ' מפות עירוב' : 'אין עדיין מפה לעיר זו, אך יש אחראים מקומיים'}${n.areas.length ? ' · ' + n.areas.length + ' שכונות עם אחראי' : ''}</p></div>
-        ${CITY_POS[c] ? `<button class="btn text" data-mapdev="${esc(c)}">${ICON.map} במפה</button>` : ''}
-        <button class="btn text" data-add-map="${esc(c)}">${ICON.map} הוספת מפה משלי</button>
-        <button class="btn ${fav ? 'tonal' : 'text'}" data-fav="${esc(c)}">${ICON.star} ${fav ? 'במועדפים' : 'הוספה למועדפים'}</button>
+        ${CITY_POS[c] ? `<button class="btn text" data-mapdev="${esc(c)}">${ICON.pin} במפה</button>` : ''}
+        <button class="btn text" data-add-map="${esc(c)}">${ICON.mapAdd} הוספת מפה משלי</button>
+        <button class="btn ${fav ? 'tonal' : 'text'}" data-fav="${esc(c)}">${fav ? ICON.starFill : ICON.star} ${fav ? 'במועדפים' : 'הוספה למועדפים'}</button>
       </div>
       ${n.maps.length ? `<div class="section-title">מפות</div><div class="map-grid">${n.maps.map(mapCardHTML).join('')}</div>` : ''}
       ${techumHTML(c)}
@@ -292,7 +299,7 @@
       עודכן ${esc(D.built)}.</div>
       <button class="btn text" data-url="${esc(D.source.site)}">לאתר המוקד</button>
       <button class="btn text" data-url="${MOKED_CONTACT}">יצירת קשר עם המוקד</button>
-      <button class="btn text" data-phone="${MOKED_EMAIL}" title="העתקת האימייל">${ICON.link} ${MOKED_EMAIL}</button>
+      <button class="btn text" data-phone="${MOKED_EMAIL}" title="העתקת האימייל">${ICON.mail} ${MOKED_EMAIL}</button>
       <button class="btn tonal" data-phone="${esc(D.source.phone)}">${ICON.phone} מענה הלכתי ${esc(D.source.phone)}</button></div>`;
   }
 
@@ -424,7 +431,7 @@
   const telChip = p => `<button class="chip" data-phone="${esc(p)}">${ICON.phone}${esc(p)}</button>`;
   function contactHTML(c) {
     return `<div class="contact"><div class="who"><b>${esc(c.name || c.role)}</b>${c.name ? `<small>${esc(c.role)}</small>` : ''}${c.note ? `<small>${esc(c.note)}</small>` : ''}</div>
-      ${c.phone ? telChip(c.phone) : ''}${c.phone2 ? telChip(c.phone2) : ''}${c.email ? `<button class="chip" data-phone="${esc(c.email)}" title="העתקה">${ICON.link}${esc(c.email)}</button>` : ''}</div>`;
+      ${c.phone ? telChip(c.phone) : ''}${c.phone2 ? telChip(c.phone2) : ''}${c.email ? `<button class="chip" data-phone="${esc(c.email)}" title="העתקה">${ICON.mail}${esc(c.email)}</button>` : ''}</div>`;
   }
   function hospView(h) {
     if (!h) return hospsView();
@@ -445,9 +452,9 @@
   function hospsView() {
     return `<div class="wrap">
       <div class="hero"><div class="grow"><h2>בתי חולים בשבת</h2><p>רב בית החולים, שירותי הדת, העירוב במתחם ותחום שבת — רק ממקורות רשמיים.</p></div></div>
-      <div class="row-links">${HOSPITALS.filter(h => !h.abroad).map(h => `<button class="btn tonal" data-hosp="${h.id}">${ICON.map} ${esc(h.name)} · ${esc(h.city)}</button>`).join('')}</div>
+      <div class="row-links">${HOSPITALS.filter(h => !h.abroad).map(h => `<button class="btn tonal" data-hosp="${h.id}">${ICON.hospital} ${esc(h.name)} · ${esc(h.city)}</button>`).join('')}</div>
       <div class="section-title">בתי חולים בחו"ל</div>
-      <div class="row-links">${HOSPITALS.filter(h => h.abroad).map(h => `<button class="btn tonal" data-hosp="${h.id}">${ICON.map} ${esc(h.name)} · ${esc(h.city)}</button>`).join('')}</div>
+      <div class="row-links">${HOSPITALS.filter(h => h.abroad).map(h => `<button class="btn tonal" data-hosp="${h.id}">${ICON.hospital} ${esc(h.name)} · ${esc(h.city)}</button>`).join('')}</div>
       <div class="section-title">ארגונים</div>
       <div class="contacts">${ORGS.map(o => `<div class="contact"><div class="who"><b>${esc(o.name)}</b><small>${esc(o.what)}</small><small>מקור: ${esc(o.src)}</small></div>
         ${telChip(o.phone)}<button class="chip" data-url="${esc(o.url)}">${ICON.link}אתר</button></div>`).join('')}</div>
@@ -466,7 +473,7 @@
       ${tech.map(d => summaryHTML(d.summary, d.title)).join('')}
       <div class="doc-grid">${tech.map(docCardHTML).join('')}</div>
       <div class="section-title">בתי חולים</div>
-      <div class="row-links">${HOSPITALS.map(h => `<button class="btn tonal" data-hosp="${h.id}">${ICON.map} ${esc(h.name)} · ${esc(h.city)}</button>`).join('')}</div>
+      <div class="row-links">${HOSPITALS.map(h => `<button class="btn tonal" data-hosp="${h.id}">${ICON.hospital} ${esc(h.name)} · ${esc(h.city)}</button>`).join('')}</div>
       <p class="fine">${esc(HOSP_EZER)}</p>
       <div class="section-title">ספריית העירובין של המוקד</div>
       <p class="fine">${X.library.length} ספרים וחוברות להורדה מאתר מוקד העירוב (נפתחים בדפדפן).</p>
@@ -488,7 +495,7 @@
     const list = X.abroad.filter(a => a.c === cur && (!fq || [a.p, a.in, a.r, heOf(a.p), heOf(a.r), heOf(a.in), metroOf(a)].join(' ').toLowerCase().includes(fq)));
     const regions = [...new Set(list.map(a => a.r))];
     const item = a => `<div class="ab-item${a.in ? ' sub' : ''}"><span dir="auto">${heOf(a.p) ? `<b>${esc(heOf(a.p))}</b> · ` : ''}${esc(a.p)}${a.in ? `<small> · ${esc(a.in)}</small>` : ''}</span><span class="ab-acts">
-      ${a.em ? `<button class="chip" data-phone="${esc(a.em)}" title="העתקת האימייל">${ICON.link}${esc(a.em)}</button>` : ''}${a.m ? `<button class="chip" data-url="${esc(a.m)}" title="${esc(a.m)}">${ICON.map}מפה</button>` : ''}${a.ph ? `<button class="chip" data-phone="${esc(a.ph)}" title="קו סטטוס העירוב">${ICON.phone}${esc(a.ph)}</button>` : ''}${a.u ? `<button class="chip" data-url="${esc(a.u)}" title="${esc(a.u)}">${ICON.link}אתר העירוב</button>` : ''}</span></div>`;
+      ${a.em ? `<button class="chip" data-phone="${esc(a.em)}" title="העתקת האימייל">${ICON.mail}${esc(a.em)}</button>` : ''}${a.m ? `<button class="chip" data-url="${esc(a.m)}" title="${esc(a.m)}">${ICON.map}מפה</button>` : ''}${a.ph ? `<button class="chip" data-phone="${esc(a.ph)}" title="קו סטטוס העירוב">${ICON.phone}${esc(a.ph)}</button>` : ''}${a.u ? `<button class="chip" data-url="${esc(a.u)}" title="${esc(a.u)}">${ICON.link}אתר העירוב</button>` : ''}</span></div>`;
     return `<div class="wrap">
       <div class="hero"><div class="grow"><h2>עירובין בחו"ל</h2>
       <p>${X.abroad.length} מקומות ב־${cs.length} ארצות. רשימת מקומות וקישורים לאתר העירוב המקומי — בלי מפות. הסטטוס משתנה מדי שבוע, ויש לבדוק באתר המקומי.</p></div></div>
@@ -550,7 +557,8 @@
     const side = $('#vSidePanel');
     if (pm) side.innerHTML = m.side; else side.innerHTML = `<h3>אחראים במפה זו</h3>` +
       (ar.length ? ar.map(a => areaHTML(a, '', { noMaps: true })).join('') : `<p class="area-names">לא שויכו אחראים למפה זו. בדף העיר ${esc(m.city)} יש רשימה מלאה.</p>`) +
-      (LINES[m.id] ? `<button class="btn" data-line="${m.id}">${ICON.map} קו העירוב בקירוב במפה</button><p class="fine">הקו שורטט מתוך מפה זו ומוצג בקירוב בלבד. הקובע: המפה הזו והאחראי.</p>` : '') +
+      (LINES[m.id] ? `<button class="btn" data-line="${m.id}">${ICON.line} קו העירוב בקירוב במפה</button><p class="fine">הקו שורטט מתוך מפה זו ומוצג בקירוב בלבד. הקובע: המפה הזו והאחראי.</p>` : '') +
+      (!ar.length && LINES[m.id] && LINES[m.id].resp ? `<p class="area-names">לבירורים לפי המפה: ${esc(LINES[m.id].resp)}</p>` : '') +
       (m.user ? `<button class="btn text" data-del-map="${m.id}">הסרת המפה שהוספתי</button>` : `<button class="btn text" data-url="${esc(m.pageUrl)}">פתיחת הדף באתר המוקד</button>`);
     $('#viewer').classList.toggle('side-off', pm ? (V.sideOff || innerWidth < 760) : (!ar.length && !m.user && !LINES[m.id]) || innerWidth < 760);
     $('#vSide').classList.toggle('on', !$('#viewer').classList.contains('side-off'));
@@ -871,8 +879,8 @@
     const m = V.m, ps = $('#printSheet');
     ps.innerHTML = `<h1>${V.doc ? esc(m.title) + ' · עמוד ' + V.page : 'גבולות עירוב · ' + esc(m.city) + ' · ' + esc(m.title)}</h1>
       <p>מקור: מוקד העירוב (${esc(D.source.phone)}). להתמצאות בלבד — יש לוודא מול האחראי המקומי לפני שבת.</p>
-      <p>${esc(exportLinks())}</p>
-      <img src="${esc(srcOf(m))}" alt="">`;
+      <p class="links">${exportLinksHTML()}</p>
+      <img src="${esc(srcOf(m))}" alt="">${V.doc || m.user ? '' : respHTML(m)}`;
     const go = () => {
       document.body.classList.add('printing');
       const done = () => { document.body.classList.remove('printing'); ps.innerHTML = ''; removeEventListener('afterprint', done); };
@@ -1035,7 +1043,15 @@
   // ── יומן שינויים ותגובות ─────────────────────────────────────
   const REPO = 'https://github.com/Hadabadra/gvulot-eruv';
   // בכל ייצוא (תמונה, הדפסה/PDF): קישור לגיטהאב והפניה לחנות התוספים של אוצריא
-  const exportLinks = () => `מתוך תוסף "גבולות עירוב" לאוצריא · GitHub: ${REPO.replace('https://', '')}/releases · חנות התוספים של אוצריא: כלים ← תוספים ← חנות, חיפוש "גבולות עירוב"`;
+  const STORE = 'https://otzaria.org/plugins/6ad93b5d2917198d73992a9d';
+  const exportLinks = () => `מתוך תוסף "גבולות עירוב" לאוצריא · חנות התוספים: ${STORE.replace('https://', '')} · GitHub: ${REPO.replace('https://', '')}/releases`;
+  // 1.9.0: בהדפסה / PDF הקישורים לחיצים (תגית a), וגם קישור לחנות התוספים
+  const exportLinksHTML = () => `מתוך תוסף "גבולות עירוב" לאוצריא · <a href="${STORE}">חנות התוספים של אוצריא</a> (${STORE.replace('https://', '')}) · <a href="${REPO}/releases/latest">הורדה מ-GitHub</a> (${REPO.replace('https://', '')}/releases)`;
+  const respHTML = m => {   // האחראים של המפה המודפסת
+    const ar = areasOfMap(m.id), L = LINES[m.id];
+    if (ar.length) return `<h2>אחראים במפה זו</h2><ul>${ar.map(a => `<li><b>${esc(a.area || a.city)}</b> — ${esc(a.names.join(', ') || 'שם לא צוין')}${a.phones.length ? ' · ' + a.phones.map(fmtPhone).map(esc).join(', ') : ''}</li>`).join('')}</ul>`;
+    return L && L.resp ? `<h2>לבירורים (לפי המפה)</h2><p>${esc(L.resp)}</p>` : `<p>האחראים המלאים של ${esc(m.city)} — בתוסף, בדף העיר.</p>`;
+  };
   const CHANGELOG = [
     ['1.8.0', ["מפה משותפת 3.0: מצבי תצוגה מפה · סביבה קרובה · רחובות · כדור, ו\"סגנון המפה\" בתפריט השכבות (צבעוני כמו עינים למקרא, ארצות בצבעים, חום-לבן).", "באודות: קישור לשרשור הדיווחים בפורום אוצריא.", "המלצה על \"אחת שאלתי\" 1.2.0."]],
     ['1.7.0', ["מפה משותפת 2.2 — לחיצה על רחוב בוחרת אותו (כמו בכיוון תפילה): שם, אורך, \"נקודת מוצא מכאן\" ו\"מסלול הליכה לכאן\".", "כפתור + בסרגל המפה: טעינת קובץ רחובות, שכבה מקובץ GeoJSON, ושרטוט קו או שטח על המפה (נשמר כשכבה וכקובץ).", "מפה צבעונית (ים כחול וכל ארץ בצבע משלה) — מתג בתפריט השכבות.", "\"המיקום שלי\" במפה דרך הגשר \"אחת שאלתי\", ואם אין גשר — מיקום המחשב.", "דיווח תקלות אוטומטי: כשמשהו נתקע, הודעה קטנה מציעה לשלוח דיווח קריסה דרך מערכת הדיווחים של אוצריא (באישור שלכם; בלי אינטרנט נשמר ונשלח אחר כך).", "המלצה על \"אחת שאלתי\" מהמקור המשותף (גרסה 1.1.0): בלי אינטרנט נשמר דף הסבר עם קישורים לחיצים.", "ההדרכה שיורדת כוללת גם את מפות העירוב של העיר שנבחרה.", "תיקון: חוברת תחומין שלמה שירדה כ-PDF או ZIP יצאה עם עברית משובשת (#9).", "פסגת זאב מרכז (ירושלים): קישורים לאתר העירוב ולתיקיית המפות שלו (#10).", "תיקון: שליחת תגובה מהתוסף נשלחה עם סוג דיווח לא תקין."]],
@@ -1093,7 +1109,7 @@
       שנותן מענה הלכתי בטלפון <button class="chip" data-phone="${esc(D.source.phone)}">${ICON.phone}${esc(D.source.phone)}</button></p>
       <p>התוסף אינו פוסק הלכה ואינו קובע אם עירוב כשר. הוא מרכז את המידע כדי להקל על הבירור.</p>
       <h3 class="info-h">ללימוד: מקורות בספריית אוצריא</h3>
-      <div class="area-actions">${SOURCES.map(x => `<button class="chip map" data-src="${esc(x[1])}" data-ref="${esc(x[2])}">${ICON.map}${esc(x[0])}</button>`).join('')}</div>`;
+      <div class="area-actions">${SOURCES.map(x => `<button class="chip map" data-src="${esc(x[1])}" data-ref="${esc(x[2])}">${ICON.book}${esc(x[0])}</button>`).join('')}</div>`;
     $('#infoScrim').hidden = false; $('#infoClose').focus();
   }
   // מפה (בפיתוח): בסיס משותף עם מקוואות וכיוון תפילה (map-core.js). כרגע ערי העירוב כנקודות, בלי שכבת רחובות וקווי עירוב.

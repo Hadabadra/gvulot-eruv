@@ -156,7 +156,8 @@ svg { display: block; }
 .rail-item.on { background: var(--color-secondary-container); color: var(--color-on-secondary-container); font-weight: 600; }
 .rail-item .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rail-item .badge { font-size: .75em; color: var(--color-on-surface-variant); }
-.rail-item .star { color: var(--color-primary); font-size: .8em; }
+.rail-item .star { color: var(--color-primary); font-size: .8em; display: inline-flex; }
+.rail-item .star svg, .fav-pin svg { width: 1.1em; height: 1.1em; display: block; }
 .rail-sep { height: 1px; background: var(--color-outline-variant); margin: .5em .8em; }
 @media (max-width: 760px) { .rail { display: none; } }
 
@@ -385,7 +386,11 @@ mark { background: var(--color-primary-container); color: var(--color-on-primary
   body.printing .print-sheet { display: block; }
   .print-sheet h1 { margin: 0 0 .2em; font-size: 1.4em; }
   .print-sheet p { margin: 0 0 .6em; font-size: .85em; }
-  .print-sheet img { width: 100%; height: auto; display: block; }
+  .print-sheet img { width: 100%; height: auto; display: block; max-height: 78vh; object-fit: contain; }
+  .print-sheet a { color: var(--color-primary); text-decoration: underline; }
+  .print-sheet h2 { font-size: 1.05em; margin: .8em 0 .3em; break-after: avoid; }
+  .print-sheet ul { margin: 0; padding-inline-start: 1.2em; font-size: .85em; columns: 2; }
+  .print-sheet li { break-inside: avoid; margin-bottom: .2em; }
 }
 
 /* ── 0.3.0: תחום שבת, חוברות, ספרייה, חו"ל ── */
