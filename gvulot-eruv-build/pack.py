@@ -12,6 +12,9 @@ for root, dirs, names in os.walk(src):
         if n.startswith(".") or n.endswith((".otzplugin", ".diff", ".orig")): continue
         if os.path.relpath(os.path.join(root, n), src).replace(os.sep, "/") in exclude: continue
         files.append(os.path.relpath(os.path.join(root, n), src).replace(os.sep, "/"))
+# 1.9.0 (#12): קובץ ריק (למשל תמונת מפה שההורדה שלה נכשלה) עוצר את האריזה במקום לצאת לחנות שבור
+empty = [f for f in files if os.path.getsize(os.path.join(src, f)) == 0]
+if empty: sys.exit("קבצים ריקים, האריזה נעצרה: " + ", ".join(empty))
 with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as z:
     for f in sorted(files):
         zi = zipfile.ZipInfo(f, (2026, 1, 1, 0, 0, 0)); zi.external_attr = 0o644 << 16; zi.compress_type = zipfile.ZIP_DEFLATED
