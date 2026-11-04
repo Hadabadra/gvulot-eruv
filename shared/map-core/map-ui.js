@@ -20,7 +20,7 @@
   else root.MapUI = factory(root.MapCore);
 })(this, function (MC) {
   'use strict';
-  const VERSION = '2.2.0';
+  const VERSION = '3.0.0';
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const W = 400, ZMIN = 0.00004, ZMAX = 10;
   const JERUSALEM = [31.7767, 35.2345];
@@ -65,6 +65,7 @@
     search: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="m20 20-4.8-4.8"/>', close: '<path d="M6 6l12 12M18 6 6 18"/>',
     jer: '<path d="M4 20h16M6 20v-7l6-5 6 5v7"/><path d="M10 20v-4h4v4"/><path d="M12 8V4"/>', ext: '<path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v6H4V6h6"/>',
     add: '<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>', dl: '<path d="M12 4v11M7 10l5 5 5-5"/><path d="M5 20h14"/>',
+    info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5.5"/><path d="M12 7.6v.2"/>',
     help: '<circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 1 1 3.4 2.3c-.7.3-1 .8-1 1.5v.4"/><path d="M12 16.8v.2"/>',
     route: '<circle cx="6" cy="18" r="2.2"/><circle cx="18" cy="6" r="2.2"/><path d="M8 18h6a3 3 0 0 0 0-6h-4a3 3 0 0 1 0-6h6"/>'
   };
@@ -73,6 +74,7 @@
 
   const CSS = `
 :root { --mu-sea: #a9cdea; --mu-coast: #6b8fae; --mu-river: #4f8fcf; --mu-land-street: #f3efe0;
+  --mu-e-land: #e6d8b0; --mu-e-sea: #9fbcc8; --mu-e-coast: #7796a3; --mu-e-line: #a08d5f; --mu-e-river: #7796a3;
   --mu-land1: #e9e3b8; --mu-land2: #cfe3b0; --mu-land3: #f1cfa8; --mu-land4: #d9c9e6; --mu-land5: #f3dcc2; --mu-land6: #c6dfd2; }
 .mapui { --mu-r: var(--radius-lg, 1.1em); --mu-sh: 0 1px 2px rgba(0,0,0,.18), 0 4px 14px rgba(0,0,0,.12); }
 .mapui .mu-stage { position: relative; border-radius: var(--mu-r); overflow: hidden; background: var(--color-surface-container, rgba(128,128,128,.08)); }
@@ -88,6 +90,11 @@
 .mapui.mapui-tab > details.mu-more[open], .mapui.mu-full > details.mu-more[open] { max-height: 38%; overflow: auto; }
 .mapui.mu-full { position: fixed; inset: 0; z-index: 9000; background: var(--color-surface, #fff); padding: .6em; }
 .mapui .mu-glass { background: var(--color-surface, #fff); color: var(--color-on-surface, inherit); box-shadow: var(--mu-sh); border-radius: var(--radius-pill, 2em); }
+.mapui .mu-modes { position: absolute; top: 3.3em; inset-inline-start: .6em; display: flex; gap: .15em; padding: .2em; z-index: 3; }
+.mapui .mu-modes button { border: 0; background: transparent; color: inherit; font: inherit; font-size: .85em; padding: .3em .75em; border-radius: var(--radius-pill, 2em); cursor: pointer; transition: background .15s; }
+.mapui .mu-modes button[aria-pressed="true"] { background: var(--color-primary); color: var(--color-on-primary, #fff); }
+.mapui .mu-styles { display: flex; gap: .25em; flex-wrap: wrap; margin: .2em 0 .4em; }
+.mapui .mu-styles button[aria-pressed="true"] { background: var(--color-primary); color: var(--color-on-primary, #fff); }
 .mapui .mu-search { position: absolute; top: .6em; inset-inline: .6em 3.6em; display: flex; align-items: center; gap: .3em; padding: .15em .25em .15em .7em; z-index: 3; }
 .mapui .mu-search input { flex: 1; min-width: 0; font: inherit; border: 0; outline: 0; background: transparent; color: inherit; padding: .45em .2em; }
 .mapui .mu-sug { position: absolute; top: calc(100% + .35em); inset-inline: 0; max-height: 16em; overflow: auto; border-radius: var(--radius-md, .9em); padding: .3em; box-shadow: var(--mu-sh); background: var(--color-surface, #fff); }
@@ -148,6 +155,7 @@
 .mapui details.mu-more { margin-top: .6em; border-radius: var(--radius-md, .9em); background: var(--color-surface-container-low, rgba(128,128,128,.06)); padding: .35em .8em; }
 .mapui details.mu-more summary { cursor: pointer; padding: .3em 0; font-weight: 600; }
 .mapui h4 { margin: .8em 0 .2em; font-size: .95em; }
+.mapui [hidden] { display: none !important; }
 .mapui .mu-guide { position: absolute; inset: 0; z-index: 8; display: grid; place-items: center; background: rgba(0,0,0,.28); padding: .8em; }
 .mapui .mu-guide > div { width: min(30em, 100%); max-height: 100%; overflow: auto; border-radius: var(--radius-lg, 1.1em); padding: 1em 1.1em .9em; animation: mu-in .16s ease-out; position: relative; }
 .mapui .mu-guide h3 { margin: 0 0 .15em; font-size: 1.05em; padding-inline-end: 2em; }
@@ -163,6 +171,9 @@
 .mapui .mu-steps li b { flex: none; width: 1.6em; height: 1.6em; border-radius: 50%; display: grid; place-items: center; background: var(--color-primary-container, rgba(128,128,128,.18)); font-size: .85em; }
 .mapui .mu-addpop { position: absolute; top: .6em; inset-inline-end: 3.75em; z-index: 6; border-radius: var(--radius-md, 1em); padding: .45em; display: flex; flex-direction: column; gap: .3em; animation: mu-in .16s ease-out; }
 .mapui .mu-addpop button { justify-content: flex-start; }
+.mapui .mu-info { position: absolute; top: .6em; inset-inline-end: 3.75em; z-index: 7; width: min(24em, calc(100% - 5em)); max-height: calc(100% - 1.2em); overflow: auto; border-radius: var(--radius-md, 1em); padding: .6em .8em; font-size: .9em; animation: mu-in .16s ease-out; }
+.mapui .mu-info h4 { margin: .2em 0 .3em; padding-inline-end: 2em; }
+.mapui .mu-info .mu-x { position: absolute; top: .35em; inset-inline-end: .35em; width: 1.9em; height: 1.9em; }
 .mapui .mu-drawbar { top: 3.7em; bottom: auto; }
 .mu-lbtn { position: relative; display: inline-block; }
 .mu-lbtn > .mu-pop { position: absolute; top: calc(100% + .4em); inset-inline-end: 0; inset-inline-start: auto; width: min(21em, 90vw); }
@@ -257,15 +268,38 @@
     return null;
   }
 
+  const MODES = [['map', 'מפה'], ['near', 'סביבה קרובה'], ['streets', 'רחובות'], ['globe', 'כדור']];
+  const STYLES = [['eyes', 'צבעוני', 'יבשה חומה וים כחול, כמו עינים למקרא'], ['countries', 'ארצות בצבעים', 'כל ארץ בצבע משלה'], ['plain', 'חום-לבן', 'כמו כיוון תפילה']];
   function mount(el, o) {
     if (!MC) { el.innerHTML = '<p>רכיב המפה לא נטען.</p>'; return; }
     css();
     const pts = (o.points || []).filter(p => p.lat != null && p.lon != null);
     const extra = (o.layers || []).map(L => Object.assign({ on: true }, L));
+    // 2.2.1: שכבות שהמשתמש שרטט או טען מקובץ נשמרות ב-storage של התוסף ונטענות לבד בכל פתיחה (דיווח גבולות עירוב 04.11)
+    const UKEY = 'mapuiUserLayers';
+    const isUser = L => /^(file|draw)-/.test(L.id);
+    function saveUser() {
+      if (!o.call) return;
+      const keep = extra.filter(isUser).map(L => ({ id: L.id, name: L.name, sub: L.sub, glyph: L.glyph, points: L.points, lines: L.lines, on: S.show['x-' + L.id] !== false }));
+      try { o.call('storage.set', { key: UKEY, value: keep }); } catch (e) {}
+    }
+    async function restoreUser() {
+      if (!o.call) return;
+      try {
+        const r = await o.call('storage.get', { key: UKEY }); let d = r && r.success !== false ? (r.data !== undefined ? r.data : r) : null;
+        if (typeof d === 'string') try { d = JSON.parse(d); } catch (e) { d = null; }
+        if (!Array.isArray(d) || !d.length) return;
+        for (const L of d) if (L && L.id && !extra.some(x => x.id === L.id)) { extra.push(Object.assign({ on: true }, L, { points: L.points || [], lines: L.lines || [] })); S.show['x-' + L.id] = L.on !== false; }
+        refresh();
+      } catch (e) {}
+    }
     const NE = () => (typeof window !== 'undefined' && window.NE_DATA) || null;
     const S = { lat: 0, lon: 0, zoom: 1, rot: 0, area: null, areaName: '', sel: o.selectedId != null ? String(o.selectedId) : null, street: null,
       show: { pts: true, streets: true, syn: true, base: true, route: true, color: false }, from: null, route: null, mark: null, jer: false, pick: null };
-    try { const c = localStorage.getItem('mapui-color'); S.show.color = c == null ? !!o.color : c === '1'; } catch (e) { S.show.color = !!o.color; }
+    // 3.0: סגנון מפה (צבעוני כמו עינים למקרא / ארצות בצבעים / חום-לבן) ומצב תצוגה (מפה / סביבה / רחובות / כדור)
+    S.style = o.style || 'eyes'; S.mode = o.mode || 'map'; S.gz = 1;
+    try { const c = localStorage.getItem('mapui-style'); if (c && STYLES.some(x => x[0] === c)) S.style = c; } catch (e) {}
+    S.show.color = S.style !== 'plain';
     extra.forEach(L => { S.show['x-' + L.id] = L.on !== false; });
     const byId = new Map(pts.map(p => [String(p.id), p]));
     const ptsLayer = () => MC.toLayer({ type: 'FeatureCollection', features: pts.map(p => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [p.lon, p.lat] }, properties: { id: p.id, name: p.name } })) }, o.layerId || 'pts', o.glyph || '•');
@@ -292,13 +326,14 @@
         <form class="mu-search mu-glass" id="mu-sf" role="search" autocomplete="off">${ic('search', ' style="width:1.1em;height:1.1em;opacity:.7;flex:none"')}
           <input type="search" id="mu-q" placeholder="חיפוש: מקום, עיר, רחוב, פינה או כתובת עם מספר בית" aria-label="חיפוש" enterkeyhint="search">
           <div class="mu-sug" id="mu-sug" hidden role="listbox"></div></form>
+        <div class="mu-modes mu-glass" id="mu-modes" role="group" aria-label="מצב תצוגה">${MODES.map(([k, t]) => `<button type="button" data-mu-mode="${k}" aria-pressed="false">${t}</button>`).join('')}</div>
         <div class="mu-ctl">
           <div class="mu-grp mu-glass"><button type="button" class="mu-ib" data-mu="in" title="זום פנימה" aria-label="זום פנימה">${ic('plus')}</button><button type="button" class="mu-ib" data-mu="out" title="זום החוצה" aria-label="זום החוצה">${ic('minus')}</button></div>
           <div class="mu-grp mu-glass"><button type="button" class="mu-ib" data-mu="rotl" title="סיבוב שמאלה" aria-label="סיבוב שמאלה">${ic('rotl')}</button><button type="button" class="mu-ib" data-mu="north" id="mu-north" title="צפון למעלה" aria-label="צפון למעלה">${compass(0)}</button><button type="button" class="mu-ib" data-mu="rotr" title="סיבוב ימינה" aria-label="סיבוב ימינה">${ic('rotr')}</button></div>
           <div class="mu-grp mu-glass"><button type="button" class="mu-ib" data-mu="me" title="המיקום שלי" aria-label="המיקום שלי">${ic('me')}</button><button type="button" class="mu-ib" data-mu="fit" title="מרכוז" aria-label="מרכוז">${ic('fit')}</button><button type="button" class="mu-ib" data-mu="full" id="mu-fullb" title="מסך מלא" aria-label="מסך מלא" aria-pressed="false">${ic('full')}</button></div>
           ${o.jerusalem ? `<div class="mu-grp mu-glass"><button type="button" class="mu-ib" data-mu="jer" id="mu-jer" title="ירושלים" aria-label="ירושלים" aria-pressed="false">${ic('jer')}</button></div>` : ''}
           <div class="mu-grp mu-glass"><button type="button" class="mu-ib" data-mu="add" id="mu-addb" title="הוספת קובץ: רחובות או שכבה" aria-label="הוספת קובץ" aria-expanded="false">${ic('add')}</button></div>
-          <div class="mu-grp mu-glass"><button type="button" class="mu-ib" data-mu="guide" title="הדרכה שלב אחר שלב" aria-label="הדרכה">${ic('help')}</button></div>
+          <div class="mu-grp mu-glass"><button type="button" class="mu-ib" data-mu="guide" title="הדרכה שלב אחר שלב" aria-label="הדרכה">${ic('help')}</button><button type="button" class="mu-ib" data-mu="info" id="mu-infob" title="רחובות, נתונים ועזרה" aria-label="רחובות, נתונים ועזרה" aria-expanded="false">${ic('info')}</button></div>
           <div class="mu-grp mu-glass"><button type="button" class="mu-ib" data-mu="layers" id="mu-lb" title="שכבות" aria-label="שכבות" aria-expanded="false">${ic('layers')}</button></div>
         </div>
         <div class="mu-pop mu-glass" id="mu-pop" hidden role="dialog" aria-label="שכבות"></div>
@@ -307,10 +342,7 @@
         <div class="mu-card mu-glass" id="mu-sel" hidden></div>
         <div class="mu-toast mu-glass" id="mu-msg" hidden role="status"></div>
         <div class="mu-card mu-glass mu-drawbar" id="mu-draw" hidden></div>
-        <div class="mu-guide" id="mu-guide" hidden role="dialog" aria-modal="true" aria-label="הדרכה"></div>
-      </div>
-      <div class="mu-near" id="mu-near"></div>
-      <details class="mu-more"><summary>רחובות, נתונים ועזרה</summary>
+        <div class="mu-info mu-glass" id="mu-info" hidden role="dialog" aria-label="רחובות, נתונים ועזרה"><button type="button" class="mu-ib mu-x" data-mu="infox" title="סגירה" aria-label="סגירה">✕</button><h4>רחובות, נתונים ועזרה</h4>
         <div class="bar">${off || o.builtinStreets ? '' : '<button class="mu" data-mu="dl" id="mu-dl">הורדת רחובות לעיר</button>'}<button class="mu" data-mu="load">טעינת רחובות מקובץ</button><button class="mu" data-mu="loadgeo">טעינת שכבה מקובץ (GeoJSON)</button></div>
         ${o.builtinStreets ? `<p class="msg">הרחובות של ${Object.keys((typeof window !== 'undefined' && window.STREET_CITIES) || {}).length || 76} ערים מובנים בתוסף ונטענים לבד כשמתקרבים לעיר בזום, בלי אינטרנט. לעיר אחרת: טעינת קובץ רחובות.</p>` : off ? '<p class="msg">אוצריא במצב "ללא גישה לאינטרנט": אפשר לטעון קובץ רחובות שכבר שמור במחשב.</p>' : `<p class="msg">מורידים את קובץ העיר (נפתח בדפדפן), ואז "טעינת רחובות מקובץ". <button class="mu" data-mu="url">מקור חלופי 1</button> <button class="mu" data-mu="url2">מקור חלופי 2</button></p>`}
         <p class="msg">חיפוש כתובת עם מספר בית (למשל: <em>רבי עקיבא 12, בני ברק</em>): ${off ? 'במצב מנותק מוצג הרחוב.' : 'המיקום המדויק נמצא ברשת (OpenStreetMap); בלי רשת מוצג הרחוב.'} פינה: <em>הרצל פינת בן יהודה</em>.</p>
@@ -319,7 +351,11 @@
         ${off ? '' : `<div class="bar"><button class="mu" data-mu-open="${SHARED_DOC}">הסבר</button><button class="mu" data-mu-open="${SHARED_URL}">הקוד של המפה</button>${join}</div>`}
         ${future.length ? `<h4>בפיתוח</h4><div class="bar">${future.map(f => `<button class="mu" aria-disabled="true" data-mu="soon" title="בפיתוח: מחכה לעזרה">${esc(f)}</button>`).join('')}</div>` : ''}
         <p class="msg">© OpenStreetMap contributors · Natural Earth. המיקומים להתמצאות בלבד.</p>
-      </details>`;
+        </div>
+        <div class="mu-guide" id="mu-guide" hidden role="dialog" aria-modal="true" aria-label="הדרכה"></div>
+      </div>
+      <div class="mu-near" id="mu-near"></div>
+`;
     const $ = id => el.querySelector('#' + id);
     const view = $('mu-view');
 
@@ -358,7 +394,9 @@
     }
     function drawNow() {
       setTimeout(updDl, 0); sizeH();
-      const v = MC.createView({ lat: S.lat, lon: S.lon, zoom: S.zoom, rot: S.rot, width: W, height: H });
+      const glb = S.mode === 'globe';
+      const v = MC.createView(glb ? { proj: 'globe', gz: S.gz, lat: S.lat, lon: S.lon, rot: S.rot, width: W, height: H } : { lat: S.lat, lon: S.lon, zoom: S.zoom, rot: S.rot, width: W, height: H });
+      modeBar();
       const layers = [];
       if (S.route && S.show.route) layers.push({ id: 'route', lines: [{ coords: S.route.coords, label: 'מסלול הליכה', style: 'route' }], points: [] });
       if (S.jer && o.me) layers.push({ id: 'jer', lines: [{ coords: [o.me, JERUSALEM], label: 'הכיוון לירושלים', style: 'route' }], points: [{ lat: JERUSALEM[0], lon: JERUSALEM[1], label: 'ירושלים', id: '__jer' }], glyph: 'י' });
@@ -366,9 +404,9 @@
       if (S.draw && S.draw.pts.length) layers.push({ id: 'draw', glyph: '•', points: S.draw.pts.map((c, i) => ({ lat: c[0], lon: c[1], id: '__d' + i, label: '' })), lines: S.draw.pts.length > 1 ? [{ coords: S.draw.closed ? [...S.draw.pts, S.draw.pts[0]] : S.draw.pts, closed: S.draw.closed, label: 'שרטוט' }] : [] });
       if (S.mark) layers.push({ id: 'mark', glyph: '★', points: [{ lat: S.mark.lat, lon: S.mark.lon, label: S.mark.label, id: '__mark' }], lines: [] });
       if (S.show.pts) layers.push(ptsLayer());
-      const base = S.show.base && NE() && (!S.area || S.zoom < 0.35) ? NE() : null;
-      view.innerHTML = MC.renderSVG({ area: S.area, view: v, layers, streets: S.show.streets, syn: S.show.syn, me: o.me, hl: S.sel, selected: S.street, color: S.show.color,
-        labels: S.zoom >= 2, outline: !S.area && !base, base, chrome: false });
+      const base = NE() && (glb || (S.show.base && (!S.area || S.zoom < 0.35))) ? NE() : null;
+      view.innerHTML = MC.renderSVG({ area: S.area, view: v, layers, streets: S.show.streets, syn: S.show.syn, me: o.me, hl: S.sel, selected: S.street, color: S.style !== 'plain', style: S.style,
+        labels: !glb && S.zoom >= 2, outline: !S.area && !base, base, chrome: false });
       view._v = v;
       $('mu-north').innerHTML = compass(S.rot);
       // סרגל קנה מידה: אורך עגול שמתאים ל-~70 פיקסלים
@@ -451,8 +489,8 @@ ${svg ? `<figure>${svg}</figure>` : ''}
       $('mu-near').innerHTML = `<div class="msg"><strong>${esc(o.nearbyLabel || 'קרוב לכתובת')}</strong></div><div class="bar">` + L.map(([p, d]) => `<button class="mu" data-mu-sel="${esc(p.id)}">${esc(p.name)} · ${MC.widthLabel(d)}</button>`).join('') + '</div>';
     }
     function refresh() { draw(); showSel(); updDl(); }
-    function selectPt(id) { S.pick = null; S.sel = String(id); const p = selPt(); if (p) { S.lat = p.lat; S.lon = p.lon; S.zoom = Math.max(S.zoom, 3); } S.street = null; refresh(); }
-    function goTo(lat, lon, zoom, label) { S.lat = lat; S.lon = lon; S.zoom = zoom; S.sel = null; S.street = null; S.mark = label ? { lat, lon, label } : null; S.from = [lat, lon]; S.fromLabel = label || ''; S.route = null; S.pick = null; refresh(); nearList([lat, lon]); }
+    function selectPt(id) { if (S.mode === 'globe') S.mode = 'map'; S.pick = null; S.sel = String(id); const p = selPt(); if (p) { S.lat = p.lat; S.lon = p.lon; S.zoom = Math.max(S.zoom, 3); } S.street = null; refresh(); }
+    function goTo(lat, lon, zoom, label) { if (S.mode === 'globe') S.mode = 'map'; S.lat = lat; S.lon = lon; S.zoom = zoom; S.sel = null; S.street = null; S.mark = label ? { lat, lon, label } : null; S.from = [lat, lon]; S.fromLabel = label || ''; S.route = null; S.pick = null; refresh(); nearList([lat, lon]); }
 
     // ── שכבות ──
     function popHTML() {
@@ -460,10 +498,11 @@ ${svg ? `<figure>${svg}</figure>` : ''}
       return `<h5>שכבות בתוסף</h5>`
         + row('pts', o.glyph || '•', o.layerName || 'נקודות', pts.length + ' במפה', S.show.pts)
         + extra.map(L => row('x-' + L.id, L.glyph || '•', L.name || L.id, L.sub || '', S.show['x-' + L.id])).join('')
+        + (extra.some(isUser) ? `<div class="bar"><button class="mu" data-mu="userclear">מחיקת השכבות ששרטטתי / טענתי</button></div>` : '')
         + row('streets', '═', 'רחובות', S.area ? S.areaName || 'נטענו' : 'מתקרבים לעיר בזום', S.show.streets, !S.area)
         + row('syn', '✡', 'בתי כנסת', '', S.show.syn, !S.area)
         + (NE() ? row('base', '◍', 'מפת העולם', 'יבשות, ארצות, ערים ונהרות', S.show.base) : '')
-        + row('color', '🎨', 'מפה צבעונית', 'ים כחול וכל ארץ בצבע משלה', S.show.color)
+        + `<h5 style="margin-top:.6em">סגנון המפה</h5><div class="mu-styles">${STYLES.map(([k, t, d]) => `<button class="mu" data-mu-style="${k}" title="${esc(d)}" aria-pressed="${S.style === k}">${esc(t)}</button>`).join('')}</div>`
         + (S.route ? row('route', '↝', 'מסלול הליכה', MC.widthLabel(S.route.m), S.show.route) : '')
         + `<h5 style="margin-top:.7em">שכבות מתוספים אחרים</h5>${otherRows(o.self)}`
         + `<p class="msg">השכבה של כל תוסף נפתחת בו, באותו מקום במפה.</p>`;
@@ -471,7 +510,17 @@ ${svg ? `<figure>${svg}</figure>` : ''}
     const pop = $('mu-pop'), lb = $('mu-lb');
     const togglePop = show => { pop.hidden = show === undefined ? !pop.hidden : !show; if (!pop.hidden) pop.innerHTML = popHTML(); lb.setAttribute('aria-expanded', String(!pop.hidden)); lb.setAttribute('aria-pressed', String(!pop.hidden)); };
     wireOthers(pop, Object.assign({}, o, { online: !off }), () => [S.lat, S.lon]);
-    pop.addEventListener('change', e => { const c = e.target.closest('[data-mu-layer]'); if (c) { S.show[c.dataset.muLayer] = c.checked; if (c.dataset.muLayer === 'color') try { localStorage.setItem('mapui-color', c.checked ? '1' : '0'); } catch (er) {} draw(); } });
+    pop.addEventListener('click', e => { const b = e.target.closest('[data-mu-style]'); if (!b) return; S.style = b.dataset.muStyle; S.show.color = S.style !== 'plain'; try { localStorage.setItem('mapui-style', S.style); } catch (er) {} pop.innerHTML = popHTML(); draw(); });
+    function modeBar() { const mb = $('mu-modes'); if (mb) mb.querySelectorAll('[data-mu-mode]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.muMode === S.mode))); }
+    function setMode(m) {
+      const c = o.me || [S.lat, S.lon];
+      if (m === 'globe') { S.gz = 1; S.lat = Math.max(-60, Math.min(60, S.lat)); }
+      else if (m === 'streets') { if (S.mode === 'globe' || S.zoom < 1) { S.lat = c[0]; S.lon = c[1]; } S.zoom = Math.max(S.zoom, 3); }
+      else if (m === 'near') { S.zoom = 0.03; }
+      else { S.zoom = 0.0004; }
+      S.mode = m; draw();
+    }
+    pop.addEventListener('change', e => { const c = e.target.closest('[data-mu-layer]'); if (c) { S.show[c.dataset.muLayer] = c.checked; if (/^x-(file|draw)-/.test(c.dataset.muLayer)) saveUser(); if (c.dataset.muLayer === 'color') try { localStorage.setItem('mapui-color', c.checked ? '1' : '0'); } catch (er) {} draw(); } });
 
     // ── קבצים ──
     async function pickJSON(title) {
@@ -492,13 +541,13 @@ ${svg ? `<figure>${svg}</figure>` : ''}
     async function loadGeo() {
       try {
         const j = await pickJSON('בחירת קובץ שכבה (GeoJSON: נקודות, קווים או פוליגונים)'); if (!j) return;
-        const L = MC.toLayer(j, 'file-' + (extra.length + 1), '◆');
+        const L = MC.toLayer(j, 'file-' + Date.now().toString(36), '◆');
         if (!L.points.length && !L.lines.length) return say('בקובץ אין נקודות או קווים');
         extra.push({ id: L.id, name: 'שכבה מקובץ ' + (extra.length + 1), sub: L.points.length + ' נקודות · ' + L.lines.length + ' קווים', glyph: '◆', points: L.points, lines: L.lines, on: true });
         S.show['x-' + L.id] = true;
         const all = [...L.points, ...L.lines.flatMap(l => l.coords.map(c => ({ lat: c[0], lon: c[1] })))];
         if (all.length) { const keep = pts.slice(); fit(all); void keep; }
-        say('השכבה נטענה לזמן הפתיחה של המסך.'); refresh(); if (!pop.hidden) pop.innerHTML = popHTML();
+        saveUser(); say('השכבה נטענה ונשמרה — תיטען לבד גם בפתיחה הבאה.'); refresh(); if (!pop.hidden) pop.innerHTML = popHTML();
       } catch (e) { say('הקובץ לא נקרא'); }
     }
 
@@ -582,7 +631,10 @@ ${svg ? `<figure>${svg}</figure>` : ''}
     // ── גרירה, צביטה, גלגלת ומקלדת ──
     const ptrs = new Map(); let drag = null, pinch = null;
     const svgK = () => { const svg = view.querySelector('svg'); return svg ? svg.getBoundingClientRect().width / W : 1; };
-    const panBy = (dx, dy, from) => { const v = MC.createView({ lat: from.lat, lon: from.lon, zoom: S.zoom, rot: S.rot, width: W, height: H }); const ll = MC.unproject(v, W / 2 - dx, H / 2 - dy); S.lat = ll[0]; S.lon = ll[1]; };
+    const panBy = (dx, dy, from) => {
+      if (S.mode === 'globe') { const k = 90 / (Math.min(W, H) * .46 * S.gz); S.lon = ((from.lon - dx * k + 540) % 360) - 180; S.lat = Math.max(-85, Math.min(85, from.lat + dy * k)); return; }
+      const v = MC.createView({ lat: from.lat, lon: from.lon, zoom: S.zoom, rot: S.rot, width: W, height: H }); const ll = MC.unproject(v, W / 2 - dx, H / 2 - dy); S.lat = ll[0]; S.lon = ll[1]; };
+    const zoomBy = f => { if (S.mode === 'globe') { S.gz = Math.max(.5, Math.min(40, S.gz * f)); if (S.gz >= 40) { S.mode = 'map'; S.zoom = 0.002; } } else { S.zoom = Math.max(ZMIN, Math.min(ZMAX, S.zoom * f)); if (S.zoom < 0.00012 && f < 1) { S.mode = 'globe'; S.gz = 1.6; } } draw(); };
     view.addEventListener('pointerdown', e => {
       ptrs.set(e.pointerId, [e.clientX, e.clientY]); try { view.setPointerCapture(e.pointerId); } catch (err) {}
       if (ptrs.size === 1) drag = { x: e.clientX, y: e.clientY, lat: S.lat, lon: S.lon, moved: false };
@@ -598,7 +650,7 @@ ${svg ? `<figure>${svg}</figure>` : ''}
     });
     const end = e => { ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch = null; if (drag) { const was = drag; setTimeout(() => { if (drag === was) drag = null; }, 0); } };
     ['pointerup', 'pointercancel', 'pointerleave'].forEach(t => view.addEventListener(t, end));
-    view.addEventListener('wheel', e => { e.preventDefault(); S.zoom = Math.max(ZMIN, Math.min(ZMAX, S.zoom * (e.deltaY < 0 ? 1.25 : 0.8))); draw(); }, { passive: false });
+    view.addEventListener('wheel', e => { e.preventDefault(); zoomBy(e.deltaY < 0 ? 1.25 : 0.8); }, { passive: false });
     view.addEventListener('dblclick', e => { e.preventDefault(); S.zoom = Math.min(ZMAX, S.zoom * 2); draw(); });
     view.addEventListener('keydown', e => {
       const st = 40, k = e.key;
@@ -609,6 +661,7 @@ ${svg ? `<figure>${svg}</figure>` : ''}
       else if (k === 'ArrowLeft') panBy(st, 0, S); else if (k === 'ArrowRight') panBy(-st, 0, S);
       else if (k === 'ArrowUp') panBy(0, st, S); else if (k === 'ArrowDown') panBy(0, -st, S);
       else if (k === 'Escape' && !$('mu-guide').hidden) guide(null);
+      else if (k === 'Escape' && !$('mu-info').hidden) $('mu-info').hidden = true;
       else if (k === 'Escape' && el.classList.contains('mu-full')) { el.classList.remove('mu-full'); $('mu-fullb').setAttribute('aria-pressed', 'false'); }
       else return;
       e.preventDefault(); draw();
@@ -674,10 +727,10 @@ ${more}
     function drawSave() {
       const L = S.draw, coords = L.pts.map(c => [+c[1].toFixed(6), +c[0].toFixed(6)]);
       const gj = { type: 'FeatureCollection', features: [{ type: 'Feature', properties: { name: 'שרטוט ' + (extra.length + 1), source: me.name }, geometry: L.closed ? { type: 'Polygon', coordinates: [[...coords, coords[0]]] } : { type: 'LineString', coordinates: coords } }] };
-      const lay = MC.toLayer(gj, 'draw-' + (extra.length + 1), '◆');
+      const lay = MC.toLayer(gj, 'draw-' + Date.now().toString(36), '◆');
       extra.push({ id: lay.id, name: 'שרטוט ' + (extra.length + 1), sub: L.closed ? 'שטח' : 'קו', glyph: '◆', points: [], lines: lay.lines, on: true }); S.show['x-' + lay.id] = true;
       try { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(gj, null, 1)], { type: 'application/geo+json' })); a.download = 'שרטוט - ' + me.name + '.geojson'; document.body.append(a); a.click(); a.remove(); } catch (e) {}
-      S.draw = null; drawBar(); refresh(); say('השרטוט נשמר כשכבה וכקובץ GeoJSON. אפשר לטעון אותו שוב בכפתור +.');
+      S.draw = null; drawBar(); saveUser(); refresh(); say('השרטוט נשמר כשכבה (תיטען לבד בפתיחה הבאה) וכקובץ GeoJSON.');
     }
 
     // ── לחיצות ──
@@ -687,12 +740,12 @@ ${more}
       if (g && !(drag && drag.moved)) { if (g.dataset.id && g.dataset.id.indexOf('__') !== 0) return selectPt(g.dataset.id); return; }
       const stp = t.closest && t.closest('[data-mu-step]');
       if (stp && S.route) { const st = S.route.steps[+stp.dataset.muStep]; if (st && st.at) { S.lat = st.at[0]; S.lon = st.at[1]; S.zoom = Math.max(S.zoom, 3); S.mark = { lat: st.at[0], lon: st.at[1], label: st.text.split(' · ')[0] }; draw(); } return; }
-      if (S.draw && t.closest && t.closest('#mu-view') && !(drag && drag.moved) && view._v) {   // 2.2: שרטוט
+      if (S.mode !== 'globe' && S.draw && t.closest && t.closest('#mu-view') && !(drag && drag.moved) && view._v) {   // 2.2: שרטוט
         const svg = view.querySelector('svg'), r = svg.getBoundingClientRect();
         S.draw.pts.push(MC.unproject(view._v, (e.clientX - r.left) * W / r.width, (e.clientY - r.top) * H / r.height)); drawBar(); draw(); return;
       }
       // 2.1: לחיצה על רחוב בוחרת אותו (כמו בכיוון תפילה)
-      if (t.closest && t.closest('#mu-view') && !(drag && drag.moved) && S.area && S.show.streets && view._v) {
+      if (S.mode !== 'globe' && t.closest && t.closest('#mu-view') && !(drag && drag.moved) && S.area && S.show.streets && view._v) {
         const svg = view.querySelector('svg'), r = svg.getBoundingClientRect(), v = view._v;
         const ll = MC.unproject(v, (e.clientX - r.left) * W / r.width, (e.clientY - r.top) * H / r.height);
         const w = MC.nearestWay(S.area, ll, 14 / (v.scale * r.width / W));
@@ -700,10 +753,11 @@ ${more}
       }
       const open = t.closest && t.closest('[data-mu-open]'); if (open) { if (o.openLink) o.openLink(open.dataset.muOpen); return; }
       const sp = t.closest && t.closest('[data-mu-sel]'); if (sp) return selectPt(sp.dataset.muSel);
+      const md = t.closest && t.closest('[data-mu-mode]'); if (md) return setMode(md.dataset.muMode);
       const b = t.closest && t.closest('[data-mu]'); if (!b) return;
       const a = b.dataset.mu;
-      if (a === 'in') { S.zoom = Math.min(ZMAX, S.zoom * 1.5); draw(); }
-      else if (a === 'out') { S.zoom = Math.max(ZMIN, S.zoom / 1.5); draw(); }
+      if (a === 'in') zoomBy(1.5);
+      else if (a === 'out') zoomBy(1 / 1.5);
       else if (a === 'rotl') { S.rot = (S.rot + 345) % 360; draw(); }
       else if (a === 'rotr') { S.rot = (S.rot + 15) % 360; draw(); }
       else if (a === 'north') { S.rot = 0; draw(); }
@@ -739,6 +793,8 @@ ${more}
       else if (a === 'dend') { S.draw = null; drawBar(); draw(); }
       else if (a === 'steps') { S.showSteps = !S.showSteps; showSel(); }
       else if (a === 'routedl') routeFile();
+      else if (a === 'userclear') { for (let i = extra.length - 1; i >= 0; i--) if (isUser(extra[i])) { delete S.show['x-' + extra[i].id]; extra.splice(i, 1); } saveUser(); refresh(); if (!pop.hidden) pop.innerHTML = popHTML(); say('השכבות שלי נמחקו.'); }
+      else if (a === 'info' || a === 'infox') { const ip = $('mu-info'); ip.hidden = a === 'infox' ? true : !ip.hidden; $('mu-infob').setAttribute('aria-expanded', String(!ip.hidden)); }
       else if (a === 'add') { const ap = $('mu-add'); ap.hidden = !ap.hidden; b.setAttribute('aria-expanded', String(!ap.hidden)); }
       else if (a === 'load') { $('mu-add').hidden = true; loadFile(); }
       else if (a === 'loadgeo') { $('mu-add').hidden = true; loadGeo(); }
@@ -751,11 +807,13 @@ ${more}
     document.addEventListener('pointerdown', e => {
       if (!el.isConnected) return;
       if (!pop.hidden && !pop.contains(e.target) && !lb.contains(e.target)) togglePop(false);
+      const ip = $('mu-info'); if (ip && !ip.hidden && !ip.contains(e.target) && !$('mu-infob').contains(e.target)) { ip.hidden = true; $('mu-infob').setAttribute('aria-expanded', 'false'); }
       const ap = $('mu-add'); if (ap && !ap.hidden && !ap.contains(e.target) && !$('mu-addb').contains(e.target)) ap.hidden = true;
       const sf = $('mu-sf'); if (sf && !sf.contains(e.target)) $('mu-sug').hidden = true;
     });
     if (typeof ResizeObserver !== 'undefined') new ResizeObserver(() => draw()).observe(view);
     refresh();
+    restoreUser();
     return { state: S, refresh, select: selectPt, goTo };
   }
 
