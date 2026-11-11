@@ -247,7 +247,7 @@
     const n = byCity.get(c);
     const fav = state.favs.includes(c);
     return `<div class="wrap">
-      <div class="hero"><div class="grow"><h2>${esc(c)}</h2>
+      <div class="hero"><div class="grow"><h2>${esc(c)}${CITY_AKA[c] ? ` <small>(${esc(CITY_AKA[c])})</small>` : ''}</h2>
         <p>${n.maps.length ? n.maps.length + ' מפות עירוב' : 'אין עדיין מפה לעיר זו, אך יש אחראים מקומיים'}${n.areas.length ? ' · ' + n.areas.length + ' שכונות עם אחראי' : ''}</p></div>
         ${CITY_POS[c] ? `<button class="btn text" data-mapdev="${esc(c)}">${ICON.pin} במפה</button>` : ''}
         <button class="btn text" data-add-map="${esc(c)}">${ICON.mapAdd} הוספת מפה משלי</button>
@@ -263,7 +263,7 @@
     const q = norm(state.q);
     const words = q.split(' ').filter(Boolean);
     const match = s => { const t = norm(s); return words.every(w => t.includes(w)); };
-    const cities = D.cities.filter(match);
+    const cities = D.cities.filter(c => match(c + ' ' + (CITY_AKA[c] || '')));
     const maps = D.maps.filter(m => match(m.city + ' ' + m.title));
     const areas = D.areas.filter(a => match([a.city, a.area, a.names.join(' ')].join(' ')));
     const docs = DOCS.filter(d => match(d.title + ' ' + d.cities.join(' ') + ' ' + Object.values(d.summary || {}).join(' ')));
@@ -414,6 +414,8 @@
     { name: 'מוקד העירוב', what: 'מענה הלכתי בענייני עירוב, מפות ואחראים · a83320@gmail.com', phone: '054-8483320', url: 'http://hiruv.com/%D7%99%D7%A6%D7%99%D7%A8%D7%AA-%D7%A7%D7%A9%D7%A8/', src: 'דף יצירת קשר באתר מוקד העירוב' },
     { name: 'Chicago Mitzvah Campaign (שיקגו)', what: 'ליווי רבני וחדרי אירוח לשבת בבתי החולים באזור שיקגו', phone: '1-866-697-2224', url: 'https://chicagomitzvahcampaign.org/in-hospital-patient-services/', src: 'אתר הארגון' },
     { name: 'מועצת הרבנים של שיקגו (cRc) — עירובין', what: 'רשימת העירובין באזור שיקגו וקווי הסטטוס', phone: '847-677-3788', url: 'https://crcweb.org/guide_chicago.php', src: 'אתר cRc (הקו של לינקולנווד–פיטרסון פארק)' },
+    { name: 'ערבתם', what: 'מידע על עירובין', phone: '072-2722909', url: '', src: 'לפי דיווח משתמש (#13) — לא אומת מול אתר הארגון' },
+    { name: 'ערבתם — עירובין שכונתיים בני ברק', what: 'קו המידע לעירובין השכונתיים בבני ברק', phone: '03-3065765', url: '', src: 'לפי דיווח משתמש (#13) — לא אומת מול אתר הארגון' },
     { name: 'עזר מציון — סניף ראשי', what: 'בחוברת "דרך התחומין" מוזכר שהאגודה מניחה עירוב תחומין ציבורי', phone: '03-6144444', url: 'https://www.ami.org.il/', src: 'אתר עזר מציון' }
   ];
   // מקורות רשמיים נוספים: עמודי שירותי דת של בתי חולים שעוד לא פורטו כאן (קישור בלבד)
@@ -457,7 +459,7 @@
       <div class="row-links">${HOSPITALS.filter(h => h.abroad).map(h => `<button class="btn tonal" data-hosp="${h.id}">${ICON.hospital} ${esc(h.name)} · ${esc(h.city)}</button>`).join('')}</div>
       <div class="section-title">ארגונים</div>
       <div class="contacts">${ORGS.map(o => `<div class="contact"><div class="who"><b>${esc(o.name)}</b><small>${esc(o.what)}</small><small>מקור: ${esc(o.src)}</small></div>
-        ${telChip(o.phone)}<button class="chip" data-url="${esc(o.url)}">${ICON.link}אתר</button></div>`).join('')}</div>
+        ${telChip(o.phone)}${o.url ? `<button class="chip" data-url="${esc(o.url)}">${ICON.link}אתר</button>` : ''}</div>`).join('')}</div>
       <div class="section-title">בתי חולים נוספים — עמודי שירותי הדת הרשמיים</div>
       <div class="lib">${MORE_SOURCES.map(x => `<button class="chip" data-url="${esc(x[1])}">${ICON.link}${esc(x[0])}</button>`).join('')}</div>
       <p class="fine">${esc(HOSP_EZER)}</p></div>`;
@@ -1023,8 +1025,10 @@
     'מודיעין עילית': [31.930, 35.040], 'מיצד': [31.590, 35.190], 'מירון': [32.980, 35.440], 'נוף הגליל': [32.710, 35.320],
     'נתיבות': [31.420, 34.590], 'נתניה': [32.330, 34.860], 'עמנואל': [32.160, 35.140], 'עפולה': [32.610, 35.290],
     'פתח תקוה': [32.090, 34.880], 'צפת': [32.960, 35.500], 'קרית אתא': [32.810, 35.110], 'קרית יערים (טלזסטון)': [31.800, 35.100],
-    'קרית מלאכי': [31.730, 34.750], 'רחובות': [31.890, 34.810], 'רכסים': [32.750, 35.100], 'תל ציון': [31.880, 35.250], 'תפרח': [31.330, 34.670]
+    'קרית מלאכי': [31.730, 34.750], 'רחובות': [31.890, 34.810], 'רכסים': [32.750, 35.100], 'חזון יחזקאל': [31.652674, 34.744438], 'תל ציון': [31.880, 35.250], 'תפרח': [31.330, 34.670]
   };
+  // שם רשמי / כינוי נוסף לפי דיווח משתמש (#15): "חזון יחזקאל" = היישוב אלומה, סמוך לקוממיות ובתחומו
+  const CITY_AKA = { 'חזון יחזקאל': 'אלומה · סמוך לקוממיות (לפי דיווח משתמש)' };
   const km = (a, b) => { const r = Math.PI / 180, x = (b[1] - a[1]) * r * Math.cos((a[0] + b[0]) * r / 2), y = (b[0] - a[0]) * r; return Math.hypot(x, y) * 6371; };
   async function locateMe() {
     toast('מאתר מיקום…');

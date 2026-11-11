@@ -8,6 +8,9 @@ from PIL import Image
 PLUG = sys.argv[1]
 os.makedirs(f"{PLUG}/maps", exist_ok=True)
 MAX, Q, TH = 2000, 52, 420
+# מפות שצריכות רזולוציה גבוהה במיוחד (#14 — מפת כל ירושלים מטושטשת ב-2000): מזהה → (צד ארוך, איכות).
+# המקור: הקובץ המקורי באתר המוקד (בלי "-scaled" של וורדפרס).
+HIRES = {"8d4561e9": (3600, 58)}
 
 ALIAS = {"גני תקווה": "גני תקוה", "פתח תקווה": "פתח תקוה", "קריית אתא": "קרית אתא",
          "קרית יערים": "קריית יערים - טלזסטון", "לוד": "לוד - אחיסמך"}
@@ -23,11 +26,29 @@ def mid(url):
     return hashlib.sha1(url.encode()).hexdigest()[:8]
 
 
+def hires_src(i, url, fallback):
+    """מוריד את המקור המלא של מפה ב-HIRES (בלי -scaled). אם נכשל — הקובץ הרגיל."""
+    if i not in HIRES:
+        return fallback
+    import urllib.request
+    os.makedirs("raw/hires", exist_ok=True)
+    dst = f"raw/hires/{i}{os.path.splitext(url)[1] or '.jpg'}"
+    if not os.path.exists(dst):
+        try:
+            u = urllib.parse.quote(url.replace("-scaled.", "."), safe=":/")
+            urllib.request.urlretrieve(u, dst)
+        except Exception as e:
+            print("hires נכשל", i, e, file=sys.stderr)
+            return fallback
+    return dst
+
+
 def enc(job):
     src, out, th = job
+    mx, q = HIRES.get(os.path.basename(out)[:-5], (MAX, Q))
     im = Image.open(src).convert("RGB")
-    big = im.copy(); big.thumbnail((MAX, MAX), Image.LANCZOS)
-    big.save(out, "WEBP", quality=Q, method=5)
+    big = im.copy(); big.thumbnail((mx, mx), Image.LANCZOS)
+    big.save(out, "WEBP", quality=q, method=5)
     t = im.copy(); t.thumbnail((TH, TH), Image.LANCZOS)
     t.save(th, "WEBP", quality=60, method=5)
     return out, big.size
@@ -41,7 +62,7 @@ for p in pages:
     city, _, sub = [s.strip() for s in t.partition("–")]
     for n, s in enumerate(p.get("sources", [])):
         i = mid(p["url"]) + (f"-{n}" if n else "")
-        jobs.append((s["file"], f"{PLUG}/maps/{i}.webp", f"{PLUG}/maps/{i}.t.webp"))
+        jobs.append((hires_src(i, s["url"], s["file"]), f"{PLUG}/maps/{i}.webp", f"{PLUG}/maps/{i}.t.webp"))
         maps.append({"id": i, "city": norm_city(city), "title": sub or "מפת העירוב",
                      "pageUrl": urllib.parse.unquote(p["url"]), "imageUrl": s["url"]})
 
