@@ -1187,6 +1187,7 @@
         <label><input type="radio" name="linkMode" value="copy" ${state.linkMode === 'copy' ? 'checked' : ''}> העתקה</label></p>
       <p>הנתונים עודכנו ב־${esc(D.built)}.</p>
       ${window.AchatPromo ? '<h3 class="info-h">המלצה</h3>' + AchatPromo.aboutHtml() + AchatPromo.settingsHtml() : ''}
+      ${window.CrashReport ? '<h3 class="info-h">דיווח תקלות</h3><label class="ap-set"><span>הצעת דיווח קריסה<small>כשמשהו נתקע — הודעה קטנה, פעם אחת בכל הפעלה, שמציעה לשלוח דיווח דרך אוצריא (רק באישורכם)</small></span><input type="checkbox" id="cr-sw" checked></label>' : ''}
       <h3 class="info-h">שליחת תגובה</h3>
       <textarea id="fbText" rows="3" placeholder="הערה, תיקון או שכונה חסרה — נשלח דרך אוצריא למפתחת"></textarea>
       <div class="sheet-actions"><button class="btn filled" id="fbSend">שליחה</button></div>
@@ -1203,6 +1204,7 @@
       <button class="btn text" data-url="https://otzaria.org/forum/post/45390">שרשור הדיווחים בפורום אוצריא</button></p>`;
     $('#fbSend').onclick = sendFeedback;
     if (window.AchatPromo) AchatPromo.bind($('#infoBody'));
+    { const crs = $('#cr-sw'); if (crs && window.CrashReport) { CrashReport.ready().then(on => { crs.checked = on; }); crs.onchange = () => CrashReport.setEnabled(crs.checked); } }
     $('#infoScrim').hidden = false; $('#infoClose').focus();
   }
 
