@@ -342,6 +342,7 @@ mark { background: var(--color-primary-container); color: var(--color-on-primary
   opacity: 0; transition: opacity .2s, transform .2s var(--ease);
 }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
+.toast.show button { pointer-events: auto; margin-inline-start: .6em; }
 
 /* ── אודות: תגובה ויומן ───────────────────────────────────────── */
 .info-h { margin: 1.2em 0 .4em; font-size: 1em; font-weight: 600; }

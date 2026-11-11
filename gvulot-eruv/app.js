@@ -111,6 +111,14 @@
     const t = $('#toast'); t.textContent = msg; t.classList.add('show');
     clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2200);
   }
+  // 2.0.0: אחרי שמירת PDF — כפתור "הדפסה" במסך ההדפסה של אוצריא (ui.printFile, מ-0.9.98.1; דורש לחיצת משתמש)
+  function printToast(token, name) {
+    const t = $('#toast'); t.textContent = 'נשמר: ' + name + ' ';
+    const b = document.createElement('button'); b.className = 'btn tonal'; b.textContent = 'הדפסה';
+    b.onclick = async () => { t.classList.remove('show'); const r = await call('ui.printFile', { token, jobName: name }); if (!r.success) toast('ההדפסה לא זמינה בגרסת אוצריא הזו'); };
+    t.append(b); t.classList.add('show');
+    clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 9000);
+  }
   async function copyPhone(p) {
     const v = fmtPhone(p);
     try { await navigator.clipboard.writeText(v); toast('המספר ' + v + ' הועתק'); }
@@ -761,7 +769,11 @@
     try { const put = await fetch(begin.data.uploadUrl, { method: 'PUT', headers: { 'Content-Type': mime }, body: blob }); if (!put.ok) throw new Error(put.status); }
     catch (e) { toast('השמירה נכשלה'); return false; }
     const res = await call('fs.commitUserFileWrite', { writeToken: begin.data.writeToken, suggestedName: name, extension: ext, title });
-    if (res.success && res.data && !res.data.cancelled) { toast('נשמר: ' + (res.data.name || name + '.' + ext)); return true; }
+    if (res.success && res.data && !res.data.cancelled) {
+      if (ext === 'pdf' && res.data.token) printToast(res.data.token, res.data.name || name + '.pdf');
+      else toast('נשמר: ' + (res.data.name || name + '.' + ext));
+      return true;
+    }
     if (!res.success) toast('השמירה נכשלה');
     return false;
   }
