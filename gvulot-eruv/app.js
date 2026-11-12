@@ -4,10 +4,34 @@
 (function () {
   'use strict';
   const D = window.ERUV_DATA;
+  // ── 2.2.0: ממשק אחד לשני תוספים (גבולות עירוב, טהרת כהנים) ──
+  // הקוד הזה נכתב פעם אחת ב-gvulot-eruv/ ומועתק לתוסף טהרת כהנים (tools/sync-ui.sh). כל תוסף נותן site.js עם
+  // window.SITE: שם, טקסטים (text), רשימות (hospitals, orgs…), שכבות למפה ותצוגות (views). בלי site.js — ברירות המחדל כאן הן של העירוב.
+  const S = window.SITE || {};
+  const IS_ERUV = !S.id || S.id === 'com.hadabadra.gvulot-eruv';
+  const T = Object.assign({
+    name: 'גבולות עירוב', home: 'כל הארץ', homeTitle: 'גבולות העירובים השכונתיים', mapsWord: 'מפות', mapsWordCity: 'מפות עירוב', areasWord: 'שכונות',
+    areasOnly: 'אחראים בלבד', noMapCity: 'אין עדיין מפה לעיר זו, אך יש אחראים מקומיים', areasCityWord: 'שכונות עם אחראי', areasTitle: 'אחראים לפי שכונה',
+    areasSearch: 'אחראים', areaNoNames: 'שם האחראי לא צוין', areaWhole: 'כל השכונה', areaCount: 'אחראים',
+    docsTitle: 'תחום שבת וחוברות', docsAll: 'כל מאמרי התחום והספרייה', abroadBtn: 'עירובין בחו"ל', abroadCrumb: 'עירובין בחו"ל', hospsBtn: 'בתי חולים',
+    docTag: 'תחום', docTagTitle: 'יש מאמר תחום שבת', railCities: 'ערים', railAbroad: 'ארצות', railHosp: 'בתי חולים',
+    techumTitle: 'תחום שבת', techumEmptyHTML: '<b>תחום שבת</b> — אין עדיין מאמר תחומין לעיר זו במאגר. לבירור התחום ועירוב תחומין: מוקד העירוב',
+    techumFine: 'מאמרי התחומין של מוקד העירוב. החישוב תלוי בשיטות שונות — לשאלה למעשה יש לפנות לרב או למוקד.',
+    searchEmpty: 'אפשר לחפש שם עיר, שכונה, רחוב או שם האחראי. למקום שאינו ברשימה: מוקד העירוב, 054-8483320.',
+    libTitle: 'ספריית העירובין', sourceSite: 'לאתר המוקד', sourceContact: 'יצירת קשר עם המוקד', sourcePhone: 'מענה הלכתי',
+    noNear: 'אין עירוב במאגר בקרבת המיקום', lineLayer: 'קווי עירוב (בקירוב — לפי מפת המוקד)', addMap: 'הוספת מפה משלי',
+    fbPlaceholder: 'הערה, תיקון או שכונה חסרה — נשלח דרך אוצריא למפתחת'
+  }, S.text || {});
+  const pick = (k, def) => (S[k] !== undefined ? S[k] : def);
+  // הצגה של תוסף אחר במאגר (שכבה בתפריט השכבות של המפה המשותפת — לחיצה פותחת את התוסף ההוא באותו מקום)
+  const SIBLINGS = [
+    { id: 'com.hadabadra.gvulot-eruv', name: 'גבולות עירוב', glyph: 'ע', desc: 'מפות העירובים והאחראים בכל עיר', layers: ['קווי עירוב (בקירוב — לפי מפת המוקד)'], store: 'https://otzaria.org/plugins/6ad93b5d2917198d73992a9d' },
+    { id: 'com.hadabadra.tahorat-kohanim', name: 'טהרת כהנים', glyph: 'כ', desc: 'אזורים אסורים לכהנים, מפות, חוברות וטיסות', layers: ['אזורים אסורים לכהנים'], store: 'https://otzaria.org/plugins' }];
+  try { const P = window.MapUI && window.MapUI.PLUGINS; if (P) SIBLINGS.forEach(x => { if (!P.some(p => p.id === x.id)) P.push(x); }); } catch (e) {}
   // אחראי נוסף שנמסר על ידי מפתח התוסף (לא מהמוקד הארצי): ועד העירובים השכונתיים בבני ברק
   // קישורים מהאתר של העירוב עצמו, לפי דיווח משתמש (#10 — פסגת זאב מרכז). מוצגים רק כשאוצריא מחוברת.
-  const AREA_LINKS = { 'ירושלים|פסגת זאב מרכז': [['אתר העירוב', 'https://eruvpzm.yisroelk.link/'], ['מפות העירוב (Google Drive)', 'https://drive.google.com/drive/folders/1BAn0sp5qWmEUx2STEwHPhApw-qT0RhjQ']] };
-  if (!D.areas.some(a => a.phones && a.phones.includes('050-4154005'))) D.areas.push({ city: 'בני ברק', n: '', area: 'ועד העירובים השכונתיים (מסר מפתח התוסף)', names: ['רפאל סטפנסקי (אחראי בפ"כ)'], phones: ['050-4154005'], emails: [['ועד העירובים השכונתיים', 'eruv.bbc@gmail.com']], maps: [] });
+  const AREA_LINKS = IS_ERUV ? { 'ירושלים|פסגת זאב מרכז': [['אתר העירוב', 'https://eruvpzm.yisroelk.link/'], ['מפות העירוב (Google Drive)', 'https://drive.google.com/drive/folders/1BAn0sp5qWmEUx2STEwHPhApw-qT0RhjQ']] } : (S.areaLinks || {});
+  if (IS_ERUV && !D.areas.some(a => a.phones && a.phones.includes('050-4154005'))) D.areas.push({ city: 'בני ברק', n: '', area: 'ועד העירובים השכונתיים (מסר מפתח התוסף)', names: ['רפאל סטפנסקי (אחראי בפ"כ)'], phones: ['050-4154005'], emails: [['ועד העירובים השכונתיים', 'eruv.bbc@gmail.com']], maps: [] });
   const $ = (s, r = document) => r.querySelector(s);
   const hasOtz = typeof window.Otzaria !== 'undefined';
   const call = async (method, params) => {
@@ -23,11 +47,12 @@
   const areasOfMap = id => D.areas.filter(a => a.maps.includes(id));
   // ── 1.9.0 (ו׳/ז׳): קווי עירוב בקירוב, משורטטים מתוך מפות המוקד (gvulot-eruv-build/eruv_lines.py) ──
   const LINES = window.ERUV_LINES || {};
-  const LINE_LAYER = 'קווי עירוב (בקירוב — לפי מפת המוקד)';
+  const LINE_LAYER = T.lineLayer;
   const lineResp = id => { const ar = areasOfMap(id); return ar.length ? ar.map(a => (a.names.join(', ') || 'אחראי') + (a.phones[0] ? ' ' + a.phones[0] : '')).join(' · ') : (LINES[id].resp || ''); };
   const lineCenter = L => { const c = L.coords; return [c.reduce((s, p) => s + p[0], 0) / c.length, c.reduce((s, p) => s + p[1], 0) / c.length]; };
   function insideMsg(lat, lon) {
     const MC = window.MapCore; if (!MC || !MC.inPoly) return '';
+    if (S.insideMsg) return S.insideMsg(lat, lon, CTX());
     let near = null;
     for (const [id, L] of Object.entries(LINES)) {
       if (!L.closed) continue;
@@ -157,15 +182,15 @@
     return `<div class="area${opts.hl ? ' hl' : ''}">
       <span class="area-num">${esc(a.n || '•')}</span>
       <div class="area-body">
-        <div class="area-title">${opts.withCity ? esc(a.city) + ' · ' : ''}${hl(a.area || 'כל השכונה', q)}</div>
-        <div class="area-names">${a.names.length ? hl(a.names.join(' · '), q) : 'שם האחראי לא צוין'}</div>
-        <div class="area-actions">${phones}${mails}${mapsChips}${links}</div>
+        <div class="area-title">${opts.withCity ? esc(a.city) + ' · ' : ''}${a.badge ? `<span class="lvl lvl-${esc(a.badge)}">${esc(a.badgeText || a.badge)}</span> ` : ''}${hl(a.area || T.areaWhole, q)}</div>
+        <div class="area-names">${a.names.length ? hl(a.names.join(' · '), q) : (a.noNames || T.areaNoNames)}</div>
+        <div class="area-actions">${phones}${mails}${mapsChips}${links}${a.line ? `<button class="chip map" data-line="${esc(a.line)}" title="הצגה בלשונית המפה">${ICON.pin}במפה</button>` : ''}</div>
       </div></div>`;
   }
   function mapCardHTML(m) {
     return `<button class="map-card" data-open-map="${m.id}">
       <img src="${esc(srcOf(m, true))}" alt="" loading="lazy">
-      <div class="meta"><strong>${esc(m.title)}</strong>${m.user ? '<span class="own">שלי</span>' : ''}<span>${areasOfMap(m.id).length || ''}${areasOfMap(m.id).length ? ' אחראים' : ''}</span>${LINES[m.id] ? '<span class="own" title="יש קו עירוב בקירוב בלשונית המפה">〰 קו במפה</span>' : ''}</div>
+      <div class="meta"><strong>${esc(m.title)}</strong>${m.user ? '<span class="own">שלי</span>' : ''}<span>${areasOfMap(m.id).length || ''}${areasOfMap(m.id).length ? ' ' + T.areaCount : ''}</span>${LINES[m.id] ? '<span class="own" title="יש קו עירוב בקירוב בלשונית המפה">〰 קו במפה</span>' : ''}</div>
     </button>`;
   }
 
@@ -179,19 +204,20 @@
       const on = !state.q.trim() && state.view === 'city' && state.city === c;
       return `<button class="rail-item${on ? ' on' : ''}" data-city="${esc(c)}">
         ${state.favs.includes(c) ? `<span class="star">${ICON.starFill}</span>` : ''}
-        <span class="name">${esc(c)}</span>${docsOfCity(c).length ? '<span class="tag" title="יש מאמר תחום שבת">תחום</span>' : ''}<span class="badge">${n.maps.length || ''}</span></button>`;
+        <span class="name">${esc(c)}</span>${docsOfCity(c).length ? `<span class="tag" title="${esc(T.docTagTitle)}">${esc(T.docTag)}</span>` : ''}<span class="badge">${n.maps.length || ''}</span></button>`;
     };
     const cs = [...new Map(X.abroad.map(a => [a.c, a.ch])).entries()].sort((a, b) => a[1].localeCompare(b[1], 'he'));
     let title, count, html;
-    if (sec === 'hosp') {
-      title = 'בתי חולים'; count = HOSPITALS.length;
+    if (S.rail && S.rail[sec]) ({ title, count, html } = S.rail[sec](CTX()));
+    else if (sec === 'hosp') {
+      title = T.railHosp; count = HOSPITALS.length;
       const hb = h => `<button class="rail-item${state.view === 'hosp' && state.hosp === h.id ? ' on' : ''}" data-hosp="${h.id}"><span class="name">${esc(h.name)}</span><span class="badge">${esc(h.city)}</span></button>`;
       html = HOSPITALS.filter(h => !h.abroad).map(hb).join('') + `<div class="rail-head"><span>חו"ל</span><span class="count">${HOSPITALS.filter(h => h.abroad).length}</span></div>` + HOSPITALS.filter(h => h.abroad).map(hb).join('');
     } else if (sec === 'abroad') {
-      title = 'ארצות'; count = cs.length;
+      title = T.railAbroad; count = cs.length;
       html = cs.map(c => `<button class="rail-item${state.view === 'abroad' && state.abroadC === c[0] ? ' on' : ''}" data-abroad="${esc(c[0])}"><span class="name">${esc(c[1])}</span><span class="badge">${X.abroad.filter(a => a.c === c[0]).length}</span></button>`).join('');
     } else {
-      title = 'ערים'; count = D.cities.length;
+      title = T.railCities; count = D.cities.length;
       const favs = state.favs.filter(c => byCity.has(c));
       html = (favs.length ? favs.map(item).join('') + '<div class="rail-sep"></div>' : '') + D.cities.map(item).join('');
     }
@@ -209,11 +235,12 @@
     const main = $('#main');
     if (state.q.trim()) { $('#crumb').textContent = 'חיפוש'; main.innerHTML = searchView(); }
     else if (state.view === 'city') { $('#crumb').textContent = state.city; main.innerHTML = cityView(state.city); }
-    else if (state.view === 'docs') { $('#crumb').textContent = 'תחום שבת וחוברות'; main.innerHTML = docsView(); }
+    else if (state.view === 'docs') { $('#crumb').textContent = T.docsTitle; main.innerHTML = docsView(); }
     else if (state.view === 'hosp') { const h = HOSPITALS.find(x => x.id === state.hosp); $('#crumb').textContent = h ? h.name : 'בית חולים'; main.innerHTML = hospView(h); }
-    else if (state.view === 'hosps') { $('#crumb').textContent = 'בתי חולים'; main.innerHTML = hospsView(); }
-    else if (state.view === 'abroad') { $('#crumb').textContent = 'עירובין בחו"ל'; main.innerHTML = abroadView(); }
-    else { $('#crumb').textContent = 'כל הארץ'; main.innerHTML = homeView(); }
+    else if (S.views && S.views[state.view] && !/^(home|city|docs|hosps|abroad)$/.test(state.view)) { $('#crumb').textContent = T['crumb_' + state.view] || ''; main.innerHTML = S.views[state.view](CTX()); }
+    else if (state.view === 'hosps') { $('#crumb').textContent = T.hospsBtn; main.innerHTML = hospsView(); }
+    else if (state.view === 'abroad') { $('#crumb').textContent = T.abroadCrumb; main.innerHTML = abroadView(); }
+    else { $('#crumb').textContent = T.home; main.innerHTML = homeView(); }
     main.scrollTop = 0;
     showTab();
     $('#btnDocs').classList.toggle('on', state.view === 'docs' && !state.q.trim());
@@ -227,7 +254,7 @@
   }
 
   // 2.1.0: מחלקות עירוב של מועצות דתיות בערים שאין להן מפה ממוקד העירוב (מאתרי המועצות, נבדק 12.11.2026)
-  const COUNCIL_ERUV = [
+  const COUNCIL_ERUV = !IS_ERUV ? (S.councils || []) : [
     { city: 'אשקלון', name: 'המועצה הדתית — מחלקת עירוב ושבת', what: 'לפי המועצה: העירוב כולל את כל שכונות העיר (גם אגמים, עיר היין, עיר ימים), המרינה והטיילת — בלי החולות והים; נבדק כל שבוע לפני שבת. ראש המחלקה: הרב שאול עופר', phone: '08-6714401', phone2: '050-7373778', url: 'https://www.mdas.org.il/%D7%9E%D7%97%D7%9C%D7%A7%D7%95%D7%AA-%D7%94%D7%9E%D7%95%D7%A2%D7%A6%D7%94/%D7%9E%D7%97%D7%9C%D7%A7%D7%AA-%D7%A2%D7%99%D7%A8%D7%95%D7%91/', src: 'אתר המועצה הדתית אשקלון' },
     { city: 'תל אביב–יפו', name: 'המועצה הדתית — מחלקת שבת ועירובין', what: 'מפת קו העירוב ומפת GIS באתר המועצה. מפקח עירובין: שלום הורן', phone: '03-6938989', phone2: '054-8473268', url: 'https://rabanut.co.il/department/%D7%9E%D7%97%D7%9C%D7%A7%D7%AA-%D7%A9%D7%91%D7%AA-%D7%95%D7%A2%D7%99%D7%A8%D7%95%D7%91%D7%99%D7%9F/', src: 'אתר המועצה הדתית תל אביב–יפו' },
     { city: 'מבשרת ציון', name: 'המועצה הדתית — שבת ועירובין', what: 'סטטוס עירוב שבועי ומפת עירוב עדכנית באתר; הקו שונה בשנת תשפ"ו עקב עבודות תשתית', phone: '02-5342860', url: 'https://mevaseret.md.gov.il/home/irov-shabat', src: 'אתר המועצה הדתית מבשרת ציון' },
@@ -236,6 +263,7 @@
     { city: 'חריש', name: 'העירייה — המחלקה לשירותי דת', what: 'לפי חוברת המידע של העירייה: קו העירוב מקיף את כל השכונות (החורש, אבני חן, הפרחים, מעו"ף ובצוותא) ונבדק בכל יום שישי', phone: '', url: 'https://digitaler.cld.bz/harish28', src: 'חוברת המידע לתושבי חריש' }
   ];
   function homeView() {
+    if (S.views && S.views.home) return S.views.home(CTX());
     const card = c => {
       const n = byCity.get(c); const m = n.maps[0];
       const thumb = m ? `<div class="city-thumb" style="background-image:url('${esc(srcOf(m, true))}')"></div>`
@@ -243,7 +271,7 @@
       const fav = state.favs.includes(c) ? `<span class="fav-pin">${ICON.starFill}</span>` : '';
       return `<button class="city-card" data-city="${esc(c)}">${fav}${thumb}
         <div class="city-meta"><strong>${esc(c)}</strong>
-        <span>${n.maps.length ? n.maps.length + ' מפות' : 'אחראים בלבד'}${n.areas.length ? ' · ' + n.areas.length + ' שכונות' : ''}</span></div></button>`;
+        <span>${n.maps.length ? n.maps.length + ' ' + T.mapsWord : T.areasOnly}${n.areas.length ? ' · ' + n.areas.length + ' ' + T.areasWord : ''}</span></div></button>`;
     };
     const recent = state.recent.filter(c => byCity.has(c)).slice(0, 4);
     return `<div class="wrap">
@@ -265,18 +293,19 @@
   }
 
   function cityView(c) {
+    if (S.views && S.views.city) return S.views.city(CTX(), c);
     const n = byCity.get(c);
     const fav = state.favs.includes(c);
     return `<div class="wrap">
       <div class="hero"><div class="grow"><h2>${esc(c)}${CITY_AKA[c] ? ` <small>(${esc(CITY_AKA[c])})</small>` : ''}</h2>
-        <p>${n.maps.length ? n.maps.length + ' מפות עירוב' : 'אין עדיין מפה לעיר זו, אך יש אחראים מקומיים'}${n.areas.length ? ' · ' + n.areas.length + ' שכונות עם אחראי' : ''}</p></div>
+        <p>${n.maps.length ? n.maps.length + ' ' + T.mapsWordCity : T.noMapCity}${n.areas.length ? ' · ' + n.areas.length + ' ' + T.areasCityWord : ''}</p></div>
         ${CITY_POS[c] ? `<button class="btn text" data-mapdev="${esc(c)}">${ICON.pin} במפה</button>` : ''}
-        <button class="btn text" data-add-map="${esc(c)}">${ICON.mapAdd} הוספת מפה משלי</button>
+        <button class="btn text" data-add-map="${esc(c)}">${ICON.mapAdd} ${esc(T.addMap)}</button>
         <button class="btn ${fav ? 'tonal' : 'text'}" data-fav="${esc(c)}">${fav ? ICON.starFill : ICON.star} ${fav ? 'במועדפים' : 'הוספה למועדפים'}</button>
       </div>
       ${n.maps.length ? `<div class="section-title">מפות</div><div class="map-grid">${n.maps.map(mapCardHTML).join('')}</div>` : ''}
       ${techumHTML(c)}
-      ${n.areas.length ? `<div class="section-title">אחראים לפי שכונה</div><div class="area-list">${n.areas.map(a => areaHTML(a, '')).join('')}</div>` : ''}
+      ${n.areas.length ? `<div class="section-title">${esc(T.areasTitle)}</div><div class="area-list">${n.areas.map(a => areaHTML(a, '')).join('')}</div>` : ''}
       ${sourceCard()}</div>`;
   }
 
@@ -292,36 +321,36 @@
     const abroad = X.abroad.filter(a => match([a.p, a.in, a.r, a.c, a.ch, heOf(a.p), heOf(a.r), metroOf(a)].join(' ')));
     if (!cities.length && !maps.length && !areas.length && !docs.length && !books.length && !abroad.length) {
       return `<div class="empty-state">${ICON.search}<strong>לא נמצא "${esc(state.q)}"</strong>
-        אפשר לחפש שם עיר, שכונה, רחוב או שם האחראי. למקום שאינו ברשימה: מוקד העירוב, 054-8483320.</div>`;
+        ${esc(T.searchEmpty)}</div>`;
     }
     const qh = state.q.trim();
     return `<div class="wrap">
       <div class="hero"><div class="grow"><h2>תוצאות עבור "${esc(qh)}"</h2>
-      <p>${cities.length} ערים · ${maps.length} מפות · ${areas.length} אחראים${docs.length ? ' · ' + docs.length + ' חוברות' : ''}${abroad.length ? ' · ' + abroad.length + ' בחו"ל' : ''}</p></div></div>
-      ${docs.length ? `<div class="section-title">תחום שבת וחוברות</div><div class="doc-grid">${docs.map(docCardHTML).join('')}</div>` : ''}
+      <p>${cities.length} ערים · ${maps.length} מפות · ${areas.length} ${esc(T.areaCount)}${docs.length ? ' · ' + docs.length + ' חוברות' : ''}${abroad.length ? ' · ' + abroad.length + ' בחו"ל' : ''}</p></div></div>
+      ${docs.length ? `<div class="section-title">${esc(T.docsTitle)}</div><div class="doc-grid">${docs.map(docCardHTML).join('')}</div>` : ''}
       ${cities.length ? `<div class="section-title">ערים</div><div class="city-grid">${cities.map(c => {
         const n = byCity.get(c);
         return `<button class="city-card" data-city="${esc(c)}">${n.maps[0] ? `<div class="city-thumb" style="background-image:url('${esc(srcOf(n.maps[0], true))}')"></div>` : ''}
-          <div class="city-meta"><strong>${hl(c, qh)}</strong><span>${n.maps.length} מפות · ${n.areas.length} שכונות</span></div></button>`;
+          <div class="city-meta"><strong>${hl(c, qh)}</strong><span>${n.maps.length} ${esc(T.mapsWord)} · ${n.areas.length} ${esc(T.areasWord)}</span></div></button>`;
       }).join('')}</div>` : ''}
       ${maps.length ? `<div class="section-title">מפות</div><div class="map-grid">${maps.map(m => mapCardHTML(m).replace(`<strong>${esc(m.title)}</strong>`, `<strong>${hl(m.city + ' · ' + m.title, qh)}</strong>`)).join('')}</div>` : ''}
-      ${areas.length ? `<div class="section-title">אחראים</div><div class="area-list">${areas.slice(0, 120).map(a => areaHTML(a, qh, { withCity: true })).join('')}</div>` : ''}
-      ${books.length ? `<div class="section-title">ספריית העירובין</div><div class="lib">${books.map(b => `<button class="chip" data-url="${esc(b.u)}">${ICON.link}${hl(b.t, qh)}</button>`).join('')}</div>` : ''}
+      ${areas.length ? `<div class="section-title">${esc(T.areasSearch)}</div><div class="area-list">${areas.slice(0, 120).map(a => areaHTML(a, qh, { withCity: true })).join('')}</div>` : ''}
+      ${books.length ? `<div class="section-title">${esc(T.libTitle)}</div><div class="lib">${books.map(b => `<button class="chip" data-url="${esc(b.u)}">${ICON.link}${hl(b.t, qh)}</button>`).join('')}</div>` : ''}
       ${abroad.length ? `<div class="section-title">עירובין בחו"ל</div><div class="ab-list">${abroad.slice(0, 60).map(a => `<div class="ab-item"><span dir="auto">${hl(a.p, qh)}<small> · ${esc([a.in, a.r, a.ch].filter(Boolean).join(', '))}</small></span>
         ${a.u ? `<button class="chip" data-url="${esc(a.u)}">${ICON.link}אתר העירוב</button>` : ''}</div>`).join('')}</div>` : ''}
     </div>`;
   }
 
   // מדף "יצירת קשר" באתר המוקד (נבדק 22.10.2026)
-  const MOKED_EMAIL = 'a83320@gmail.com';
-  const MOKED_CONTACT = 'http://hiruv.com/%D7%99%D7%A6%D7%99%D7%A8%D7%AA-%D7%A7%D7%A9%D7%A8/';
+  const MOKED_EMAIL = pick('email', 'a83320@gmail.com');
+  const MOKED_CONTACT = pick('contactUrl', 'http://hiruv.com/%D7%99%D7%A6%D7%99%D7%A8%D7%AA-%D7%A7%D7%A9%D7%A8/');
   function sourceCard() {
     return `<div class="source-card"><div class="grow"><b>מקור:</b> ${esc(D.source.name)}, באישורם. ${esc(D.source.note)}
       עודכן ${esc(D.built)}.</div>
-      <button class="btn text" data-url="${esc(D.source.site)}">לאתר המוקד</button>
-      <button class="btn text" data-url="${MOKED_CONTACT}">יצירת קשר עם המוקד</button>
+      <button class="btn text" data-url="${esc(D.source.site)}">${esc(T.sourceSite)}</button>
+      ${MOKED_CONTACT ? `<button class="btn text" data-url="${MOKED_CONTACT}">${esc(T.sourceContact)}</button>` : ''}
       <button class="btn text" data-phone="${MOKED_EMAIL}" title="העתקת האימייל">${ICON.mail} ${MOKED_EMAIL}</button>
-      <button class="btn tonal" data-phone="${esc(D.source.phone)}">${ICON.phone} מענה הלכתי ${esc(D.source.phone)}</button></div>`;
+      <button class="btn tonal" data-phone="${esc(D.source.phone)}">${ICON.phone} ${esc(T.sourcePhone)} ${esc(D.source.phone)}</button></div>`;
   }
 
 
@@ -343,16 +372,15 @@
   }
   function techumHTML(c) {
     const ds = docsOfCity(c);
-    if (!ds.length) return `<div class="techum-empty">${ICON.book}<div><b>תחום שבת</b> — אין עדיין מאמר תחומין לעיר זו במאגר.
-      לבירור התחום ועירוב תחומין: מוקד העירוב <button class="chip" data-phone="${esc(D.source.phone)}">${ICON.phone}${esc(D.source.phone)}</button></div></div>`;
-    return `<div class="section-title">תחום שבת</div>
+    if (!ds.length) return `<div class="techum-empty">${ICON.book}<div>${T.techumEmptyHTML} <button class="chip" data-phone="${esc(D.source.phone)}">${ICON.phone}${esc(D.source.phone)}</button></div></div>`;
+    return `<div class="section-title">${esc(T.techumTitle)}</div>
       ${ds.map(d => summaryHTML(d.summary)).join('')}
       <div class="doc-grid">${ds.map(d => docCardHTML(d, c)).join('')}</div>
-      <p class="fine">מאמרי התחומין של מוקד העירוב. החישוב תלוי בשיטות שונות — לשאלה למעשה יש לפנות לרב או למוקד.</p>`;
+      <p class="fine">${esc(T.techumFine)}</p>`;
   }
   // בתי חולים. כל טלפון ושם כאן מועתק מעמוד רשמי של בית החולים (src), ונבדק ב-22.10.2026.
   // אין להוסיף מספר שלא הופיע במקור רשמי. eruv/techum — רק מה שכתוב במקור; בלי מקור לתחום מוצגת הפנייה למוקד.
-  const HOSPITALS = [
+  const HOSPITALS = S.hospitals ? S.hospitals : [
     { id: 'shaare-zedek', name: 'שערי צדק', city: 'ירושלים',
       src: 'https://www.szmc.org.il/media/bnlhwz3j/%D7%A9%D7%99%D7%A8%D7%95%D7%AA%D7%99-%D7%93%D7%AA.pdf', srcName: 'עלון המחלקה לשירותי דת, אתר שערי צדק',
       contacts: [
@@ -431,7 +459,7 @@
       eruv: 'לפי העלון: עירוב סקוקי מתיר לטלטל בין בית החולים לחדר האירוח לשבת (Gross Point Road 9631, בקומה התחתונה מכניסת החניון). לפני שבת יש לבדוק את קו הסטטוס.' }
   ];
   // ארגונים — רק פרטים מהאתר הרשמי של הארגון
-  const ORGS = [
+  const ORGS = S.orgs ? S.orgs : [
     { name: 'מוקד העירוב', what: 'מענה הלכתי בענייני עירוב, מפות ואחראים · a83320@gmail.com', phone: '054-8483320', url: 'http://hiruv.com/%D7%99%D7%A6%D7%99%D7%A8%D7%AA-%D7%A7%D7%A9%D7%A8/', src: 'דף יצירת קשר באתר מוקד העירוב' },
     { name: 'Chicago Mitzvah Campaign (שיקגו)', what: 'ליווי רבני וחדרי אירוח לשבת בבתי החולים באזור שיקגו', phone: '1-866-697-2224', url: 'https://chicagomitzvahcampaign.org/in-hospital-patient-services/', src: 'אתר הארגון' },
     { name: 'מועצת הרבנים של שיקגו (cRc) — עירובין', what: 'רשימת העירובין באזור שיקגו וקווי הסטטוס', phone: '847-677-3788', url: 'https://crcweb.org/guide_chicago.php', src: 'אתר cRc (הקו של לינקולנווד–פיטרסון פארק)' },
@@ -472,6 +500,7 @@
   ];
   function hospView(h) {
     if (!h) return hospsView();
+    if (S.views && S.views.hosp) return S.views.hosp(CTX(), h);
     const doc = h.doc && docById.get(h.doc);
     return `<div class="wrap">
       <div class="hero"><div class="grow"><h2>${esc(h.name)}</h2><p>${esc(h.city)} · מידע לשבת</p></div></div>
@@ -487,6 +516,7 @@
       <p class="fine">התוסף אינו פוסק הלכה. לשאלה למעשה יש לפנות לרב בית החולים או למוקד העירוב.</p></div>`;
   }
   function hospsView() {
+    if (S.views && S.views.hosps) return S.views.hosps(CTX());
     return `<div class="wrap">
       <div class="hero"><div class="grow"><h2>בתי חולים בשבת</h2><p>רב בית החולים, שירותי הדת, העירוב במתחם ותחום שבת — רק ממקורות רשמיים.</p></div></div>
       <div class="row-links">${HOSPITALS.filter(h => !h.abroad).map(h => `<button class="btn tonal" data-hosp="${h.id}">${ICON.hospital} ${esc(h.name)} · ${esc(h.city)}</button>`).join('')}</div>
@@ -503,6 +533,7 @@
       <p class="fine">${esc(HOSP_EZER)}</p></div>`;
   }
   function docsView() {
+    if (S.views && S.views.docs) return S.views.docs(CTX());
     const tech = DOCS.filter(d => d.kind === 'techum'), books = DOCS.filter(d => d.kind === 'booklet');
     const groups = [...new Set(X.library.map(b => b.g))];
     return `<div class="wrap">
@@ -529,6 +560,7 @@
     'ניו יורק New York': /Brooklyn|Manhattan|Queens|Bronx|Staten Island|Far Rockaway|Five Towns|Riverdale|Kew Gardens/i, 'לונדון London': /London|Edgware|Stanmore|Golders|Hendon|Barnet|Bushey|Borehamwood|Mill Hill|Pinner|Chigwell|Hampstead|Woodside Park/i };
   const metroOf = a => Object.keys(METRO).filter(k => METRO[k].test(a.p + ' ' + (a.in || ''))).join(' ');
   function abroadView() {
+    if (S.views && S.views.abroad) return S.views.abroad(CTX());
     const cs = [...new Map(X.abroad.map(a => [a.c, a.ch])).entries()].sort((a, b) => a[1].localeCompare(b[1], 'he'));
     const cur = state.abroadC || (cs.find(c => c[0] === 'United States') || cs[0] || [''])[0];
     const fq = (state.abq || '').trim().toLowerCase();
@@ -1036,14 +1068,14 @@
     const r = await call('reader.openSearchTab', { query: q.split('|')[0] + ' ' + ref });
     if (!r.success) toast('לא נמצא בספרייה: ' + q + ' ' + ref);
   }
-  const SOURCES = [
+  const SOURCES = S.sources ? S.sources : [
     ['שולחן ערוך — הלכות עירובין', 'שולחן ערוך אורח חיים', 'שסו'],
     ['משנה ברורה — הלכות עירובין', 'משנה ברורה', 'שסו'],
     ['שולחן ערוך — הלכות רשויות', 'שולחן ערוך אורח חיים', 'שמה'],
     ['רמב"ם — הלכות עירובין', 'הלכות עירובין|משנה תורה עירובין', 'א'],
     ['גמרא — מסכת עירובין', 'עירובין', 'ב א']
   ];
-  const OPEN_TASKS = [
+  const OPEN_TASKS = S.openTasks ? S.openTasks : [
     'קווי עירוב בקירוב לעוד ערים (כעת קרית אתא וחדרה) — כל עיר נבדקת מול מפת המוקד לפני שהיא נכנסת',
     'מפת רחובות בלי אינטרנט, בסיס משותף עם מקוואות וכיוון תפילה (בפיתוח, מחכה לעזרה: ראו "מפה (בפיתוח)")',
     'עדכון מתוך התוסף בזמן ריצה — אחרי שאוצריא תפתח את הכתובות (בקשה הוכנה)',
@@ -1058,7 +1090,7 @@
   ];
 
   // ── זיהוי מיקום: גשר "אחת שאלתי" (כמו בכיוון תפילה), ואם אין — מיקום הדפדפן; העיר הקרובה נפתחת ──
-  const CITY_POS = {
+  const CITY_POS = Object.assign({
     'אופקים': [31.314, 34.620], 'אלעד': [32.052, 34.951], 'אשדוד': [31.801, 34.650], 'באר שבע': [31.252, 34.791],
     'בית שמש': [31.730, 34.990], 'ביתר': [31.700, 35.120], 'בני ברק': [32.084, 34.834], 'בת ים': [32.023, 34.751],
     'גבעת זאב': [31.860, 35.170], 'גני תקוה': [32.060, 34.873], 'זכרון יעקב': [32.570, 34.950], 'חדרה': [32.434, 34.919],
@@ -1068,9 +1100,9 @@
     'נתיבות': [31.420, 34.590], 'נתניה': [32.330, 34.860], 'עמנואל': [32.160, 35.140], 'עפולה': [32.610, 35.290],
     'פתח תקוה': [32.090, 34.880], 'צפת': [32.960, 35.500], 'קרית אתא': [32.810, 35.110], 'קרית יערים (טלזסטון)': [31.800, 35.100],
     'קרית מלאכי': [31.730, 34.750], 'רחובות': [31.890, 34.810], 'רכסים': [32.750, 35.100], 'חזון יחזקאל': [31.652674, 34.744438], 'תל ציון': [31.880, 35.250], 'תפרח': [31.330, 34.670]
-  };
+  }, S.cityPos || {});
   // שם רשמי / כינוי נוסף לפי דיווח משתמש (#15): "חזון יחזקאל" = היישוב אלומה, סמוך לקוממיות ובתחומו
-  const CITY_AKA = { 'חזון יחזקאל': 'אלומה · סמוך לקוממיות (לפי דיווח משתמש)' };
+  const CITY_AKA = S.cityAka ? S.cityAka : { 'חזון יחזקאל': 'אלומה · סמוך לקוממיות (לפי דיווח משתמש)' };
   const km = (a, b) => { const r = Math.PI / 180, x = (b[1] - a[1]) * r * Math.cos((a[0] + b[0]) * r / 2), y = (b[0] - a[0]) * r; return Math.hypot(x, y) * 6371; };
   // 2.1.0: כשאין גשר "אחת שאלתי" — העיר שנבחרה בלוח השנה של אוצריא (הגדרות ← לוח שנה)
   async function calendarCityPos() {
@@ -1094,23 +1126,23 @@
     }
     if (!p) { toast('לא ניתן לזהות מיקום. התקינו את הגשר "אחת שאלתי", בחרו עיר בלוח השנה של אוצריא, או בחרו עיר מהרשימה'); return; }
     const best = Object.keys(CITY_POS).filter(c => byCity.has(c)).map(c => [c, km(p, CITY_POS[c])]).sort((a, b) => a[1] - b[1])[0];
-    if (!best || best[1] > 25) { toast('אין עירוב במאגר בקרבת המיקום (העיר הקרובה: ' + (best ? best[0] + ', ' + Math.round(best[1]) + ' ק"מ' : '—') + ')'); return; }
+    if (!best || best[1] > 25) { toast(T.noNear + ' (העיר הקרובה: ' + (best ? best[0] + ', ' + Math.round(best[1]) + ' ק"מ' : '—') + ')'); return; }
     goCity(best[0]); toast('מיקום ' + how + ': ' + best[0] + (best[1] > 3 ? ' (כ-' + Math.round(best[1]) + ' ק"מ)' : ''));
   }
 
   // ── יומן שינויים ותגובות ─────────────────────────────────────
-  const REPO = 'https://github.com/Hadabadra/gvulot-eruv';
+  const REPO = 'https://github.com/Hadabadra/gvulot-eruv';  // שני התוספים באותו מאגר
   // בכל ייצוא (תמונה, הדפסה/PDF): קישור לגיטהאב והפניה לחנות התוספים של אוצריא
-  const STORE = 'https://otzaria.org/plugins/6ad93b5d2917198d73992a9d';
-  const exportLinks = () => `מתוך תוסף "גבולות עירוב" לאוצריא · חנות התוספים: ${STORE.replace('https://', '')} · GitHub: ${REPO.replace('https://', '')}/releases`;
+  const STORE = pick('store', 'https://otzaria.org/plugins/6ad93b5d2917198d73992a9d');
+  const exportLinks = () => `מתוך תוסף "${T.name}" לאוצריא · חנות התוספים: ${STORE.replace('https://', '')} · GitHub: ${REPO.replace('https://', '')}/releases`;
   // 1.9.0: בהדפסה / PDF הקישורים לחיצים (תגית a), וגם קישור לחנות התוספים
-  const exportLinksHTML = () => `מתוך תוסף "גבולות עירוב" לאוצריא · <a href="${STORE}">חנות התוספים של אוצריא</a> (${STORE.replace('https://', '')}) · <a href="${REPO}/releases/latest">הורדה מ-GitHub</a> (${REPO.replace('https://', '')}/releases)`;
+  const exportLinksHTML = () => `מתוך תוסף "${T.name}" לאוצריא · <a href="${STORE}">חנות התוספים של אוצריא</a> (${STORE.replace('https://', '')}) · <a href="${REPO}/releases/latest">הורדה מ-GitHub</a> (${REPO.replace('https://', '')}/releases)`;
   const respHTML = m => {   // האחראים של המפה המודפסת
     const ar = areasOfMap(m.id), L = LINES[m.id];
     if (ar.length) return `<h2>אחראים במפה זו</h2><ul>${ar.map(a => `<li><b>${esc(a.area || a.city)}</b> — ${esc(a.names.join(', ') || 'שם לא צוין')}${a.phones.length ? ' · ' + a.phones.map(fmtPhone).map(esc).join(', ') : ''}</li>`).join('')}</ul>`;
     return L && L.resp ? `<h2>לבירורים (לפי המפה)</h2><p>${esc(L.resp)}</p>` : `<p>האחראים המלאים של ${esc(m.city)} — בתוסף, בדף העיר.</p>`;
   };
-  const CHANGELOG = [
+  const CHANGELOG = S.changelog ? S.changelog : [
     ['2.1.0', ["#16 טהרת כהנים: התאחדות טהרת הכהנים בעמוד בתי החולים — קו המידע, המדריך לכהנים, תיקיית המפות, ניווט וטיסות (קישורים כשיש אינטרנט). המפות עצמן ייכנסו לתוסף אחרי אישור הארגון.", "עירובין בערים נוספות לפי המועצות הדתיות: אשקלון, תל אביב–יפו, מבשרת ציון, אזור, נס ציונה וחריש (טלפונים, אחראים וקישור למפה הרשמית).", "ארגונים: \"ערבתם\" (עירובי תחומין ותחום שבת, עם שעות המענה), \"עירוב כהלכה\", ו\"אתרים שומרי שבת\" (#13).", "סמלי סרגל חדשים וברורים, עם תווית מתחת לכל סמל.", "\"המיקום שלי\" בלי הגשר \"אחת שאלתי\": לפי העיר שנבחרה בלוח השנה של אוצריא.", "אימות המקורות: מפות מוקד העירוב והאחראים נבדקו מחדש ללא שינוי; ספר חדש בספריית המוקד; עירובין בחו\"ל עודכנו."]],
     ['2.0.0', ["גרסה יציבה (2.0.0). הפיתוח מושהה עד כמאי 2027 — הנושאים הפתוחים ב-gvulot-eruv-docs/STATUS.md.", "הכל בתוך התוסף: אין צורך באינטרנט מלבד ההורדה.", "חזון יחזקאל = היישוב אלומה, סמוך לקוממיות: מופיע בחיפוש ובכותרת העיר, ונקודה במפה (#15).", "מפת \"העירובים השכונתיים בכל העיר\" של ירושלים ברזולוציה גבוהה — חדה בהגדלה (#14).", "ברשימת הארגונים: \"ערבתם\" ומספר העירובין השכונתיים בבני ברק, לפי דיווח משתמש (#13). סמל \"תחום שבת וחוברות\" בסרגל הוחלף לסמל מסמך.", "דיווח קריסה 1.1.0: הצעה אחת בלבד בכל הפעלה, ומתג \"הצעת דיווח קריסה\" באודות.", "המלצה על \"אחת שאלתי\" 1.4.0 מהמקור המשותף: מזהה שהוא מותקן גם כשהגשר כבוי.", "אחרי שמירת חוברת כ-PDF — כפתור \"הדפסה\" שפותח את מסך ההדפסה של אוצריא (ui.printFile)."]],
     ['1.9.0', ["קווי עירוב על המפה (פיילוט): קרית אתא — שכונת שביט, וחדרה — שכונות שלמה, קלרין ופאר. השכבה \"קווי עירוב (בקירוב — לפי מפת המוקד)\" משורטטת מתוך מפות המוקד, עם המפה המקורית והאחראי. קירוב בלבד — הקובע הוא המפה והאחראי.", "בדיקת כתובת: אחרי חיפוש כתובת במפה מוצג אם היא בתוך קו העירוב, על הגבול או מחוצה לו (בערים שיש להן קו).", "במציג המפה: כפתור \"קו העירוב בקירוב במפה\" ושורת \"לבירורים לפי המפה\" כשאין אחראים משויכים.", "עט לשרטוט ידני: סרגל קטן — קו או שטח, ביטול נקודה (Ctrl+Z), ניקוי, 5 צבעים ושמירה (Enter). נשמר כשכבה שנטענת לבד וכקובץ GeoJSON.", "אודות: רמות 2–4 בוצעו חלקית; קו שהמפה שלו התחלפה אצל המוקד יורד אוטומטית בעדכון השבועי.", "הדפסה: קישורים לחיצים לחנות התוספים ול-GitHub, והאחראים של המפה מודפסים יחד איתה.", "סמלים מונוכרום שתואמים לתוכן (מועדף, אימייל, קישור חיצוני, בית חולים, הוספת מפה, מקורות).", "כפתור \"חיפוש עירוב\" בתוך שדות החיפוש של אוצריא (מ-0.9.98.3), מופיע כשיש טקסט.", "תיקון: מפת \"מעלות דפנה והסביבה\" לא נפתחה במציג (#12). השכבה ששורטטה נטענת לבד (#11).", "החוברות \"דרך התחומין\" נדחסו מעט בלי שינוי באיכות. דורש אוצריא 0.9.98.3 ומעלה."]],
@@ -1153,16 +1185,18 @@
   async function sendFeedback() {
     const t = ($('#fbText').value || '').trim();
     if (!t) { $('#fbText').focus(); return; }
-    const r = await call('feedback.report', { details: '[גבולות עירוב ' + VERSION + '] ' + t, reportType: 'other' });
+    const r = await call('feedback.report', { details: '[' + T.name + ' ' + VERSION + '] ' + t, reportType: 'other' });
     if (r.success && r.data === 'cancelled') return;
     if (r.success) { $('#fbText').value = ''; toast(r.data === 'queued' ? 'התגובה תישלח כשיהיה חיבור' : 'התגובה נשלחה, תודה!'); }
     else toast('השליחה זמינה בתוך אוצריא');
   }
-  const VERSION = '2.1.0';
+  const VERSION = pick('version', '2.2.0');
 
   // ── אודות ───────────────────────────────────────────────────
   function openHalacha() {
     $('#infoTitle').textContent = 'מידע הלכתי';
+    const srcBtns = `<div class="area-actions">${SOURCES.map(x => `<button class="chip map" data-src="${esc(x[1])}" data-ref="${esc(x[2])}">${ICON.book}${esc(x[0])}</button>`).join('')}</div>`;
+    if (S.halachaHTML) { $('#infoBody').innerHTML = S.halachaHTML(CTX()) + '<h3 class="info-h">ללימוד: מקורות בספריית אוצריא</h3>' + srcBtns; $('#infoScrim').hidden = false; $('#infoClose').focus(); return; }
     $('#infoBody').innerHTML = `
       <p>המפות מסמנות את גבולות העירובים השכונתיים כפי שפורסמו על ידי <b>מוקד העירוב</b>.
       יש הבדלים בדרגות הכשרות בין העירובים, וכל עירוב עלול להיפסל במהלך השבוע. ${esc(D.source.note)}</p>
@@ -1193,7 +1227,7 @@
     const lineIds = Object.keys(LINES), lineCities = [...new Set(lineIds.map(i => LINES[i].city))];
     const lineLayer = lineIds.length ? [{ id: 'eruv-lines', name: LINE_LAYER, glyph: '〰', sub: lineIds.length + ' עירובים · ' + lineCities.join(', '), points: lineIds.map(i => { const c = lineCenter(LINES[i]); return { lat: c[0], lon: c[1], id: '__line-' + i, label: LINES[i].name }; }),
       lines: lineIds.map(i => ({ coords: LINES[i].coords, closed: LINES[i].closed, solid: true, color: 'var(--eruv-line, #d84315)', label: `קו עירוב בקירוב — ${LINES[i].city} · ${LINES[i].name} · המקור: מפת מוקד העירוב · בירורים: ${lineResp(i)}` })) }] : [];
-    UI.mount($("#mapTab"), { tab: true, route: false, draw: true, zoom: state.mapZoom || null, inside: insideMsg, layers: lineLayer, self: 'com.hadabadra.gvulot-eruv', center: state.mapCenter || null, builtinStreets: true, online: !state.offline, points: pts, layerId: 'eruv', glyph: 'ע', layerName: 'ערי עירוב', selectedId: sel, call, openLink, repo: REPO, forumUrl: 'https://otzaria.org/forum/post/45390', issueUrl: REPO + '/issues/1',
+    UI.mount($("#mapTab"), { tab: true, route: false, draw: true, zoom: state.mapZoom || null, inside: insideMsg, layers: S.layers ? S.layers(CTX()) : lineLayer, self: 'com.hadabadra.gvulot-eruv', center: state.mapCenter || null, builtinStreets: true, online: !state.offline, points: pts, layerId: 'eruv', glyph: 'ע', layerName: 'ערי עירוב', selectedId: sel, call, openLink, repo: REPO, forumUrl: 'https://otzaria.org/forum/post/45390', issueUrl: REPO + '/issues/1',
       // 2.2: בהדרכה שיורדת — גם מפות העירוב של העיר שנבחרה (תמונות מוקד העירוב, מוטמעות בקובץ)
       guideExtra: async id => {
         const c = byCity.get(id || state.city); if (!c || !c.maps.length) return '';
@@ -1206,7 +1240,7 @@
         { t: LINE_LAYER, d: `בחלק מהערים (${lineCities.join(', ') || 'בקרוב'}) קו העירוב משורטט על המפה בקירוב, מתוך מפת המוקד. חיפוש כתובת מראה אם היא בתוך הקו, סמוכה לו או מחוצה לו. הקובע תמיד: המפה המקורית של המוקד והאחראי המקומי.` },
         { t: 'עט — שרטוט ידני', d: 'כפתור העט פותח סרגל קטן: קו או שטח, ביטול נקודה (Ctrl+Z), ניקוי, צבע ושמירה (Enter). השרטוט נשמר כשכבה שנטענת לבד וכקובץ GeoJSON.' }],
       pickLabel: 'פתיחת העיר', nearbyLabel: 'ערים קרובות', future: ['קווי עירוב לעוד ערים (לפי מפות המוקד)', 'עדכון אוטומטי של הקווים כשהמוקד מעדכן מפה'],
-      onPick: id => { state.tab = 'list'; goCity(id); } });
+      onPick: id => { state.tab = 'list'; goCity(id); }, ...(S.map ? S.map(CTX()) : {}) });
     $('#mapTab').insertAdjacentHTML('beforeend', `<p class="fine">מיקומי הערים בקירוב. ${lineIds.length ? 'קווי העירוב המשורטטים (' + lineCities.join(', ') + ') הם קירוב בלבד, מתוך מפות המוקד — לא לסמוך עליהם להלכה. ' : ''}המפות עצמן הן התמונות של מוקד העירוב (בלשונית "רשימה").</p>`);
   }
   // תוסף אחר (כיוון תפילה / מקוואות) מבקש לפתוח את המפה באותו מקום (מפה משותפת, Prayer-pointA#11)
@@ -1226,6 +1260,7 @@
   function openInfo() {
     $('#infoScrim').classList.remove('full'); $('#infoScrim').style.top = '';
     $('#infoTitle').textContent = 'אודות התוסף';
+    if (S.aboutHTML) { aboutRest(S.aboutHTML(CTX())); return; }
     $('#infoBody').innerHTML = `
       <p>גבולות עירוב ${VERSION} · מאת לזש"ק לרמב"ר ומבק"י. המפות ורשימת האחראים מאתר <b>מוקד העירוב</b>, באישורם.
       מידע על כשרות ובירור לפני שבת — בכפתור "מידע הלכתי".</p>
@@ -1235,9 +1270,22 @@
         <div class="level part"><span class="dot">3</span><div><b>בדיקת כתובת</b>בוצע חלקית (1.9.0): חיפוש כתובת עם מספר בית במפה מראה אם היא בתוך קו העירוב, סמוכה לגבול או מחוצה לו — בערים שיש להן קו. הקובע תמיד: המפה המקורית והאחראי.</div></div>
         <div class="level part"><span class="dot">4</span><div><b>עדכונים מהמוקד</b>בוצע חלקית: גרסה חדשה בכל שבוע שבו המקורות השתנו, ומ-1.9.0 — אם המוקד מחליף מפה שיש לה קו, הקו יורד אוטומטית עד שישורטט מחדש (שלא יוצג קו ישן). בהמשך: משיכה מתוך התוסף, כשאוצריא תאפשר.</div></div>
       </div>
+      ${aboutCommon()}`;
+    afterInfo();
+  }
+  // חלקי "אודות" שזהים בשני התוספים (הגדרות, דיווח קריסה, תגובה, בתכנון, יומן שינויים)
+  function aboutRest(top) { $('#infoBody').innerHTML = top + aboutCommon(); afterInfo(); }
+  function afterInfo() {
+    $('#fbSend').onclick = sendFeedback;
+    if (window.AchatPromo) AchatPromo.bind($('#infoBody'));
+    { const crs = $('#cr-sw'); if (crs && window.CrashReport) { CrashReport.ready().then(on => { crs.checked = on; }); crs.onchange = () => CrashReport.setEnabled(crs.checked); } }
+    $('#infoScrim').hidden = false; $('#infoClose').focus();
+  }
+  function aboutCommon() {
+    return `
       <p>קיצורי מקשים: <b>/</b> חיפוש · במציג: <b>+ / -</b> הגדלה, <b>0</b> התאמה, <b>R</b> סיבוב, <b>PageUp/PageDown</b> דפדוף בחוברת, <b>Esc</b> סגירה.
       בספר פתוח: <b>Ctrl+Alt+E</b> פותח את התוסף (אפשר לשנות בהגדרות → קיצורי מקשים).</p>
-      <p><label class="switch"><input type="checkbox" data-toggle-toolbar ${state.settings.toolbar ? 'checked' : ''}> כפתור "גבולות עירוב" בסרגל העיון</label></p>
+      <p><label class="switch"><input type="checkbox" data-toggle-toolbar ${state.settings.toolbar ? 'checked' : ''}> כפתור "${esc(T.name)}" בסרגל העיון</label></p>
       <p class="link-mode">קישור חיצוני:
         <label><input type="radio" name="linkMode" value="open" ${state.linkMode === 'open' ? 'checked' : ''}> פתיחה בדפדפן</label>
         <label><input type="radio" name="linkMode" value="copy" ${state.linkMode === 'copy' ? 'checked' : ''}> העתקה</label></p>
@@ -1245,7 +1293,7 @@
       ${window.AchatPromo ? '<h3 class="info-h">המלצה</h3>' + AchatPromo.aboutHtml() + AchatPromo.settingsHtml() : ''}
       ${window.CrashReport ? '<h3 class="info-h">דיווח תקלות</h3><label class="ap-set"><span>הצעת דיווח קריסה<small>כשמשהו נתקע — הודעה קטנה, פעם אחת בכל הפעלה, שמציעה לשלוח דיווח דרך אוצריא (רק באישורכם)</small></span><input type="checkbox" id="cr-sw" checked></label>' : ''}
       <h3 class="info-h">שליחת תגובה</h3>
-      <textarea id="fbText" rows="3" placeholder="הערה, תיקון או שכונה חסרה — נשלח דרך אוצריא למפתחת"></textarea>
+      <textarea id="fbText" rows="3" placeholder="${esc(T.fbPlaceholder)}"></textarea>
       <div class="sheet-actions"><button class="btn filled" id="fbSend">שליחה</button></div>
       <h3 class="info-h">בתכנון</h3>
       <ul class="tasks">${OPEN_TASKS.map(t => `<li>${esc(t)}</li>`).join('')}</ul>
@@ -1255,13 +1303,10 @@
       <details class="cl" open><summary><b>יומן שינויים</b> · גרסה ${VERSION}</summary>
         ${CHANGELOG.map((c, i) => `<p><b>${esc(c[0])}</b></p><ul>${c[1].map(t => `<li>${mdLinks(t)}</li>`).join('')}</ul>`).join('')}</details>
       <p><button class="btn tonal" data-mapdev>מפה</button></p>
-      <p><button class="btn text" data-url="${REPO}/blob/main/gvulot-eruv-docs/PLAN.md">התכנון המלא בגיטהאב</button>
+      <p><button class="btn text" data-url="${REPO}/blob/main/${pick('planPath', 'gvulot-eruv-docs/PLAN.md')}">התכנון המלא בגיטהאב</button>
       <button class="btn text" data-url="${REPO}/releases">כל הגרסאות</button>
-      <button class="btn text" data-url="https://otzaria.org/forum/post/45390">שרשור הדיווחים בפורום אוצריא</button></p>`;
-    $('#fbSend').onclick = sendFeedback;
-    if (window.AchatPromo) AchatPromo.bind($('#infoBody'));
-    { const crs = $('#cr-sw'); if (crs && window.CrashReport) { CrashReport.ready().then(on => { crs.checked = on; }); crs.onchange = () => CrashReport.setEnabled(crs.checked); } }
-    $('#infoScrim').hidden = false; $('#infoClose').focus();
+      <button class="btn text" data-url="${STORE}">התוסף בחנות אוצריא</button>
+      ${pick('forumUrl', 'https://otzaria.org/forum/post/45390') ? `<button class="btn text" data-url="${pick('forumUrl', 'https://otzaria.org/forum/post/45390')}">שרשור הדיווחים בפורום אוצריא</button>` : ''}</p>`;
   }
 
   // ── אירועים כלליים ─────────────────────────────────────────
@@ -1342,7 +1387,7 @@
   // פתיחה מתוך ספר: במסכת עירובין ובהלכות עירובין/תחומין — ישר למאמרי התחום והחוברות
   function fromBook(d) {
     const b = (d && (d.currentBook || d.currentRef)) || '';
-    if (/עירובין|תחומין|תחום שבת|שצו|שצז|שצח|שצט|ת"ו/.test(b)) goView('docs');
+    if ((S.bookRegex || /עירובין|תחומין|תחום שבת|שצו|שצז|שצח|שצט|ת"ו/).test(b)) goView('docs');
     else if (state.view === 'home' && state.recent[0]) goCity(state.recent[0]);
   }
   let suspendedSrc = null;
@@ -1350,7 +1395,23 @@
   function onResume() { if (suspendedSrc && !$('#viewer').hidden) { img.src = suspendedSrc; } suspendedSrc = null; }
 
   // ── אתחול ───────────────────────────────────────────────────
+  // טקסטים קבועים ב-index.html לפי התוסף (S.dom: בורר ← {text, html, title, placeholder})
+  function applyDom() {
+    if (S.title) document.title = S.title;
+    Object.entries(S.dom || {}).forEach(([sel, o]) => document.querySelectorAll(sel).forEach(el => {
+      if (o.text != null) el.textContent = o.text; if (o.html != null) el.innerHTML = o.html;
+      if (o.title != null) { el.title = o.title; el.setAttribute('aria-label', o.title); }
+      if (o.placeholder != null) el.placeholder = o.placeholder; if (o.hidden != null) el.hidden = o.hidden;
+      if (o.data) Object.assign(el.dataset, o.data);
+    }));
+  }
+  // עזרים לתצוגות של site.js
+  function CTX() {
+    return { D, S, T, DOCS, X, LINES, HOSPITALS, ORGS, CITY_POS, byCity, docById, mapById, state, esc, hl, norm, fmtPhone, ICON, toast, call, render,
+      docCardHTML, mapCardHTML, areaHTML, telChip, contactHTML, sourceCard, techumHTML, docsOfCity, srcOf, pageSrc, goCity, goView, openLink, VERSION, REPO, STORE };
+  }
   async function start(payload) {
+    applyDom();
     if (payload && payload.theme) applyTheme(payload.theme);
     else { const r = await call('app.getTheme'); if (r.success) applyTheme(r.data); }
     await loadPrefs();
@@ -1365,16 +1426,16 @@
     render();
     $('#q').focus();
     // דיווח תקלות אוטומטי (רכיב משותף shared/report): תקלה שלא טופלה ← הצעה לשלוח דיווח קריסה דרך מערכת הדיווחים של אוצריא
-    if (window.CrashReport) CrashReport.init({ call, plugin: 'גבולות עירוב', version: VERSION });
+    if (window.CrashReport) CrashReport.init({ call, plugin: T.name, version: VERSION });
     // המלצה על "אחת שאלתי" (רכיב משותף מ-KLI-MULON shared/promo): פופאפ בפתיחה מתפריט הכלים, לכל היותר פעם בשבוע
-    if (window.AchatPromo) { try { AchatPromo.init({ call, plugin: 'גבולות עירוב', links: { gh: REPO + '/releases/latest', store: 'https://otzaria.org/plugins/6ad93b5d2917198d73992a9d' } }); AchatPromo.maybeShow(); } catch (e) {} }
+    if (window.AchatPromo) { try { AchatPromo.init({ call, plugin: T.name, links: { gh: REPO + '/releases/latest', store: STORE } }); AchatPromo.maybeShow(); } catch (e) {} }
   }
   if (hasOtz) {
     Otzaria.on('plugin.boot', start);
     Otzaria.on('theme.changed', applyTheme);
     // 1.9.0 (אוצריא 0.9.98.3): כפתור בשדות החיפוש של אוצריא (מופיע רק כשיש טקסט) — מעביר את הטקסט לחיפוש בתוסף
     Otzaria.on('search.fieldAction.invoked', p => {
-      if (!p || p.actionId !== 'find-eruv') return;
+      if (!p || p.actionId !== pick('fieldActionId', 'find-eruv')) return;
       const t = String(p.selectionEnd > p.selectionStart ? p.text.slice(p.selectionStart, p.selectionEnd) : p.text || '').trim();
       try { Otzaria.call('search.endFieldSession', { sessionId: p.sessionId }); } catch (e) {}
       if (!t) return; closeMap(); state.tab = 'list'; $('#q').value = t; state.q = t; showTab(); render(); call('plugin.openSelf');
