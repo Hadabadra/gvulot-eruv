@@ -63,7 +63,7 @@
     }
     return near ? `מחוץ לקו העירוב בקירוב של ${near.L.name} (${near.L.city}), כ-${Math.round(near.d)} מ' ממנו` : '';
   }
-  function openLine(id) { const L = LINES[id]; if (!L) return; closeMap(); state.mapSel = null; state.mapCenter = lineCenter(L); state.mapZoom = 0.6; state.tab = 'map'; mapKey = ''; showTab(); saveView(); }
+  function openLine(id) { const L = LINES[id]; if (!L) return; closeMap(); state.mapSel = null; state.lineFocus = true; state.mapCenter = lineCenter(L); state.mapZoom = pick('lineZoom', 0.6); state.tab = 'map'; mapKey = ''; showTab(); saveView(); }
   const srcOf = (m, thumb) => m.src ? (thumb ? m.thumb : m.src) : m.user ? m.url : `maps/${m.id}${thumb ? '.t' : ''}.webp`;
   // חוברות ומאמרי תחום שבת (docs.js), ספרייה וחו"ל (extra.js)
   const DOCS = window.ERUV_DOCS || [];
@@ -305,10 +305,18 @@
       </div>
       ${n.maps.length ? `<div class="section-title">מפות</div><div class="map-grid">${n.maps.map(mapCardHTML).join('')}</div>` : ''}
       ${techumHTML(c)}
-      ${n.areas.length ? `<div class="section-title">${esc(T.areasTitle)}</div><div class="area-list">${n.areas.map(a => areaHTML(a, '')).join('')}</div>` : ''}
+      ${areaGroupsHTML(n.areas)}
       ${sourceCard()}</div>`;
   }
 
+  // 2.2.0: קבוצות ברשימת האזורים של עיר (a.group; שמות ב-S.areaGroups). בלי קבוצות — רשימה אחת כמו תמיד.
+  function areaGroupsHTML(list) {
+    if (!list.length) return '';
+    const G = S.areaGroups || [[undefined, T.areasTitle]];
+    const known = new Set(G.map(g => g[0]));
+    return G.map(([g, title]) => [title, list.filter(a => a.group === g || (g === undefined && !known.has(a.group)))])
+      .filter(x => x[1].length).map(([title, l]) => `<div class="section-title">${esc(title)}</div><div class="area-list">${l.map(a => areaHTML(a, '')).join('')}</div>`).join('');
+  }
   function searchView() {
     const q = norm(state.q);
     const words = q.split(' ').filter(Boolean);
@@ -458,6 +466,7 @@
       contacts: [{ role: 'Chicago Mitzvah Campaign — ליווי רבני בבתי החולים', phone: '1-866-697-2224' }, { role: 'קו סטטוס עירוב סקוקי (cRc)', phone: '847-679-3788' }],
       eruv: 'לפי העלון: עירוב סקוקי מתיר לטלטל בין בית החולים לחדר האירוח לשבת (Gross Point Road 9631, בקומה התחתונה מכניסת החניון). לפני שבת יש לבדוק את קו הסטטוס.' }
   ];
+  if (S.hospitalsExtra) HOSPITALS.push(...S.hospitalsExtra);
   // ארגונים — רק פרטים מהאתר הרשמי של הארגון
   const ORGS = S.orgs ? S.orgs : [
     { name: 'מוקד העירוב', what: 'מענה הלכתי בענייני עירוב, מפות ואחראים · a83320@gmail.com', phone: '054-8483320', url: 'http://hiruv.com/%D7%99%D7%A6%D7%99%D7%A8%D7%AA-%D7%A7%D7%A9%D7%A8/', src: 'דף יצירת קשר באתר מוקד העירוב' },
@@ -526,8 +535,9 @@
       <div class="contacts">${ORGS.map(o => `<div class="contact"><div class="who"><b>${esc(o.name)}</b><small>${esc(o.what)}</small><small>מקור: ${esc(o.src)}</small></div>
         ${telChip(o.phone)}${o.url ? `<button class="chip" data-url="${esc(o.url)}">${ICON.link}אתר</button>` : ''}</div>`).join('')}</div>
       <div class="section-title">טהרת כהנים — מדריכים ומפות (התאחדות טהרת הכהנים)</div>
+      <div class="row-links"><button class="btn tonal" data-plugin="com.hadabadra.tahorat-kohanim">${ICON.map} פתיחת התוסף "טהרת כהנים"</button></div>
       <div class="lib">${KOHANIM.map(x => `<button class="chip" data-url="${esc(x[1])}">${ICON.link}${esc(x[0])}</button>`).join('')}</div>
-      <p class="fine">החומרים באתר הארגון ובתיקיית Google Drive שלו (נפתחים בדפדפן כשיש אינטרנט). מפות מירון, צפת, חיפה והר הזיתים — במייל a083132020@gmail.com. כשיתקבל אישור הארגון — המפות ייכנסו לתוך התוסף.</p>
+      <p class="fine">כל החומר של ההתאחדות — המדריך לכהנים, מפות מירון, צפת, טבריה, חיפה, הר הזיתים ובתי החולים, החוברות, המצגות, האזורים האסורים על המפה ולוח הטיסות — נמצא בתוסף הנפרד "טהרת כהנים", בלי אינטרנט (באישור ההתאחדות). הקישורים כאן נפתחים בדפדפן כשיש אינטרנט.</p>
       <div class="section-title">בתי חולים נוספים — עמודי שירותי הדת הרשמיים</div>
       <div class="lib">${MORE_SOURCES.map(x => `<button class="chip" data-url="${esc(x[1])}">${ICON.link}${esc(x[0])}</button>`).join('')}</div>
       <p class="fine">${esc(HOSP_EZER)}</p></div>`;
@@ -584,7 +594,7 @@
   // ── ניווט ───────────────────────────────────────────────────
   function goCity(c) {
     state.view = 'city'; state.city = c; state.q = ''; $('#q').value = '';
-    state.mapSel = null;
+    state.mapSel = null; state.lineFocus = false;
     state.recent = [c, ...state.recent.filter(x => x !== c)].slice(0, 8); savePref('recent');
     render();
   }
@@ -624,7 +634,7 @@
     $('#vPager').hidden = !V.doc;
     V.m = m; V.r = 0; V.w = m.w; V.h = m.h;
     $('#vTitle').textContent = m.city + ' · ' + m.title;
-    $('#vSub').textContent = m.sub || (m.user ? 'מפה שהוספת · להתמצאות בלבד' : 'מוקד העירוב · להתמצאות בלבד');
+    $('#vSub').textContent = m.sub || (m.user ? 'מפה שהוספת · להתמצאות בלבד' : D.source.name + ' · להתמצאות בלבד');
     const ar = pm ? [] : areasOfMap(id);
     const side = $('#vSidePanel');
     if (pm) side.innerHTML = m.side; else side.innerHTML = `<h3>אחראים במפה זו</h3>` +
@@ -661,7 +671,7 @@
       <button class="btn text" data-url="${esc(d.url)}">המקור באתר מוקד העירוב</button>`;
     const cached = pageCache.get(id + ':' + page);
     openMap(null, { id: 'doc-' + id + '-' + page, city: 'עמוד ' + page, title: d.title, w, h, src: cached || BLANK, thumb: pageSrc(d, page, true),
-      sub: 'מוקד העירוב · עמוד ' + page + ' מתוך ' + d.pages, side });
+      sub: D.source.name + ' · עמוד ' + page + ' מתוך ' + d.pages, side });
     $('#vTitle').textContent = d.title;
     $('#vPage').value = page; $('#vPage').max = d.pages; $('#vPages').textContent = '/ ' + d.pages;
     $('#vPrev').disabled = page <= R0; $('#vNext').disabled = page >= R1; $('#vPage').min = R0; $('#vPage').max = R1;
@@ -880,8 +890,8 @@
     } catch (e) { toast('לא ניתן ליצור את הקובץ: ' + ((e && e.message) || e)); }
     finally { bookBusy = false; }
   }
-  const readmeText = (d, a, b) => `${d.title}\r\nעמודים ${a}–${b}\r\n\r\nמקור: מוקד העירוב (${D.source.phone}), ${d.url}\r\nלהתמצאות בלבד — יש לוודא מול האחראי המקומי לפני שבת.\r\n\r\n` +
-    `הורד מתוך תוסף "גבולות עירוב" לאוצריא.\r\nהורדת התוסף מ-GitHub: ${REPO}/releases\r\nבחנות התוספים של אוצריא: כלים ← תוספים ← חנות, חיפוש "גבולות עירוב"\r\n`;
+  const readmeText = (d, a, b) => `${d.title}\r\nעמודים ${a}–${b}\r\n\r\nמקור: ${D.source.name} (${D.source.phone}), ${d.url}\r\n${T.readmeNote || 'להתמצאות בלבד — יש לוודא מול האחראי המקומי לפני שבת.'}\r\n\r\n` +
+    `הורד מתוך תוסף "${T.name}" לאוצריא.\r\nהורדת התוסף מ-GitHub: ${REPO}/releases\r\nבחנות התוספים של אוצריא: ${STORE} (או כלים ← תוספים ← חנות, חיפוש "${T.name}")\r\n`;
   // PDF 1.4 מינימלי: עמוד לכל תמונה (JPEG כ-DCTDecode), גודל העמוד לפי התמונה ב-72dpi מוקטן לרוחב A4 בערך
   function makePdf(pages, title) {
     const enc = new TextEncoder(), parts = [], offs = []; let len = 0;
@@ -1214,15 +1224,15 @@
     const map = state.tab === 'map';
     document.querySelectorAll('#viewTabs [data-tab]').forEach(b => { b.classList.toggle('on', b.dataset.tab === state.tab); b.setAttribute('aria-selected', String(b.dataset.tab === state.tab)); });
     $('#main').hidden = map; $('#mapTab').hidden = !map;
-    const sel = state.mapSel || (state.view === 'city' && CITY_POS[state.city] ? state.city : null);
+    const sel = state.lineFocus ? null : state.mapSel || (state.view === 'city' && CITY_POS[state.city] ? state.city : null);
     $('#viewScope').textContent = map ? (sel || 'כל הארץ') : '';
     if (!map) return;
-    const key = [sel, state.offline].join('|');
+    const key = [sel, state.offline, state.lineFocus ? state.mapCenter : ''].join('|');
     if (key === mapKey && $('#mapTab').firstChild) return; mapKey = key;
     const MC = window.MapCore, UI = window.MapUI;
     if (!MC || !UI) { $('#mapTab').textContent = 'רכיב המפה לא נטען.'; return; }
     const cities = Object.keys(CITY_POS).filter(c => byCity.has(c));
-    const pts = cities.map(c => ({ id: c, name: c + ' · ' + byCity.get(c).maps.length + ' מפות', sub: byCity.get(c).maps.length + ' מפות עירוב · ' + byCity.get(c).areas.length + ' שכונות עם אחראי', lat: CITY_POS[c][0], lon: CITY_POS[c][1] }));
+    const pts = cities.map(c => ({ id: c, name: c + ' · ' + byCity.get(c).maps.length + ' ' + T.mapsWord, sub: byCity.get(c).maps.length + ' ' + T.mapsWordCity + ' · ' + byCity.get(c).areas.length + ' ' + T.areasCityWord, lat: CITY_POS[c][0], lon: CITY_POS[c][1] }));
     // מסלול הליכה כבוי: הנקודות כאן הן ערים (מיקום בקירוב), לא יעד הליכה. ניווט ב-Waze / Google Maps נשאר.
     const lineIds = Object.keys(LINES), lineCities = [...new Set(lineIds.map(i => LINES[i].city))];
     const lineLayer = lineIds.length ? [{ id: 'eruv-lines', name: LINE_LAYER, glyph: '〰', sub: lineIds.length + ' עירובים · ' + lineCities.join(', '), points: lineIds.map(i => { const c = lineCenter(LINES[i]); return { lat: c[0], lon: c[1], id: '__line-' + i, label: LINES[i].name }; }),
@@ -1232,7 +1242,7 @@
       guideExtra: async id => {
         const c = byCity.get(id || state.city); if (!c || !c.maps.length) return '';
         const toData = async m => { try { const b = await (await fetch(srcOf(m))).blob(); return await new Promise(r => { const f = new FileReader(); f.onload = () => r(f.result); f.onerror = () => r(''); f.readAsDataURL(b); }); } catch (e) { return ''; } };
-        let h = `<h2>מפות העירוב — ${esc(id || state.city)}</h2><p>מקור: מוקד העירוב (${esc(D.source.phone)}). להתמצאות בלבד — יש לוודא מול האחראי המקומי לפני שבת.</p>`;
+        let h = `<h2>${esc(T.mapsWordCity)} — ${esc(id || state.city)}</h2><p>מקור: ${esc(D.source.name)} (${esc(D.source.phone)}). ${esc(T.guideNote || 'להתמצאות בלבד — יש לוודא מול האחראי המקומי לפני שבת.')}</p>`;
         for (const m of c.maps.slice(0, 6)) { const u = await toData(m); if (u) h += `<figure><img src="${u}" alt="${esc(m.title)}" style="width:100%;height:auto;display:block"><figcaption>${esc(m.title)}</figcaption></figure>`; }
         return h;
       },
@@ -1241,7 +1251,7 @@
         { t: 'עט — שרטוט ידני', d: 'כפתור העט פותח סרגל קטן: קו או שטח, ביטול נקודה (Ctrl+Z), ניקוי, צבע ושמירה (Enter). השרטוט נשמר כשכבה שנטענת לבד וכקובץ GeoJSON.' }],
       pickLabel: 'פתיחת העיר', nearbyLabel: 'ערים קרובות', future: ['קווי עירוב לעוד ערים (לפי מפות המוקד)', 'עדכון אוטומטי של הקווים כשהמוקד מעדכן מפה'],
       onPick: id => { state.tab = 'list'; goCity(id); }, ...(S.map ? S.map(CTX()) : {}) });
-    $('#mapTab').insertAdjacentHTML('beforeend', `<p class="fine">מיקומי הערים בקירוב. ${lineIds.length ? 'קווי העירוב המשורטטים (' + lineCities.join(', ') + ') הם קירוב בלבד, מתוך מפות המוקד — לא לסמוך עליהם להלכה. ' : ''}המפות עצמן הן התמונות של מוקד העירוב (בלשונית "רשימה").</p>`);
+    $('#mapTab').insertAdjacentHTML('beforeend', T.mapFine ? `<p class="fine">${esc(T.mapFine)}</p>` : `<p class="fine">מיקומי הערים בקירוב. ${lineIds.length ? 'קווי העירוב המשורטטים (' + lineCities.join(', ') + ') הם קירוב בלבד, מתוך מפות המוקד — לא לסמוך עליהם להלכה. ' : ''}המפות עצמן הן התמונות של מוקד העירוב (בלשונית "רשימה").</p>`);
   }
   // תוסף אחר (כיוון תפילה / מקוואות) מבקש לפתוח את המפה באותו מקום (מפה משותפת, Prayer-pointA#11)
   if (window.MapUI && window.MapUI.onOpenMap) window.MapUI.onOpenMap(p => { state.mapSel = null; state.mapCenter = p.lat != null ? [p.lat, p.lon] : null; state.tab = 'map'; mapKey = ''; showTab(); });
@@ -1328,6 +1338,8 @@
     e.preventDefault(); e.stopPropagation(); openLink(h);
   }, true);
   document.addEventListener('click', e => {
+    const tp = e.target.closest('[data-plugin]');
+    if (tp) { const sb = SIBLINGS.find(x => x.id === tp.dataset.plugin); call('plugin.openOther', { pluginId: tp.dataset.plugin, param: { type: 'open', from: S.id || '' } }).then(r => { if (!r || !r.success) { toast('התוסף "' + (sb ? sb.name : '') + '" אינו מותקן — דף החנות'); if (sb) openLink(sb.store); } }); return; }
     const t = e.target.closest('[data-open-map],[data-city],[data-phone],[data-fav],[data-url],[data-add-map],[data-del-map],[data-src],[data-doc],[data-view],[data-abroad],[data-hosp],[data-sec],[data-toggle-toolbar],[data-mapdev],[data-line]');
     if (!t) return;
     if (t.dataset.line) return openLine(t.dataset.line);
@@ -1356,7 +1368,7 @@
   $('#btnHome').onclick = goHome;
   $('#btnDocs').onclick = () => goView('docs');
   $('#btnInfo').onclick = openInfo;
-  $('#viewTabs').onclick = e => { const b = e.target.closest('[data-tab]'); if (!b) return; state.tab = b.dataset.tab; if (state.tab === 'list') state.mapSel = null; showTab(); saveView(); };
+  $('#viewTabs').onclick = e => { const b = e.target.closest('[data-tab]'); if (!b) return; state.tab = b.dataset.tab; if (state.tab === 'list') { state.mapSel = null; state.lineFocus = false; } showTab(); saveView(); };
   $('#btnHal').onclick = openHalacha;
   $('#btnLoc').onclick = locateMe;
   $('#infoClose').onclick = () => { $('#infoScrim').hidden = true; };

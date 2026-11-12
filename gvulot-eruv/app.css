@@ -497,3 +497,20 @@ body.offline [data-url^="http"], body.offline .ext-only { display: none !importa
 .icon-btn:has(> .lbl) { width: auto; min-width: 3.3em; height: auto; padding: .3em .45em .25em; grid-template-rows: auto auto; gap: .12em; border-radius: .7em; }
 .icon-btn > .lbl { font-size: .66em; line-height: 1.1; white-space: nowrap; font-weight: 500; }
 @media (max-width: 44em) { .icon-btn > .lbl { display: none; } .icon-btn:has(> .lbl) { min-width: 2.5em; padding: .55em; } }
+
+/* 2.2.0: תג רמה לאזור (טהרת כהנים) ולוח הטיסות */
+.lvl { font-size: .75em; padding: 0 .5em; border-radius: var(--radius-pill); background: var(--color-error-container); color: var(--color-on-error-container); font-weight: 600; }
+.lvl-ב { background: var(--color-tertiary-container); color: var(--color-on-tertiary-container); }
+.lvl-ג { background: var(--color-secondary-container); color: var(--color-on-secondary-container); }
+.fl-tl { position: relative; height: 2.2em; border-radius: var(--radius-pill); background: var(--color-surface-container-high); overflow: hidden; margin: .6em 0 .2em; }
+.fl-tl i { position: absolute; top: 0; bottom: 0; }
+.fl-tl .r { background: var(--color-error); }
+.fl-tl .o { background: var(--color-tertiary); opacity: .55; }
+.fl-ticks { display: flex; justify-content: space-between; font-size: .75em; color: var(--color-on-surface-variant); }
+.fl-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(13em, 1fr)); gap: .4em; margin: .6em 0; }
+.fl-item { display: flex; gap: .6em; align-items: baseline; padding: .45em .7em; border-radius: var(--radius-md, .75em); background: var(--color-surface-container); }
+.fl-item b { font-variant-numeric: tabular-nums; }
+.fl-check { display: flex; flex-wrap: wrap; gap: .6em; align-items: center; margin: .6em 0; }
+.fl-check input, .fl-check select { font: inherit; padding: .35em .6em; border-radius: var(--radius-sm, .5em); border: 1px solid var(--color-outline-variant); background: var(--color-surface); color: var(--color-on-surface); }
+.fl-res { padding: .7em .9em; border-radius: var(--radius-md, .75em); background: var(--color-surface-container-high); }
+.fl-res.warn { background: var(--color-error-container); color: var(--color-on-error-container); }
