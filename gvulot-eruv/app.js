@@ -226,6 +226,15 @@
     saveT = setTimeout(() => call('plugin.setRestoreState', { state: { view: state.view, city: state.city, abroadC: state.abroadC, tab: state.tab } }), 400);
   }
 
+  // 2.1.0: מחלקות עירוב של מועצות דתיות בערים שאין להן מפה ממוקד העירוב (מאתרי המועצות, נבדק 12.11.2026)
+  const COUNCIL_ERUV = [
+    { city: 'אשקלון', name: 'המועצה הדתית — מחלקת עירוב ושבת', what: 'לפי המועצה: העירוב כולל את כל שכונות העיר (גם אגמים, עיר היין, עיר ימים), המרינה והטיילת — בלי החולות והים; נבדק כל שבוע לפני שבת. ראש המחלקה: הרב שאול עופר', phone: '08-6714401', phone2: '050-7373778', url: 'https://www.mdas.org.il/%D7%9E%D7%97%D7%9C%D7%A7%D7%95%D7%AA-%D7%94%D7%9E%D7%95%D7%A2%D7%A6%D7%94/%D7%9E%D7%97%D7%9C%D7%A7%D7%AA-%D7%A2%D7%99%D7%A8%D7%95%D7%91/', src: 'אתר המועצה הדתית אשקלון' },
+    { city: 'תל אביב–יפו', name: 'המועצה הדתית — מחלקת שבת ועירובין', what: 'מפת קו העירוב ומפת GIS באתר המועצה. מפקח עירובין: שלום הורן', phone: '03-6938989', phone2: '054-8473268', url: 'https://rabanut.co.il/department/%D7%9E%D7%97%D7%9C%D7%A7%D7%AA-%D7%A9%D7%91%D7%AA-%D7%95%D7%A2%D7%99%D7%A8%D7%95%D7%91%D7%99%D7%9F/', src: 'אתר המועצה הדתית תל אביב–יפו' },
+    { city: 'מבשרת ציון', name: 'המועצה הדתית — שבת ועירובין', what: 'סטטוס עירוב שבועי ומפת עירוב עדכנית באתר; הקו שונה בשנת תשפ"ו עקב עבודות תשתית', phone: '02-5342860', url: 'https://mevaseret.md.gov.il/home/irov-shabat', src: 'אתר המועצה הדתית מבשרת ציון' },
+    { city: 'אזור', name: 'המועצה הדתית — עירוב', what: 'העירוב בפיקוח הרב יצחק אהרון; פניות ודיווח על תקלות בימים א׳–ו׳ 08:00–13:00', phone: '03-5507950', phone2: '054-8453396', url: 'https://azor.muni.il/%D7%A9%D7%91%D7%AA-%D7%95%D7%A2%D7%99%D7%A8%D7%95%D7%91/', src: 'אתר המועצה המקומית אזור' },
+    { city: 'נס ציונה', name: 'המועצה הדתית — שבת ועירובין', what: 'מעקב אחרי העירוב בעיר', phone: '077-5020046', url: 'https://www.moatzanz.co.il/%D7%A9%D7%99%D7%A8%D7%95%D7%AA%D7%99-%D7%94%D7%9E%D7%95%D7%A2%D7%A6%D7%94/%D7%A9%D7%91%D7%AA-%D7%95%D7%A2%D7%99%D7%A8%D7%95%D7%91%D7%99%D7%9F/', src: 'אתר המועצה הדתית נס ציונה' },
+    { city: 'חריש', name: 'העירייה — המחלקה לשירותי דת', what: 'לפי חוברת המידע של העירייה: קו העירוב מקיף את כל השכונות (החורש, אבני חן, הפרחים, מעו"ף ובצוותא) ונבדק בכל יום שישי', phone: '', url: 'https://digitaler.cld.bz/harish28', src: 'חוברת המידע לתושבי חריש' }
+  ];
   function homeView() {
     const card = c => {
       const n = byCity.get(c); const m = n.maps[0];
@@ -248,6 +257,10 @@
         <div class="row-links"><button class="btn text" data-view="docs">${ICON.book} כל מאמרי התחום והספרייה</button>
         <button class="btn text" data-view="abroad">${ICON.globe} עירובין בחו"ל</button>
         <button class="btn text" data-view="hosps">${ICON.hospital} בתי חולים</button></div>` : ''}
+      <div class="section-title">עירובין בערים נוספות — מידע רשמי מהמועצות הדתיות</div>
+      <p class="fine">לא מטעם מוקד העירוב. הפרטים כפי שפורסמו באתר הרשמי של כל מועצה; לפני שבת יש לוודא מול האחראי המקומי ולשאול רב.</p>
+      <div class="contacts">${COUNCIL_ERUV.map(o => `<div class="contact"><div class="who"><b>${esc(o.city)} — ${esc(o.name)}</b><small>${esc(o.what)}</small><small>מקור: ${esc(o.src)}</small></div>
+        ${o.phone ? telChip(o.phone) : ''}${o.phone2 ? telChip(o.phone2) : ''}${o.url ? `<button class="chip" data-url="${esc(o.url)}">${ICON.link}אתר</button>` : ''}</div>`).join('')}</div>
       ${sourceCard()}</div>`;
   }
 
@@ -422,7 +435,8 @@
     { name: 'מוקד העירוב', what: 'מענה הלכתי בענייני עירוב, מפות ואחראים · a83320@gmail.com', phone: '054-8483320', url: 'http://hiruv.com/%D7%99%D7%A6%D7%99%D7%A8%D7%AA-%D7%A7%D7%A9%D7%A8/', src: 'דף יצירת קשר באתר מוקד העירוב' },
     { name: 'Chicago Mitzvah Campaign (שיקגו)', what: 'ליווי רבני וחדרי אירוח לשבת בבתי החולים באזור שיקגו', phone: '1-866-697-2224', url: 'https://chicagomitzvahcampaign.org/in-hospital-patient-services/', src: 'אתר הארגון' },
     { name: 'מועצת הרבנים של שיקגו (cRc) — עירובין', what: 'רשימת העירובין באזור שיקגו וקווי הסטטוס', phone: '847-677-3788', url: 'https://crcweb.org/guide_chicago.php', src: 'אתר cRc (הקו של לינקולנווד–פיטרסון פארק)' },
-    { name: 'ערבתם', what: 'מידע על עירובין', phone: '072-2722909', url: '', src: 'לפי דיווח משתמש (#13) — לא אומת מול אתר הארגון' },
+    { name: 'ערבתם', what: 'עירובי תחומין ותחום שבת: מענה הלכתי טלפוני של רבני הוועד (א׳–ה׳ 14:00–14:30 ו-19:30–21:00), וסידור עירוב תחומין למי שמבקש', phone: '072-2722909', url: '', src: 'עלון "ערבתם" ואתר עירוב כהלכה; דיווח משתמש (#13)' },
+    { name: 'עירוב כהלכה', what: 'מאגר עירובין בארץ: רמת העירוב, מפות גבולות ותחום שבת לפי יישוב', phone: '02-6664977', url: 'https://eruv.org.il/cities/', src: 'אתר עירוב כהלכה (eruv.org.il)' },
     { name: 'ערבתם — עירובין שכונתיים בני ברק', what: 'קו המידע לעירובין השכונתיים בבני ברק', phone: '03-3065765', url: '', src: 'לפי דיווח משתמש (#13) — לא אומת מול אתר הארגון' },
     { name: 'אתרים שומרי שבת', what: 'קו מידע על אתרים שומרי שבת (לא עניין של עירוב — לנוחות)', phone: '079-6970060', url: '', src: 'לפי דיווח משתמש (#13)' },
     { name: 'התאחדות טהרת הכהנים', what: 'טהרת כהנים: קו מידע (שלוחה * — בית ההוראה, פרטי בתי חולים; 9 ואז 6 — הרשמה לעדכונים). מפות מירון, צפת, חיפה והר הזיתים נשלחות במייל a083132020@gmail.com', phone: '08-3132020', url: 'https://hakohanim.org/', src: 'אתר הארגון (hakohanim.org), 12.11.2026' },
