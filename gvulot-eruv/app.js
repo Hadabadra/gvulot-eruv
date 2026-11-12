@@ -424,6 +424,8 @@
     { name: 'מועצת הרבנים של שיקגו (cRc) — עירובין', what: 'רשימת העירובין באזור שיקגו וקווי הסטטוס', phone: '847-677-3788', url: 'https://crcweb.org/guide_chicago.php', src: 'אתר cRc (הקו של לינקולנווד–פיטרסון פארק)' },
     { name: 'ערבתם', what: 'מידע על עירובין', phone: '072-2722909', url: '', src: 'לפי דיווח משתמש (#13) — לא אומת מול אתר הארגון' },
     { name: 'ערבתם — עירובין שכונתיים בני ברק', what: 'קו המידע לעירובין השכונתיים בבני ברק', phone: '03-3065765', url: '', src: 'לפי דיווח משתמש (#13) — לא אומת מול אתר הארגון' },
+    { name: 'אתרים שומרי שבת', what: 'קו מידע על אתרים שומרי שבת (לא עניין של עירוב — לנוחות)', phone: '079-6970060', url: '', src: 'לפי דיווח משתמש (#13)' },
+    { name: 'התאחדות טהרת הכהנים', what: 'טהרת כהנים: קו מידע (שלוחה * — בית ההוראה, פרטי בתי חולים; 9 ואז 6 — הרשמה לעדכונים). מפות מירון, צפת, חיפה והר הזיתים נשלחות במייל a083132020@gmail.com', phone: '08-3132020', url: 'https://hakohanim.org/', src: 'אתר הארגון (hakohanim.org), 12.11.2026' },
     { name: 'עזר מציון — סניף ראשי', what: 'בחוברת "דרך התחומין" מוזכר שהאגודה מניחה עירוב תחומין ציבורי', phone: '03-6144444', url: 'https://www.ami.org.il/', src: 'אתר עזר מציון' }
   ];
   // מקורות רשמיים נוספים: עמודי שירותי דת של בתי חולים שעוד לא פורטו כאן (קישור בלבד)
@@ -443,6 +445,17 @@
     return `<div class="contact"><div class="who"><b>${esc(c.name || c.role)}</b>${c.name ? `<small>${esc(c.role)}</small>` : ''}${c.note ? `<small>${esc(c.note)}</small>` : ''}</div>
       ${c.phone ? telChip(c.phone) : ''}${c.phone2 ? telChip(c.phone2) : ''}${c.email ? `<button class="chip" data-phone="${esc(c.email)}" title="העתקה">${ICON.mail}${esc(c.email)}</button>` : ''}</div>`;
   }
+  // 2.1.0 (#16): טהרת כהנים — קישורים רשמיים של התאחדות טהרת הכהנים (hakohanim.org)
+  const KOHANIM = [
+    ['המדריך לכהנים המעודכן', 'https://drive.google.com/file/d/1O2saqog7g8h62acP9C3ZvTD9j1uq4Z-N/view'],
+    ['מפות, קונטרסים ועוד (תיקייה)', 'https://drive.google.com/drive/folders/1I4LBIeZRHuUfdAwT8WDYJa-24R5sF7Bs'],
+    ['מידע לבין הזמנים (כולל מפת טבריה)', 'https://drive.google.com/file/d/1YXdYJz2ukAwMGB0nqzCk4h5_gYZReHAX/view'],
+    ['מידע על בתי חולים', 'https://drive.google.com/file/d/1DKtT0QXYM4fO04wZUrvfvBxEBeINu3Yn/view'],
+    ['ניווט לכהנים (אתר)', 'https://gps.hakohanim.org/'],
+    ['ניווט לכהנים (אנדרואיד)', 'https://play.google.com/store/apps/details?id=gps.hakohanim.org'],
+    ['מידע על טיסות', 'https://flights.hakohanim.org/'],
+    ['אתר המדריך לכהנים', 'https://hakohanim.org/']
+  ];
   function hospView(h) {
     if (!h) return hospsView();
     const doc = h.doc && docById.get(h.doc);
@@ -468,6 +481,9 @@
       <div class="section-title">ארגונים</div>
       <div class="contacts">${ORGS.map(o => `<div class="contact"><div class="who"><b>${esc(o.name)}</b><small>${esc(o.what)}</small><small>מקור: ${esc(o.src)}</small></div>
         ${telChip(o.phone)}${o.url ? `<button class="chip" data-url="${esc(o.url)}">${ICON.link}אתר</button>` : ''}</div>`).join('')}</div>
+      <div class="section-title">טהרת כהנים — מדריכים ומפות (התאחדות טהרת הכהנים)</div>
+      <div class="lib">${KOHANIM.map(x => `<button class="chip" data-url="${esc(x[1])}">${ICON.link}${esc(x[0])}</button>`).join('')}</div>
+      <p class="fine">החומרים באתר הארגון ובתיקיית Google Drive שלו (נפתחים בדפדפן כשיש אינטרנט). מפות מירון, צפת, חיפה והר הזיתים — במייל a083132020@gmail.com. כשיתקבל אישור הארגון — המפות ייכנסו לתוך התוסף.</p>
       <div class="section-title">בתי חולים נוספים — עמודי שירותי הדת הרשמיים</div>
       <div class="lib">${MORE_SOURCES.map(x => `<button class="chip" data-url="${esc(x[1])}">${ICON.link}${esc(x[0])}</button>`).join('')}</div>
       <p class="fine">${esc(HOSP_EZER)}</p></div>`;
