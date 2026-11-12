@@ -165,7 +165,7 @@ def main(out, quick=False):
         print("חוברת", title, len(dims), os.path.getsize(src), "→", os.path.getsize(pdf), file=sys.stderr)
         shutil.rmtree(tmp)
     with open(os.path.join(out, "docs.js"), "w") as f:
-        f.write("// נוצר ע\"י kohanim-build/build.py — לא לערוך ידנית\nwindow.ERUV_DOCS = " + json.dumps(res, ensure_ascii=False, separators=(",", ":")) + ";\n")
+        f.write("/* נוצר על ידי kohanim-build/build.py — לא לערוך ידנית */\nwindow.ERUV_DOCS = " + json.dumps(res, ensure_ascii=False, separators=(",", ":")) + ";\n")
     # ── אזורים אסורים (תוכנת הניווט) ──
     feats = json.load(open(os.path.join(RAW, "areas.json")))["data"]["features"]
     lines, areas, cpos = {}, [], dict(CITY_POS)
@@ -206,11 +206,11 @@ def main(out, quick=False):
                     key=lambda c: (c == OPEN_ROADS, c not in order, order.index(c) if c in order else 0, c))
     built = datetime.date.today().isoformat()
     with open(os.path.join(out, "data.js"), "w") as f:
-        f.write("// נוצר ע\"י kohanim-build/build.py מחומרי התאחדות טהרת הכהנים, באישורם — לא לערוך ידנית\nwindow.ERUV_DATA = " +
+        f.write("/* נוצר על ידי kohanim-build/build.py מחומרי התאחדות טהרת הכהנים, באישורם — לא לערוך ידנית */\nwindow.ERUV_DATA = " +
                 json.dumps({"source": SRC, "built": built, "cities": cities, "maps": maps, "areas": areas, "cityPos": cpos},
                            ensure_ascii=False, separators=(",", ":")) + ";\n")
     with open(os.path.join(out, "eruv-lines.js"), "w") as f:
-        f.write("/* אזורים אסורים לכהנים — מתוך תוכנת הניווט של התאחדות טהרת הכהנים (gps.hakohanim.org), באישורם. נוצר ע\"י kohanim-build/build.py.\n"
+        f.write("/* אזורים אסורים לכהנים — מתוך תוכנת הניווט של התאחדות טהרת הכהנים (gps.hakohanim.org), באישורם. נוצר על ידי kohanim-build/build.py.\n"
                 "   להתמצאות בלבד; הקובע הוא ההתאחדות והרב. */\nwindow.ERUV_LINES = " + json.dumps(lines, ensure_ascii=False, separators=(",", ":")) + ";\n")
     # ── טיסות: הלוח הקבוע לפי יום בשבוע ──
     days = {}
@@ -231,7 +231,7 @@ def main(out, quick=False):
         ("מידע טיסות לכהנים — זמן אמת", "https://flights.hakohanim.org/"),
         ("כל החומרים בתיקיית Google Drive של ההתאחדות", "https://drive.google.com/drive/folders/1I4LBIeZRHuUfdAwT8WDYJa-24R5sF7Bs")]]
     with open(os.path.join(out, "extra.js"), "w") as f:
-        f.write("// נוצר ע\"י kohanim-build/build.py\nwindow.ERUV_EXTRA = " + json.dumps({"library": lib, "abroad": [], "flights": flights}, ensure_ascii=False, separators=(",", ":")) + ";\n")
+        f.write("/* נוצר על ידי kohanim-build/build.py. הערה: בכותרות של קבצים שנוצרים — רק הערת בלוק, בלי גרשיים (בודק החנות נתקע אחרת) */\nwindow.ERUV_EXTRA = " + json.dumps({"library": lib, "abroad": [], "flights": flights}, ensure_ascii=False, separators=(",", ":")) + ";\n")
     missing = [p for p in tree if p not in used and p not in DUPS and not re.search(r"\.(mp4|mov)$", p, re.I)]
     print(f"ערים {len(cities)} · מפות {len(maps)} · חוברות {len(res)} · אזורים {sum(1 for a in areas if a['group']=='areas')} (+{sum(1 for l in lines.values() if l['level']=='A')} שטחי A) · נקודות הפצה {sum(1 for a in areas if a['group']=='dist')} · לא נארזו: {missing}", file=sys.stderr)
 
