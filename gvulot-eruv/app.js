@@ -1042,15 +1042,27 @@
   // שם רשמי / כינוי נוסף לפי דיווח משתמש (#15): "חזון יחזקאל" = היישוב אלומה, סמוך לקוממיות ובתחומו
   const CITY_AKA = { 'חזון יחזקאל': 'אלומה · סמוך לקוממיות (לפי דיווח משתמש)' };
   const km = (a, b) => { const r = Math.PI / 180, x = (b[1] - a[1]) * r * Math.cos((a[0] + b[0]) * r / 2), y = (b[0] - a[0]) * r; return Math.hypot(x, y) * 6371; };
+  // 2.1.0: כשאין גשר "אחת שאלתי" — העיר שנבחרה בלוח השנה של אוצריא (הגדרות ← לוח שנה)
+  async function calendarCityPos() {
+    try {
+      const s = await call('settings.get', { key: 'key-selected-city' });
+      const name = s && s.success && typeof s.data === 'string' ? s.data : '';
+      if (!name) return null;
+      const r = await call('calendar.getCities');
+      const c = (r && r.success && Array.isArray(r.data) ? r.data : []).find(x => x.name === name);
+      return c && c.lat != null ? { name, lat: +c.lat, lon: +(c.lng != null ? c.lng : c.lon) } : null;
+    } catch (e) { return null; }
+  }
   async function locateMe() {
     toast('מאתר מיקום…');
     let p = null, how = '';
     try { if (window.ERUV_BRIDGE && await ERUV_BRIDGE.available()) { const d = await ERUV_BRIDGE.location(); p = [+d.lat, +d.lon]; how = 'מ-Windows'; } } catch (e) {}
+    if (!p) { const cc = await calendarCityPos(); if (cc) { p = [cc.lat, cc.lon]; how = 'לפי העיר בלוח השנה (' + cc.name + ')'; } }
     if (!p && navigator.geolocation) {
       p = await new Promise(res => navigator.geolocation.getCurrentPosition(g => res([g.coords.latitude, g.coords.longitude]), () => res(null), { timeout: 12000, maximumAge: 300000 }));
       how = 'מהמכשיר';
     }
-    if (!p) { toast('לא ניתן לזהות מיקום. התקינו את הגשר "אחת שאלתי" או בחרו עיר מהרשימה'); return; }
+    if (!p) { toast('לא ניתן לזהות מיקום. התקינו את הגשר "אחת שאלתי", בחרו עיר בלוח השנה של אוצריא, או בחרו עיר מהרשימה'); return; }
     const best = Object.keys(CITY_POS).filter(c => byCity.has(c)).map(c => [c, km(p, CITY_POS[c])]).sort((a, b) => a[1] - b[1])[0];
     if (!best || best[1] > 25) { toast('אין עירוב במאגר בקרבת המיקום (העיר הקרובה: ' + (best ? best[0] + ', ' + Math.round(best[1]) + ' ק"מ' : '—') + ')'); return; }
     goCity(best[0]); toast('מיקום ' + how + ': ' + best[0] + (best[1] > 3 ? ' (כ-' + Math.round(best[1]) + ' ק"מ)' : ''));

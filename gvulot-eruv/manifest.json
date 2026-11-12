@@ -28,7 +28,9 @@
     "navigation.write",
     "plugin.open_other",
     "network.access",
-    "search.field_actions"
+    "search.field_actions",
+    "settings.read",
+    "calendar.read"
   ],
   "network": {
     "enabled": true,
