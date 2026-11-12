@@ -7,11 +7,21 @@
 import re, html, json, sys, os, urllib.parse
 
 R = os.path.join(os.path.dirname(__file__), "raw")
+PREV_PLUGIN = sys.argv[1] if len(sys.argv) > 1 else None
 
 def library():
     out, seen = [], set()
     for fn, group in (("books2.html", "חוברות בהלכות אקטואליות"), ("books1.html", "ספרים תורניים בעירובין")):
-        p = open(os.path.join(R, fn), encoding="utf-8", errors="replace").read()
+        fp = os.path.join(R, fn)
+        p = open(fp, encoding="utf-8", errors="replace").read() if os.path.exists(fp) else ""
+        if ".pdf" not in p:
+            # 12.11.2026: הדף "חוברות וספרים" הוסר מאתר המוקד (הקבצים עצמם עדיין זמינים) — שומרים את הרשימה הקודמת
+            prev = os.path.join(PREV_PLUGIN or "", "extra.js")
+            if PREV_PLUGIN and os.path.exists(prev):
+                old = json.loads(open(prev, encoding="utf-8").read().split("=", 1)[1].strip().rstrip(";"))["library"]
+                for b in old:
+                    if b["g"] == group and b["u"] not in seen: seen.add(b["u"]); out.append(b)
+            continue
         for m in re.finditer(r'<a[^>]+href="([^"]+\.pdf)"[^>]*>(.*?)</a>', p, re.S):
             url = urllib.parse.unquote(m.group(1)).strip()
             if url in seen: continue
