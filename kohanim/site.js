@@ -153,7 +153,7 @@
 
   window.SITE = {
     id: ID, title: 'טהרת כהנים', version: '2.2.0', lineZoom: 4,
-    store: 'https://otzaria.org/plugins',   // יוחלף בכתובת דף התוסף בחנות אחרי הפרסום הראשון
+    store: 'https://otzaria.org/plugins/6af5c07506096e8fb9b1aaa1',   // דף התוסף בחנות (נוצר 12.11.2026, ממתין לאישור מנהל)
     planPath: 'kohanim-docs/STATUS.md', forumUrl: '', fieldActionId: 'find-kohanim', email: EMAIL, contactUrl: 'https://hakohanim.org/',
     bookRegex: /אהלות|טומאת מת|טומאת כהנים|הלכות אבל|שסט|שע|אמור/,
     cityPos: D.cityPos || {}, cityAka: {},
