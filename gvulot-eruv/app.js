@@ -26,7 +26,7 @@
   // הצגה של תוסף אחר במאגר (שכבה בתפריט השכבות של המפה המשותפת — לחיצה פותחת את התוסף ההוא באותו מקום)
   const SIBLINGS = [
     { id: 'com.hadabadra.gvulot-eruv', name: 'גבולות עירוב', glyph: 'ע', desc: 'מפות העירובים והאחראים בכל עיר', layers: ['קווי עירוב (בקירוב — לפי מפת המוקד)'], store: 'https://otzaria.org/plugins/6ad93b5d2917198d73992a9d' },
-    { id: 'com.hadabadra.tahorat-kohanim', name: 'טהרת כהנים', glyph: 'כ', desc: 'אזורים אסורים לכהנים, מפות, חוברות וטיסות', layers: ['אזורים אסורים לכהנים'], store: 'https://otzaria.org/plugins' }];
+    { id: 'com.hadabadra.tahorat-kohanim', name: 'טהרת כהנים', glyph: 'כ', desc: 'אזורים אסורים לכהנים, מפות, חוברות וטיסות', layers: ['אזורים אסורים לכהנים'], store: 'https://otzaria.org/plugins/6af5c07506096e8fb9b1aaa1' }];
   try { const P = window.MapUI && window.MapUI.PLUGINS; if (P) SIBLINGS.forEach(x => { if (!P.some(p => p.id === x.id)) P.push(x); }); } catch (e) {}
   // אחראי נוסף שנמסר על ידי מפתח התוסף (לא מהמוקד הארצי): ועד העירובים השכונתיים בבני ברק
   // קישורים מהאתר של העירוב עצמו, לפי דיווח משתמש (#10 — פסגת זאב מרכז). מוצגים רק כשאוצריא מחוברת.
