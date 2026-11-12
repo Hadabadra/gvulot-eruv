@@ -1,6 +1,13 @@
 # גבולות עירוב — מצב (12.11.2026)
 
-**הגרסה: 2.1.0 יציבה (stable). מושהה עד ~מאי 2027.** אין issues או PRs פתוחים.
+**הגרסה: 2.2.0 יציבה (stable). מושהה עד ~מאי 2027.** אין issues או PRs פתוחים.
+
+## מ-2.2.0: שני תוספים, ממשק אחד
+- במאגר גם **טהרת כהנים** (`kohanim/`, id `com.hadabadra.tahorat-kohanim`) — מצב ותכנון ב-`kohanim-docs/STATUS.md`.
+- **הממשק נכתב פעם אחת ב-`gvulot-eruv/`** (index.html, app.js, app.css, bridge, i18n, המפה, pdfjs, shared). `tools/sync-ui.sh` מעתיק אותו ל-`kohanim/` (ב-CI, ואפשר ידנית); שם הוא ב-.gitignore. **לא עורכים ממשק בתוך kohanim/.**
+- מה שונה בין התוספים נמצא ב-`site.js` של כל תוסף (`window.SITE`): שם, טקסטים (`text`), טקסטים ב-HTML (`dom`), רשימות (hospitals/orgs/sources/openTasks/changelog), שכבות מפה (`layers`), בדיקת כתובת (`insideMsg`), תצוגות (`views`, `rail`), אודות ומידע הלכתי. בלי הגדרה — ברירת המחדל ב-app.js היא של העירוב.
+- **כל גרסה לשניהם:** version זהה בשני ה-manifest (CI נכשל אחרת) וב-`version` של שני ה-site.js. `eruv-release.yml` אורז את שניהם, Release אחד עם שני הקבצים, ופרסום לחנות של שניהם (matrix). העדכון השבועי (`auto_update.py`) מעלה גרסה לשניהם.
+- רכיב משותף חדש: `SIBLINGS` ב-app.js מוסיף כל תוסף לתפריט השכבות של המפה של השני (`MapUI.PLUGINS`), וכפתור `data-plugin` פותח אותו (`plugin.openOther`, ואם אינו מותקן — דף החנות).
 
 - מאגר: Hadabadra/gvulot-eruv, ענף main. דחיפה ל-main עם גרסה חדשה ב-`gvulot-eruv/manifest.json` → CI אורז (`gvulot-eruv-build/pack.py`), יוצר Release ומפרסם לחנות (`.github/workflows/eruv-release.yml`, סודות OTZARIA_USER/PASSWORD).
 - הקוד המשותף (מפה, רחובות, דיווח קריסה, המלצה) מגיע מ-Hadabadra/Mikvaot `shared/` — ה-CI מוריד אותו לפני האריזה (`tools/sync-shared.sh`). מתקנים שם בלבד.
@@ -30,6 +37,6 @@
 - קווי עירוב אמיתיים מעבר לפיילוט (קרית אתא, חדרה): אין מקור וקטורי; שכבת GovMap דורשת הרצה מישראל.
 - מפות בית שמש (#4, #8 ישנים) ודירוג רמות העירוב — ממתינים למוקד (`MOKED-REQUEST.md`).
 - בקשת allowlist ל-hiruv.com באוצריא — הטקסט ב-`OTZARIA-ALLOWLIST-ISSUE.md`, להגשה על ידה.
-- מפות טהרת כהנים בתוך התוסף — ממתין לאישור ולקבצים מהתאחדות טהרת הכהנים (טיוטת מייל מוכנה).
+- (נסגר ב-2.2.0) מפות טהרת כהנים — עברו לתוסף נפרד "טהרת כהנים".
 - ערים נוספות מהמועצות הדתיות — רק טלפונים/קישורים; מפות בתוך התוסף רק באישור המועצה.
 - מספרי בתים במצב לא מקוון; מפות לא מקוונות מלאות (PLAN §6); שאלת קישור ל-MapsOffline; האם לאחד עם מקוואות (ההחלטה שלה).

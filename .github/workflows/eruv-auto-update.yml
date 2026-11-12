@@ -35,7 +35,7 @@ jobs:
         run: |
           git config user.name "Claude"
           git config user.email "noreply@anthropic.com"
-          git add -A gvulot-eruv gvulot-eruv-build/sources.lock.json README.md
+          git add -A gvulot-eruv kohanim/manifest.json kohanim/site.js gvulot-eruv-build/sources.lock.json README.md
           if git diff --cached --quiet; then echo "אין שינוי"; exit 0; fi
           msg="עדכון אוטומטי מהמקורות"
           [ "${{ steps.upd.outputs.changed }}" = baseline ] && msg="עדכון אוטומטי: מצב בסיס של המקורות"
@@ -46,10 +46,12 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          v="${{ steps.upd.outputs.version }}"; tag="gvulot-eruv-v$v"; file="gvulot-eruv-$v.otzplugin"
+          v="${{ steps.upd.outputs.version }}"; tag="gvulot-eruv-v$v"; file="gvulot-eruv-$v.otzplugin"; file2="tahorat-kohanim-$v.otzplugin"
+          bash tools/sync-shared.sh && bash tools/sync-ui.sh   # 2.2.0: גרסה משותפת — גם טהרת כהנים נארזת
           python3 gvulot-eruv-build/pack.py gvulot-eruv "$file"
-          size=$(stat -c %s "$file"); echo "size=$size"
-          if [ "$size" -gt 52428800 ]; then echo "::error::החבילה מעל 50MB — לא מוציאים גרסה"; exit 1; fi
+          python3 gvulot-eruv-build/pack.py kohanim "$file2"
+          for f in "$file" "$file2"; do size=$(stat -c %s "$f"); echo "$f size=$size"
+            if [ "$size" -gt 52428800 ]; then echo "::error::$f מעל 50MB — לא מוציאים גרסה"; exit 1; fi; done
           awk -v h="## מה חדש ב-$v" 'index($0,h)==1{f=1;next} /^## /{if(f)exit} f' README.md > notes.md
           printf '\n### התקנה\nבאוצריא: כלים ← תוספים ← התקן תוסף חדש, ובחירת הקובץ.\n' >> notes.md
-          gh release create "$tag" "$file" --target "$(git rev-parse HEAD)" --title "גבולות עירוב $v" --notes-file notes.md --prerelease
+          gh release create "$tag" "$file" "$file2" --target "$(git rev-parse HEAD)" --title "גבולות עירוב + טהרת כהנים $v" --notes-file notes.md --prerelease

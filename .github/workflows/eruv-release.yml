@@ -1,7 +1,8 @@
-name: גבולות עירוב — Release
+name: גבולות עירוב + טהרת כהנים — Release
 
-# יוצר GitHub Release לכל גרסה חדשה (לפי version ב-manifest), עם קובץ ה-.otzplugin ותיאור מתוך README.
-# האריזה נעשית כאן ב-CI (החבילה כ-70MB, ולכן היא לא נשמרת ב-git).
+# 2.2.0: שני תוספים באותו מאגר ובאותו ממשק — גבולות עירוב (gvulot-eruv/) וטהרת כהנים (kohanim/).
+# כל גרסה (version ב-manifest, זהה בשניהם) יוצאת לשניהם באותו push: Release אחד עם שני קובצי .otzplugin, ופרסום של שניהם לחנות.
+# האריזה נעשית כאן ב-CI (החבילות כ-45MB כל אחת, ולכן לא נשמרות ב-git). הממשק של טהרת כהנים מועתק מ-gvulot-eruv/ (tools/sync-ui.sh).
 on:
   push:
     branches: [main]
@@ -15,34 +16,53 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Sync shared map (Mikvaot/shared)
-        run: bash tools/sync-shared.sh
+      - name: Sync shared map (Mikvaot/shared) + shared UI
+        run: bash tools/sync-shared.sh && bash tools/sync-ui.sh
+      - name: Same version in both plugins
+        run: |
+          a="$(node -p "require('./gvulot-eruv/manifest.json').version")"; b="$(node -p "require('./kohanim/manifest.json').version")"
+          if [ "$a" != "$b" ]; then echo "::error::גרסאות שונות: גבולות עירוב $a, טהרת כהנים $b — כל גרסה יוצאת לשניהם"; exit 1; fi
       - name: Pack
         run: |
           v="$(node -p "require('./gvulot-eruv/manifest.json').version")"
-          python3 gvulot-eruv-build/pack.py gvulot-eruv "gvulot-eruv-$v.otzplugin"
-          ls -la "gvulot-eruv-$v.otzplugin"
+          for p in gvulot-eruv:gvulot-eruv kohanim:tahorat-kohanim; do
+            d="${p%%:*}"; n="${p##*:}"
+            python3 gvulot-eruv-build/pack.py "$d" "$n-$v.otzplugin"
+            s=$(stat -c %s "$n-$v.otzplugin"); echo "$n: $s bytes"
+            if [ "$s" -gt 52428800 ]; then echo "::error::$n מעל 50MB"; exit 1; fi
+          done
       - name: Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           v="$(node -p "require('./gvulot-eruv/manifest.json').version")"
-          tag="gvulot-eruv-v$v"; file="gvulot-eruv-$v.otzplugin"
+          tag="gvulot-eruv-v$v"
           if gh release view "$tag" >/dev/null 2>&1; then echo "Release $tag כבר קיים"; exit 0; fi
           awk -v h="## מה חדש ב-$v" 'index($0,h)==1{f=1;next} /^## /{if(f)exit} f' README.md > notes.md
-          printf '\n### התקנה\nבאוצריא: כלים ← תוספים ← התקן תוסף חדש, ובחירת הקובץ.\n' >> notes.md
-          gh release create "$tag" "$file" --target "$GITHUB_SHA" --title "גבולות עירוב $v" --notes-file notes.md
+          printf '\n### התקנה\nבאוצריא: כלים ← תוספים ← התקן תוסף חדש, ובחירת הקובץ.\n- `gvulot-eruv-%s.otzplugin` — גבולות עירוב\n- `tahorat-kohanim-%s.otzplugin` — טהרת כהנים\n' "$v" "$v" >> notes.md
+          gh release create "$tag" "gvulot-eruv-$v.otzplugin" "tahorat-kohanim-$v.otzplugin" --target "$GITHUB_SHA" --title "גבולות עירוב + טהרת כהנים $v" --notes-file notes.md
 
-  # פרסום לחנות התוספים של אוצריא (נדרשים הסודות OTZARIA_USER ו-OTZARIA_PASSWORD).
+  # פרסום לחנות התוספים של אוצריא — שני התוספים (נדרשים הסודות OTZARIA_USER ו-OTZARIA_PASSWORD).
+  # לטהרת כהנים: צילומי מסך והסכמה לקבלת דיווחים — חובה בפרסום הראשון של תוסף חדש (בעדכונים לא נשלחים שוב).
   store:
     needs: release
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - path: gvulot-eruv
+            screenshots: ''
+          - path: kohanim
+            screenshots: kohanim-docs/screenshot.png,kohanim-docs/screenshot-city.png,kohanim-docs/screenshot-flights.png
     steps:
       - uses: actions/checkout@v4
-      - name: Sync shared map (Mikvaot/shared)
-        run: bash tools/sync-shared.sh
+      - name: Sync shared map (Mikvaot/shared) + shared UI
+        run: bash tools/sync-shared.sh && bash tools/sync-ui.sh
       - uses: Otzaria/otzaria-plugin-validator@v1
         with:
-          path: gvulot-eruv
+          path: ${{ matrix.path }}
           otzaria-user: ${{ secrets.OTZARIA_USER }}
           otzaria-password: ${{ secrets.OTZARIA_PASSWORD }}
+          screenshots: ${{ matrix.screenshots }}
+          reports-consent: 'true'
