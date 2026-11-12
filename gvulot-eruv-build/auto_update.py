@@ -73,20 +73,29 @@ def fingerprint(with_extra):
 
 
 def bump(changed_parts):
+    # 2.2.0: גרסה משותפת לשני התוספים במאגר (גבולות עירוב + טהרת כהנים) — כל גרסה יוצאת לשניהם
     mf = os.path.join(PLUG, "manifest.json")
     m = json.load(open(mf))
     a, b, c = map(int, m["version"].split("."))
     v = f"{a}.{b}.{c + 1}"
-    m["version"] = v
-    json.dump(m, open(mf, "w"), ensure_ascii=False, indent=2)
-    open(mf, "a").write("\n")
+    for d in (PLUG, os.path.join(ROOT, "kohanim")):
+        f = os.path.join(d, "manifest.json")
+        if not os.path.exists(f): continue
+        mm = json.load(open(f)); mm["version"] = v
+        json.dump(mm, open(f, "w"), ensure_ascii=False, indent=2); open(f, "a").write("\n")
+        sj = os.path.join(d, "site.js")
+        if os.path.exists(sj):
+            t = re.sub(r"version: '[^']+'", f"version: '{v}'", open(sj).read(), count=1)
+            if d != PLUG:
+                t = t.replace("    changelog: [", f"    changelog: [['{v}', ['גרסה משותפת עם גבולות עירוב (עדכון אוטומטי של מקורות העירוב) — בלי שינוי בתוכן של טהרת כהנים.']], ", 1)
+            open(sj, "w").write(t)
     he = {"maps": "מפות", "areas": "רשימת האחראים", "library": "ספריית העירובין", "abroad": 'עירובין בחו"ל'}
     what = ", ".join(he[k] for k in changed_parts if k in he)
     line = f"עדכון אוטומטי מהמקורות ({datetime.date.today().isoformat()}): {what}"
     app = os.path.join(PLUG, "app.js")
     s = open(app).read()
-    s = re.sub(r"const VERSION = '[^']+';", f"const VERSION = '{v}';", s)
-    s = s.replace("  const CHANGELOG = [\n", f"  const CHANGELOG = [\n    ['{v}', ['{line}']],\n", 1)
+    s = re.sub(r"const VERSION = pick\('version', '[^']+'\);", f"const VERSION = pick('version', '{v}');", s)
+    s = s.replace("  const CHANGELOG = S.changelog ? S.changelog : [\n", f"  const CHANGELOG = S.changelog ? S.changelog : [\n    ['{v}', ['{line}']],\n", 1)
     open(app, "w").write(s)
     rd = os.path.join(ROOT, "README.md")
     r = open(rd).read()

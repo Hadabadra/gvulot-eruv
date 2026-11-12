@@ -1,0 +1,13 @@
+# קבצי הממשק — מועתקים מ-gvulot-eruv/ ע"י tools/sync-ui.sh (לא לערוך כאן)
+index.html
+app.css
+app.js
+bridge.js
+i18n.js
+map-core.js
+map-ui.js
+world-basemap.js
+streets-cities.js
+streets/
+pdfjs/
+shared/
