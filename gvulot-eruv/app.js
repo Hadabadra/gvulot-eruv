@@ -226,6 +226,15 @@
     saveT = setTimeout(() => call('plugin.setRestoreState', { state: { view: state.view, city: state.city, abroadC: state.abroadC, tab: state.tab } }), 400);
   }
 
+  // 2.1.0: מחלקות עירוב של מועצות דתיות בערים שאין להן מפה ממוקד העירוב (מאתרי המועצות, נבדק 12.11.2026)
+  const COUNCIL_ERUV = [
+    { city: 'אשקלון', name: 'המועצה הדתית — מחלקת עירוב ושבת', what: 'לפי המועצה: העירוב כולל את כל שכונות העיר (גם אגמים, עיר היין, עיר ימים), המרינה והטיילת — בלי החולות והים; נבדק כל שבוע לפני שבת. ראש המחלקה: הרב שאול עופר', phone: '08-6714401', phone2: '050-7373778', url: 'https://www.mdas.org.il/%D7%9E%D7%97%D7%9C%D7%A7%D7%95%D7%AA-%D7%94%D7%9E%D7%95%D7%A2%D7%A6%D7%94/%D7%9E%D7%97%D7%9C%D7%A7%D7%AA-%D7%A2%D7%99%D7%A8%D7%95%D7%91/', src: 'אתר המועצה הדתית אשקלון' },
+    { city: 'תל אביב–יפו', name: 'המועצה הדתית — מחלקת שבת ועירובין', what: 'מפת קו העירוב ומפת GIS באתר המועצה. מפקח עירובין: שלום הורן', phone: '03-6938989', phone2: '054-8473268', url: 'https://rabanut.co.il/department/%D7%9E%D7%97%D7%9C%D7%A7%D7%AA-%D7%A9%D7%91%D7%AA-%D7%95%D7%A2%D7%99%D7%A8%D7%95%D7%91%D7%99%D7%9F/', src: 'אתר המועצה הדתית תל אביב–יפו' },
+    { city: 'מבשרת ציון', name: 'המועצה הדתית — שבת ועירובין', what: 'סטטוס עירוב שבועי ומפת עירוב עדכנית באתר; הקו שונה בשנת תשפ"ו עקב עבודות תשתית', phone: '02-5342860', url: 'https://mevaseret.md.gov.il/home/irov-shabat', src: 'אתר המועצה הדתית מבשרת ציון' },
+    { city: 'אזור', name: 'המועצה הדתית — עירוב', what: 'העירוב בפיקוח הרב יצחק אהרון; פניות ודיווח על תקלות בימים א׳–ו׳ 08:00–13:00', phone: '03-5507950', phone2: '054-8453396', url: 'https://azor.muni.il/%D7%A9%D7%91%D7%AA-%D7%95%D7%A2%D7%99%D7%A8%D7%95%D7%91/', src: 'אתר המועצה המקומית אזור' },
+    { city: 'נס ציונה', name: 'המועצה הדתית — שבת ועירובין', what: 'מעקב אחרי העירוב בעיר', phone: '077-5020046', url: 'https://www.moatzanz.co.il/%D7%A9%D7%99%D7%A8%D7%95%D7%AA%D7%99-%D7%94%D7%9E%D7%95%D7%A2%D7%A6%D7%94/%D7%A9%D7%91%D7%AA-%D7%95%D7%A2%D7%99%D7%A8%D7%95%D7%91%D7%99%D7%9F/', src: 'אתר המועצה הדתית נס ציונה' },
+    { city: 'חריש', name: 'העירייה — המחלקה לשירותי דת', what: 'לפי חוברת המידע של העירייה: קו העירוב מקיף את כל השכונות (החורש, אבני חן, הפרחים, מעו"ף ובצוותא) ונבדק בכל יום שישי', phone: '', url: 'https://digitaler.cld.bz/harish28', src: 'חוברת המידע לתושבי חריש' }
+  ];
   function homeView() {
     const card = c => {
       const n = byCity.get(c); const m = n.maps[0];
@@ -248,6 +257,10 @@
         <div class="row-links"><button class="btn text" data-view="docs">${ICON.book} כל מאמרי התחום והספרייה</button>
         <button class="btn text" data-view="abroad">${ICON.globe} עירובין בחו"ל</button>
         <button class="btn text" data-view="hosps">${ICON.hospital} בתי חולים</button></div>` : ''}
+      <div class="section-title">עירובין בערים נוספות — מידע רשמי מהמועצות הדתיות</div>
+      <p class="fine">לא מטעם מוקד העירוב. הפרטים כפי שפורסמו באתר הרשמי של כל מועצה; לפני שבת יש לוודא מול האחראי המקומי ולשאול רב.</p>
+      <div class="contacts">${COUNCIL_ERUV.map(o => `<div class="contact"><div class="who"><b>${esc(o.city)} — ${esc(o.name)}</b><small>${esc(o.what)}</small><small>מקור: ${esc(o.src)}</small></div>
+        ${o.phone ? telChip(o.phone) : ''}${o.phone2 ? telChip(o.phone2) : ''}${o.url ? `<button class="chip" data-url="${esc(o.url)}">${ICON.link}אתר</button>` : ''}</div>`).join('')}</div>
       ${sourceCard()}</div>`;
   }
 
@@ -422,8 +435,11 @@
     { name: 'מוקד העירוב', what: 'מענה הלכתי בענייני עירוב, מפות ואחראים · a83320@gmail.com', phone: '054-8483320', url: 'http://hiruv.com/%D7%99%D7%A6%D7%99%D7%A8%D7%AA-%D7%A7%D7%A9%D7%A8/', src: 'דף יצירת קשר באתר מוקד העירוב' },
     { name: 'Chicago Mitzvah Campaign (שיקגו)', what: 'ליווי רבני וחדרי אירוח לשבת בבתי החולים באזור שיקגו', phone: '1-866-697-2224', url: 'https://chicagomitzvahcampaign.org/in-hospital-patient-services/', src: 'אתר הארגון' },
     { name: 'מועצת הרבנים של שיקגו (cRc) — עירובין', what: 'רשימת העירובין באזור שיקגו וקווי הסטטוס', phone: '847-677-3788', url: 'https://crcweb.org/guide_chicago.php', src: 'אתר cRc (הקו של לינקולנווד–פיטרסון פארק)' },
-    { name: 'ערבתם', what: 'מידע על עירובין', phone: '072-2722909', url: '', src: 'לפי דיווח משתמש (#13) — לא אומת מול אתר הארגון' },
+    { name: 'ערבתם', what: 'עירובי תחומין ותחום שבת: מענה הלכתי טלפוני של רבני הוועד (א׳–ה׳ 14:00–14:30 ו-19:30–21:00), וסידור עירוב תחומין למי שמבקש', phone: '072-2722909', url: '', src: 'עלון "ערבתם" ואתר עירוב כהלכה; דיווח משתמש (#13)' },
+    { name: 'עירוב כהלכה', what: 'מאגר עירובין בארץ: רמת העירוב, מפות גבולות ותחום שבת לפי יישוב', phone: '02-6664977', url: 'https://eruv.org.il/cities/', src: 'אתר עירוב כהלכה (eruv.org.il)' },
     { name: 'ערבתם — עירובין שכונתיים בני ברק', what: 'קו המידע לעירובין השכונתיים בבני ברק', phone: '03-3065765', url: '', src: 'לפי דיווח משתמש (#13) — לא אומת מול אתר הארגון' },
+    { name: 'אתרים שומרי שבת', what: 'קו מידע על אתרים שומרי שבת (לא עניין של עירוב — לנוחות)', phone: '079-6970060', url: '', src: 'לפי דיווח משתמש (#13)' },
+    { name: 'התאחדות טהרת הכהנים', what: 'טהרת כהנים: קו מידע (שלוחה * — בית ההוראה, פרטי בתי חולים; 9 ואז 6 — הרשמה לעדכונים). מפות מירון, צפת, חיפה והר הזיתים נשלחות במייל a083132020@gmail.com', phone: '08-3132020', url: 'https://hakohanim.org/', src: 'אתר הארגון (hakohanim.org), 12.11.2026' },
     { name: 'עזר מציון — סניף ראשי', what: 'בחוברת "דרך התחומין" מוזכר שהאגודה מניחה עירוב תחומין ציבורי', phone: '03-6144444', url: 'https://www.ami.org.il/', src: 'אתר עזר מציון' }
   ];
   // מקורות רשמיים נוספים: עמודי שירותי דת של בתי חולים שעוד לא פורטו כאן (קישור בלבד)
@@ -443,6 +459,17 @@
     return `<div class="contact"><div class="who"><b>${esc(c.name || c.role)}</b>${c.name ? `<small>${esc(c.role)}</small>` : ''}${c.note ? `<small>${esc(c.note)}</small>` : ''}</div>
       ${c.phone ? telChip(c.phone) : ''}${c.phone2 ? telChip(c.phone2) : ''}${c.email ? `<button class="chip" data-phone="${esc(c.email)}" title="העתקה">${ICON.mail}${esc(c.email)}</button>` : ''}</div>`;
   }
+  // 2.1.0 (#16): טהרת כהנים — קישורים רשמיים של התאחדות טהרת הכהנים (hakohanim.org)
+  const KOHANIM = [
+    ['המדריך לכהנים המעודכן', 'https://drive.google.com/file/d/1O2saqog7g8h62acP9C3ZvTD9j1uq4Z-N/view'],
+    ['מפות, קונטרסים ועוד (תיקייה)', 'https://drive.google.com/drive/folders/1I4LBIeZRHuUfdAwT8WDYJa-24R5sF7Bs'],
+    ['מידע לבין הזמנים (כולל מפת טבריה)', 'https://drive.google.com/file/d/1YXdYJz2ukAwMGB0nqzCk4h5_gYZReHAX/view'],
+    ['מידע על בתי חולים', 'https://drive.google.com/file/d/1DKtT0QXYM4fO04wZUrvfvBxEBeINu3Yn/view'],
+    ['ניווט לכהנים (אתר)', 'https://gps.hakohanim.org/'],
+    ['ניווט לכהנים (אנדרואיד)', 'https://play.google.com/store/apps/details?id=gps.hakohanim.org'],
+    ['מידע על טיסות', 'https://flights.hakohanim.org/'],
+    ['אתר המדריך לכהנים', 'https://hakohanim.org/']
+  ];
   function hospView(h) {
     if (!h) return hospsView();
     const doc = h.doc && docById.get(h.doc);
@@ -468,6 +495,9 @@
       <div class="section-title">ארגונים</div>
       <div class="contacts">${ORGS.map(o => `<div class="contact"><div class="who"><b>${esc(o.name)}</b><small>${esc(o.what)}</small><small>מקור: ${esc(o.src)}</small></div>
         ${telChip(o.phone)}${o.url ? `<button class="chip" data-url="${esc(o.url)}">${ICON.link}אתר</button>` : ''}</div>`).join('')}</div>
+      <div class="section-title">טהרת כהנים — מדריכים ומפות (התאחדות טהרת הכהנים)</div>
+      <div class="lib">${KOHANIM.map(x => `<button class="chip" data-url="${esc(x[1])}">${ICON.link}${esc(x[0])}</button>`).join('')}</div>
+      <p class="fine">החומרים באתר הארגון ובתיקיית Google Drive שלו (נפתחים בדפדפן כשיש אינטרנט). מפות מירון, צפת, חיפה והר הזיתים — במייל a083132020@gmail.com. כשיתקבל אישור הארגון — המפות ייכנסו לתוך התוסף.</p>
       <div class="section-title">בתי חולים נוספים — עמודי שירותי הדת הרשמיים</div>
       <div class="lib">${MORE_SOURCES.map(x => `<button class="chip" data-url="${esc(x[1])}">${ICON.link}${esc(x[0])}</button>`).join('')}</div>
       <p class="fine">${esc(HOSP_EZER)}</p></div>`;
@@ -1042,15 +1072,27 @@
   // שם רשמי / כינוי נוסף לפי דיווח משתמש (#15): "חזון יחזקאל" = היישוב אלומה, סמוך לקוממיות ובתחומו
   const CITY_AKA = { 'חזון יחזקאל': 'אלומה · סמוך לקוממיות (לפי דיווח משתמש)' };
   const km = (a, b) => { const r = Math.PI / 180, x = (b[1] - a[1]) * r * Math.cos((a[0] + b[0]) * r / 2), y = (b[0] - a[0]) * r; return Math.hypot(x, y) * 6371; };
+  // 2.1.0: כשאין גשר "אחת שאלתי" — העיר שנבחרה בלוח השנה של אוצריא (הגדרות ← לוח שנה)
+  async function calendarCityPos() {
+    try {
+      const s = await call('settings.get', { key: 'key-selected-city' });
+      const name = s && s.success && typeof s.data === 'string' ? s.data : '';
+      if (!name) return null;
+      const r = await call('calendar.getCities');
+      const c = (r && r.success && Array.isArray(r.data) ? r.data : []).find(x => x.name === name);
+      return c && c.lat != null ? { name, lat: +c.lat, lon: +(c.lng != null ? c.lng : c.lon) } : null;
+    } catch (e) { return null; }
+  }
   async function locateMe() {
     toast('מאתר מיקום…');
     let p = null, how = '';
     try { if (window.ERUV_BRIDGE && await ERUV_BRIDGE.available()) { const d = await ERUV_BRIDGE.location(); p = [+d.lat, +d.lon]; how = 'מ-Windows'; } } catch (e) {}
+    if (!p) { const cc = await calendarCityPos(); if (cc) { p = [cc.lat, cc.lon]; how = 'לפי העיר בלוח השנה (' + cc.name + ')'; } }
     if (!p && navigator.geolocation) {
       p = await new Promise(res => navigator.geolocation.getCurrentPosition(g => res([g.coords.latitude, g.coords.longitude]), () => res(null), { timeout: 12000, maximumAge: 300000 }));
       how = 'מהמכשיר';
     }
-    if (!p) { toast('לא ניתן לזהות מיקום. התקינו את הגשר "אחת שאלתי" או בחרו עיר מהרשימה'); return; }
+    if (!p) { toast('לא ניתן לזהות מיקום. התקינו את הגשר "אחת שאלתי", בחרו עיר בלוח השנה של אוצריא, או בחרו עיר מהרשימה'); return; }
     const best = Object.keys(CITY_POS).filter(c => byCity.has(c)).map(c => [c, km(p, CITY_POS[c])]).sort((a, b) => a[1] - b[1])[0];
     if (!best || best[1] > 25) { toast('אין עירוב במאגר בקרבת המיקום (העיר הקרובה: ' + (best ? best[0] + ', ' + Math.round(best[1]) + ' ק"מ' : '—') + ')'); return; }
     goCity(best[0]); toast('מיקום ' + how + ': ' + best[0] + (best[1] > 3 ? ' (כ-' + Math.round(best[1]) + ' ק"מ)' : ''));
@@ -1069,6 +1111,7 @@
     return L && L.resp ? `<h2>לבירורים (לפי המפה)</h2><p>${esc(L.resp)}</p>` : `<p>האחראים המלאים של ${esc(m.city)} — בתוסף, בדף העיר.</p>`;
   };
   const CHANGELOG = [
+    ['2.1.0', ["#16 טהרת כהנים: התאחדות טהרת הכהנים בעמוד בתי החולים — קו המידע, המדריך לכהנים, תיקיית המפות, ניווט וטיסות (קישורים כשיש אינטרנט). המפות עצמן ייכנסו לתוסף אחרי אישור הארגון.", "עירובין בערים נוספות לפי המועצות הדתיות: אשקלון, תל אביב–יפו, מבשרת ציון, אזור, נס ציונה וחריש (טלפונים, אחראים וקישור למפה הרשמית).", "ארגונים: \"ערבתם\" (עירובי תחומין ותחום שבת, עם שעות המענה), \"עירוב כהלכה\", ו\"אתרים שומרי שבת\" (#13).", "סמלי סרגל חדשים וברורים, עם תווית מתחת לכל סמל.", "\"המיקום שלי\" בלי הגשר \"אחת שאלתי\": לפי העיר שנבחרה בלוח השנה של אוצריא.", "אימות המקורות: מפות מוקד העירוב והאחראים נבדקו מחדש ללא שינוי; ספר חדש בספריית המוקד; עירובין בחו\"ל עודכנו."]],
     ['2.0.0', ["גרסה יציבה (2.0.0). הפיתוח מושהה עד כמאי 2027 — הנושאים הפתוחים ב-gvulot-eruv-docs/STATUS.md.", "הכל בתוך התוסף: אין צורך באינטרנט מלבד ההורדה.", "חזון יחזקאל = היישוב אלומה, סמוך לקוממיות: מופיע בחיפוש ובכותרת העיר, ונקודה במפה (#15).", "מפת \"העירובים השכונתיים בכל העיר\" של ירושלים ברזולוציה גבוהה — חדה בהגדלה (#14).", "ברשימת הארגונים: \"ערבתם\" ומספר העירובין השכונתיים בבני ברק, לפי דיווח משתמש (#13). סמל \"תחום שבת וחוברות\" בסרגל הוחלף לסמל מסמך.", "דיווח קריסה 1.1.0: הצעה אחת בלבד בכל הפעלה, ומתג \"הצעת דיווח קריסה\" באודות.", "המלצה על \"אחת שאלתי\" 1.4.0 מהמקור המשותף: מזהה שהוא מותקן גם כשהגשר כבוי.", "אחרי שמירת חוברת כ-PDF — כפתור \"הדפסה\" שפותח את מסך ההדפסה של אוצריא (ui.printFile)."]],
     ['1.9.0', ["קווי עירוב על המפה (פיילוט): קרית אתא — שכונת שביט, וחדרה — שכונות שלמה, קלרין ופאר. השכבה \"קווי עירוב (בקירוב — לפי מפת המוקד)\" משורטטת מתוך מפות המוקד, עם המפה המקורית והאחראי. קירוב בלבד — הקובע הוא המפה והאחראי.", "בדיקת כתובת: אחרי חיפוש כתובת במפה מוצג אם היא בתוך קו העירוב, על הגבול או מחוצה לו (בערים שיש להן קו).", "במציג המפה: כפתור \"קו העירוב בקירוב במפה\" ושורת \"לבירורים לפי המפה\" כשאין אחראים משויכים.", "עט לשרטוט ידני: סרגל קטן — קו או שטח, ביטול נקודה (Ctrl+Z), ניקוי, 5 צבעים ושמירה (Enter). נשמר כשכבה שנטענת לבד וכקובץ GeoJSON.", "אודות: רמות 2–4 בוצעו חלקית; קו שהמפה שלו התחלפה אצל המוקד יורד אוטומטית בעדכון השבועי.", "הדפסה: קישורים לחיצים לחנות התוספים ול-GitHub, והאחראים של המפה מודפסים יחד איתה.", "סמלים מונוכרום שתואמים לתוכן (מועדף, אימייל, קישור חיצוני, בית חולים, הוספת מפה, מקורות).", "כפתור \"חיפוש עירוב\" בתוך שדות החיפוש של אוצריא (מ-0.9.98.3), מופיע כשיש טקסט.", "תיקון: מפת \"מעלות דפנה והסביבה\" לא נפתחה במציג (#12). השכבה ששורטטה נטענת לבד (#11).", "החוברות \"דרך התחומין\" נדחסו מעט בלי שינוי באיכות. דורש אוצריא 0.9.98.3 ומעלה."]],
     ['1.8.0', ["מפה משותפת 3.0: מצבי תצוגה מפה · סביבה קרובה · רחובות · כדור, ו\"סגנון המפה\" בתפריט השכבות (צבעוני כמו עינים למקרא, ארצות בצבעים, חום-לבן).", "באודות: קישור לשרשור הדיווחים בפורום אוצריא.", "המלצה על \"אחת שאלתי\" 1.2.0."]],
@@ -1115,7 +1158,7 @@
     if (r.success) { $('#fbText').value = ''; toast(r.data === 'queued' ? 'התגובה תישלח כשיהיה חיבור' : 'התגובה נשלחה, תודה!'); }
     else toast('השליחה זמינה בתוך אוצריא');
   }
-  const VERSION = '2.0.0';
+  const VERSION = '2.1.0';
 
   // ── אודות ───────────────────────────────────────────────────
   function openHalacha() {

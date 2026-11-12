@@ -1,7 +1,7 @@
 {
   "id": "com.hadabadra.gvulot-eruv",
   "name": "גבולות עירוב",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "מפות העירובים והאחראים, תחום שבת, חוברות \"דרך התחומין\" ועירובין בחו\"ל — מתוך מוקד העירוב ובאישורו. הכל בתוך התוסף, בלי אינטרנט מלבד ההורדה.",
   "author": "לזש\"ק לרמב\"ר ומבק\"י",
   "schemaVersion": 1,
@@ -28,7 +28,9 @@
     "navigation.write",
     "plugin.open_other",
     "network.access",
-    "search.field_actions"
+    "search.field_actions",
+    "settings.read",
+    "calendar.read"
   ],
   "network": {
     "enabled": true,

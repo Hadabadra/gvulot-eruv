@@ -48,7 +48,9 @@ def parse():
     cats = {c["id"]: c for c in ix["cats"]}
     out = []
     for x in ix["listings"]:
-        p = open(os.path.join(DIR, f"{x['id']}.html"), encoding="utf-8", errors="replace").read()
+        fn = os.path.join(DIR, f"{x['id']}.html")
+        if not os.path.exists(fn): print("חסר דף", x["id"], "— מדלגים", file=sys.stderr); continue
+        p = open(fn, encoding="utf-8", errors="replace").read()
         f = {}
         for m in FIELD.finditer(p):
             key, val = m.group(1), m.group(3)

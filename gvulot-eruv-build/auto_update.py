@@ -47,9 +47,11 @@ def fetch_sources():
         m = re.search(r'<a[^>]+href="(http://hiruv\.com/[^"]+)"[^>]*>\s*(?:<[^>]+>\s*)*' + re.escape(label), home)
         if m:
             open(os.path.join(RAW, fn), "w").write(get(m.group(1)))
-        else:
+        elif fn == "books1.html":
             have_books = False
             print("לא נמצא דף", label, "— הספרייה לא תתעדכן", file=sys.stderr)
+        else:
+            print("לא נמצא דף", label, "(הוסר מהאתר ב-11.2026) — נשמרת הרשימה הקודמת", file=sys.stderr)
     wiki = get(WIKI)
     if len(wiki) > 5000:
         open(os.path.join(RAW, "wiki-eruvin.txt"), "w").write(wiki)
@@ -62,8 +64,9 @@ def fingerprint(with_extra):
     fp = {"maps": sha([[p["url"], p["title"], sorted(p["images"])] for p in idx]), "areas": sha(resp),
           "n_pages": len(idx), "n_areas": len(resp)}
     if with_extra:
+        b2 = os.path.join(RAW, "books2.html")
         books = "".join(sorted(re.findall(r'href="([^"]+\.pdf)"', open(os.path.join(RAW, "books1.html")).read()
-                                          + open(os.path.join(RAW, "books2.html")).read())))
+                                          + (open(b2).read() if os.path.exists(b2) else ""))))
         fp["library"] = sha(books)
         fp["abroad"] = sha(open(os.path.join(RAW, "wiki-eruvin.txt")).read())
     return fp

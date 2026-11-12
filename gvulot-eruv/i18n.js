@@ -6,7 +6,7 @@
     // מסגרת וכפתורים
     'גבולות עירוב': 'Eruv Borders', 'כל הארץ': 'All Israel', 'ישראל': 'Israel', 'חו"ל': 'Abroad', 'בתי חולים': 'Hospitals',
     'ערים': 'Cities', 'ארצות': 'Countries', 'חיפוש': 'Search', 'כל הערים': 'All cities', 'המיקום שלי': 'My location',
-    'אודות': 'About', 'מידע הלכתי': 'Halachic info', 'תחום שבת וחוברות': 'Techum & booklets', 'ניווט ראשי': 'Main navigation',
+    'אודות': 'About', 'מיקום': 'Location', 'הדפסה': 'Print', 'הלכות': 'Halacha', 'מידע הלכתי': 'Halachic info', 'תחום שבת וחוברות': 'Techum & booklets', 'ניווט ראשי': 'Main navigation',
     'סגירה': 'Close', 'הגדלה': 'Zoom in', 'הקטנה': 'Zoom out', 'התאמה למסך': 'Fit', 'סיבוב': 'Rotate', 'ייצוא': 'Export',
     'אחראים': 'Contacts', 'העמוד הבא': 'Next page', 'העמוד הקודם': 'Previous page', 'מספר עמוד': 'Page number',
     'אודות גבולות עירוב': 'About Eruv Borders', 'אודות התוסף': 'About', 'הדפסה / שמירה כ-PDF': 'Print / save as PDF',
