@@ -514,3 +514,38 @@ body.offline [data-url^="http"], body.offline .ext-only { display: none !importa
 .fl-check input, .fl-check select { font: inherit; padding: .35em .6em; border-radius: var(--radius-sm, .5em); border: 1px solid var(--color-outline-variant); background: var(--color-surface); color: var(--color-on-surface); }
 .fl-res { padding: .7em .9em; border-radius: var(--radius-md, .75em); background: var(--color-surface-container-high); }
 .fl-res.warn { background: var(--color-error-container); color: var(--color-on-error-container); }
+
+/* 2.3.0: ממשק האתר ומסך הבחירה בכניסה (צבעי אוצריא בלבד) */
+.web { position: fixed; inset: 0; z-index: 40; overflow: auto; background: var(--color-surface); color: var(--color-on-surface); }
+.web-head { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; gap: .5em 1em; padding: .6em 1.2em; background: var(--color-surface-container); border-bottom: 1px solid var(--color-outline-variant); }
+.web-brand { display: flex; align-items: center; gap: .6em; font: inherit; font-weight: 700; font-size: 1.15em; background: none; border: 0; color: var(--color-primary); cursor: pointer; }
+.web-brand img { height: 2.4em; width: auto; }
+.web-nav { display: flex; flex-wrap: wrap; gap: .2em; flex: 1; }
+.web-nav button { font: inherit; background: none; border: 0; padding: .4em .7em; border-radius: var(--radius-pill); color: var(--color-on-surface); cursor: pointer; }
+.web-nav button:hover { background: var(--color-surface-container-high); }
+.web-nav button.on { background: var(--color-secondary-container); color: var(--color-on-secondary-container); font-weight: 600; }
+.web-tools { display: flex; gap: .4em; }
+.web-body { max-width: 62em; margin: 0 auto; padding: 1.4em 1.4em 2em; line-height: 1.7; }
+.web-body h1 { font-size: 1.6em; color: var(--color-primary); margin: .2em 0 .6em; }
+.web-body h2, .web-body h3, .web-body h4 { color: var(--color-primary); margin: 1.1em 0 .4em; }
+.web-body img { max-width: min(100%, 24em); max-height: 22em; width: auto; height: auto; border-radius: var(--radius-sm, .5em); margin: .3em; vertical-align: middle; }
+.web-body img[data-open-map], .web-body img[data-doc] { cursor: zoom-in; max-width: 16em; box-shadow: 0 0 0 1px var(--color-outline-variant); }
+.web-body a { color: var(--color-primary); text-decoration: underline; cursor: pointer; }
+.web-body a[data-open-map], .web-body a[data-doc], .web-body a[data-webpage] { text-decoration-style: solid; }
+.web-body a[data-url] { text-decoration-style: dotted; }
+.web-body table { border-collapse: collapse; width: 100%; margin: .6em 0; }
+.web-body td, .web-body th { border: 1px solid var(--color-outline-variant); padding: .35em .6em; vertical-align: top; }
+.web-body blockquote { margin: .6em 0; padding: .4em 1em; border-inline-start: .25em solid var(--color-primary); background: var(--color-surface-container-low); }
+.web-body .web-noimg { display: inline-block; font-size: .85em; margin: .2em; }
+.web-foot { max-width: 62em; margin: 0 auto 2em; padding: 0 1.4em; font-size: .85em; color: var(--color-on-surface-variant); }
+.chooser { position: fixed; inset: 0; z-index: 55; display: grid; place-items: center; padding: 1em; background: var(--color-scrim-soft, var(--color-surface)); }
+.chooser-card { max-width: 40em; width: 100%; padding: 1.6em; border-radius: var(--radius-lg, 1.2em); background: var(--color-surface-container); text-align: center; }
+.chooser-card h2 { margin: 0 0 .2em; color: var(--color-primary); }
+.chooser-opts { display: grid; grid-template-columns: 1fr 1fr; gap: 1em; margin: 1em 0; }
+.chooser-opts button { display: flex; flex-direction: column; align-items: center; gap: .4em; padding: 1.2em 1em; font: inherit; cursor: pointer; border-radius: var(--radius-md, .75em); border: 1px solid var(--color-outline-variant); background: var(--color-surface); color: var(--color-on-surface); }
+.chooser-opts button:hover { background: var(--color-secondary-container); color: var(--color-on-secondary-container); }
+.chooser-opts svg { width: 2.4em; height: 2.4em; }
+.chooser-opts b { font-size: 1.1em; }
+.chooser-opts span { font-size: .85em; color: var(--color-on-surface-variant); }
+.chooser-rem { font-size: .85em; }
+@media (max-width: 560px) { .chooser-opts { grid-template-columns: 1fr; } }

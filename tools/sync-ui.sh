@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ממשק אחד לשני תוספים (2.2.0): המקור של הממשק הוא gvulot-eruv/. הסקריפט מעתיק אותו לתוסף טהרת כהנים (kohanim/).
-# בתוך kohanim/ נשמרים ב-git רק התוכן וההגדרות (manifest.json, icon.png, site.js, data.js, docs.js, extra.js, eruv-lines.js, flights.js, maps/, docs/).
+# בתוך kohanim/ נשמרים ב-git רק התוכן וההגדרות (manifest.json, icon.png, site.js, data.js, docs.js, extra.js, eruv-lines.js, web.js, web/, maps/, docs/).
 # קבצי הממשק המועתקים מופיעים ב-kohanim/.gitignore. רץ ב-CI לפני האריזה (אחרי sync-shared.sh), ואפשר גם ידנית.
 # לא עורכים את קבצי הממשק בתוך kohanim/ — רק ב-gvulot-eruv/.
 set -e

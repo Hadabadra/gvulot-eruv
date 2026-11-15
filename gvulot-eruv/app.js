@@ -88,6 +88,8 @@
     if (dp && dp.success && dp.data && typeof dp.data === 'object') state.docPages = dp.data;
     const tb = await call('storage.get', { key: 'hideToolbar' });
     state.settings.toolbar = !(tb && tb.success && tb.data === true);
+    const um = await call('storage.get', { key: 'uiMode' });
+    if (um && um.success && (um.data === 'web' || um.data === 'app')) state.uiMode = um.data;
     const lm = await call('storage.get', { key: 'linkMode' });
     if (lm && lm.success && (lm.data === 'copy' || lm.data === 'open')) state.linkMode = lm.data;
   }
@@ -1153,6 +1155,7 @@
     return L && L.resp ? `<h2>לבירורים (לפי המפה)</h2><p>${esc(L.resp)}</p>` : `<p>האחראים המלאים של ${esc(m.city)} — בתוסף, בדף העיר.</p>`;
   };
   const CHANGELOG = S.changelog ? S.changelog : [
+    ['2.3.0', ["ממשק האתר: בכניסה אפשר לבחור בין ממשק התוסף לבין עמודי האתר של מוקד העירוב (50 עמודים, עם התפריט והתמונות), בלי אינטרנט. הבחירה נשמרת, ואפשר להחליף בכל רגע בכפתור הגלובוס למעלה או באודות.", "החומר פעם אחת: מפות העירוב בעמודי האתר נפתחות במציג של התוסף (הגדלה, סיבוב, ייצוא)."]],
     ['2.2.0', ["תוסף חדש באותו ממשק: \"טהרת כהנים\" — כל החומר של התאחדות טהרת הכהנים, באישורם, בלי אינטרנט (מדריכים, מפות, אזורים אסורים על המפה, טיסות). בעמוד בתי החולים — כפתור לפתיחתו, ובתפריט השכבות במפה — \"אזורים אסורים לכהנים\".", "הממשק נכתב פעם אחת ומשותף לשני התוספים; כל גרסה יוצאת לשניהם יחד.", "תיקונים: לחיצה על קו במפה ממקדת עליו; שם המקור במציג ובייצוא."]],
     ['2.1.0', ["#16 טהרת כהנים: התאחדות טהרת הכהנים בעמוד בתי החולים — קו המידע, המדריך לכהנים, תיקיית המפות, ניווט וטיסות (קישורים כשיש אינטרנט). המפות עצמן ייכנסו לתוסף אחרי אישור הארגון.", "עירובין בערים נוספות לפי המועצות הדתיות: אשקלון, תל אביב–יפו, מבשרת ציון, אזור, נס ציונה וחריש (טלפונים, אחראים וקישור למפה הרשמית).", "ארגונים: \"ערבתם\" (עירובי תחומין ותחום שבת, עם שעות המענה), \"עירוב כהלכה\", ו\"אתרים שומרי שבת\" (#13).", "סמלי סרגל חדשים וברורים, עם תווית מתחת לכל סמל.", "\"המיקום שלי\" בלי הגשר \"אחת שאלתי\": לפי העיר שנבחרה בלוח השנה של אוצריא.", "אימות המקורות: מפות מוקד העירוב והאחראים נבדקו מחדש ללא שינוי; ספר חדש בספריית המוקד; עירובין בחו\"ל עודכנו."]],
     ['2.0.0', ["גרסה יציבה (2.0.0). הפיתוח מושהה עד כמאי 2027 — הנושאים הפתוחים ב-gvulot-eruv-docs/STATUS.md.", "הכל בתוך התוסף: אין צורך באינטרנט מלבד ההורדה.", "חזון יחזקאל = היישוב אלומה, סמוך לקוממיות: מופיע בחיפוש ובכותרת העיר, ונקודה במפה (#15).", "מפת \"העירובים השכונתיים בכל העיר\" של ירושלים ברזולוציה גבוהה — חדה בהגדלה (#14).", "ברשימת הארגונים: \"ערבתם\" ומספר העירובין השכונתיים בבני ברק, לפי דיווח משתמש (#13). סמל \"תחום שבת וחוברות\" בסרגל הוחלף לסמל מסמך.", "דיווח קריסה 1.1.0: הצעה אחת בלבד בכל הפעלה, ומתג \"הצעת דיווח קריסה\" באודות.", "המלצה על \"אחת שאלתי\" 1.4.0 מהמקור המשותף: מזהה שהוא מותקן גם כשהגשר כבוי.", "אחרי שמירת חוברת כ-PDF — כפתור \"הדפסה\" שפותח את מסך ההדפסה של אוצריא (ui.printFile)."]],
@@ -1201,7 +1204,7 @@
     if (r.success) { $('#fbText').value = ''; toast(r.data === 'queued' ? 'התגובה תישלח כשיהיה חיבור' : 'התגובה נשלחה, תודה!'); }
     else toast('השליחה זמינה בתוך אוצריא');
   }
-  const VERSION = pick('version', '2.2.0');
+  const VERSION = pick('version', '2.3.0');
 
   // ── אודות ───────────────────────────────────────────────────
   function openHalacha() {
@@ -1294,6 +1297,7 @@
   }
   function aboutCommon() {
     return `
+      ${webAboutHTML()}
       <p>קיצורי מקשים: <b>/</b> חיפוש · במציג: <b>+ / -</b> הגדלה, <b>0</b> התאמה, <b>R</b> סיבוב, <b>PageUp/PageDown</b> דפדוף בחוברת, <b>Esc</b> סגירה.
       בספר פתוח: <b>Ctrl+Alt+E</b> פותח את התוסף (אפשר לשנות בהגדרות → קיצורי מקשים).</p>
       <p><label class="switch"><input type="checkbox" data-toggle-toolbar ${state.settings.toolbar ? 'checked' : ''}> כפתור "${esc(T.name)}" בסרגל העיון</label></p>
@@ -1408,6 +1412,67 @@
   function onResume() { if (suspendedSrc && !$('#viewer').hidden) { img.src = suspendedSrc; } suspendedSrc = null; }
 
   // ── אתחול ───────────────────────────────────────────────────
+  // ── 2.3.0: ממשק האתר — עותק של עמודי האתר של המקור (tools/build_web.py), בלי אינטרנט ──
+  // החומר פעם אחת: מפות וחוברות בעמודי האתר נפתחות במציג של התוסף. העיצוב — של התוסף (צבעי אוצריא).
+  const W = window.SITE_WEB;
+  const webHist = [];
+  function webEl() {
+    let v = $('#webView');
+    if (!v) { v = document.createElement('div'); v.id = 'webView'; v.className = 'web'; v.hidden = true; document.body.appendChild(v); }
+    return v;
+  }
+  function webPage(id, push) {
+    const v = webEl(), P = W.pages[id] || W.pages[W.home];
+    if (push !== false && v.dataset.page && v.dataset.page !== id) webHist.push(v.dataset.page);
+    v.dataset.page = id in W.pages ? id : W.home;
+    v.innerHTML = `<header class="web-head">
+        <button class="web-brand" data-webpage="${W.home}">${W.logo ? `<img src="${esc(W.logo)}" alt="">` : ''}<span>${esc(W.name)}</span></button>
+        <nav class="web-nav">${[[W.home, 'דף הבית'], ...W.nav].map(([k, t]) => `<button data-webpage="${k}"${k === v.dataset.page ? ' class="on"' : ''}>${esc(t)}</button>`).join('')}</nav>
+        <div class="web-tools">${webHist.length ? `<button class="btn text" data-webback>חזרה</button>` : ''}
+          <button class="btn tonal" data-uimode="app">${ICON.map} ממשק התוסף</button></div>
+      </header>
+      <article class="web-body"><h1>${esc(P.t)}</h1>${P.h}</article>
+      <footer class="web-foot">עותק של האתר ${esc(W.url)} בתוך התוסף "${esc(T.name)}" (נאסף ${esc(W.built)}), בלי אינטרנט. מפות וחוברות נפתחות במציג של התוסף; קישורים חיצוניים — רק כשיש אינטרנט.
+        <button class="btn text" data-url="${esc(P.u)}">העמוד באתר עצמו</button></footer>`;
+    v.scrollTop = 0;
+  }
+  function setUiMode(m, remember) {
+    state.uiMode = m;
+    if (remember) savePref('uiMode');
+    const v = webEl(); v.hidden = m !== 'web';
+    document.body.classList.toggle('web-mode', m === 'web');
+    if (m === 'web' && !v.dataset.page) webPage(W.home, false);
+    const c = $('#uiChooser'); if (c) c.remove();
+  }
+  function chooser() {
+    const d = document.createElement('div'); d.id = 'uiChooser'; d.className = 'chooser';
+    d.innerHTML = `<div class="chooser-card"><h2>${esc(T.name)}</h2><p>איך להציג?</p>
+      <div class="chooser-opts">
+        <button data-choose="app">${ICON.map}<b>ממשק התוסף</b><span>ערים, מפות, חיפוש וחוברות — בממשק של אוצריא</span></button>
+        <button data-choose="web">${ICON.globe}<b>ממשק האתר</b><span>העמודים של ${esc(W.name)}, כמו באתר — בלי אינטרנט</span></button></div>
+      <label class="chooser-rem"><input type="checkbox" id="chRem" checked> לזכור את הבחירה (אפשר להחליף בכל רגע בכפתור למעלה, ובאודות)</label></div>`;
+    document.body.appendChild(d);
+  }
+  function webInit() {
+    if (!W || !W.pages) return;
+    const bar = $('.topbar-actions');
+    if (bar && !$('#btnWeb')) bar.insertAdjacentHTML('afterbegin', `<button class="icon-btn topbar-btn" id="btnWeb" data-uimode="web" title="ממשק האתר של ${esc(W.name)}" aria-label="ממשק האתר">${ICON.globe}</button>`);
+    document.addEventListener('click', e => {
+      const tv = e.target.closest('#webView [data-view],#webView [data-mapdev],#webView [data-city]');
+      if (tv) { setUiMode('app', false); return; }   // כלי של התוסף (טיסות, מפה, חוברות) — עוברים לממשק התוסף, והטיפול הרגיל ממשיך
+      const t = e.target.closest('[data-webpage],[data-webback],[data-uimode],[data-choose]'); if (!t) return;
+      if (t.dataset.choose) { setUiMode(t.dataset.choose, $('#chRem') && $('#chRem').checked); return; }
+      if (t.dataset.uimode) { $('#infoScrim').hidden = true; setUiMode(t.dataset.uimode, true); return; }
+      if (t.hasAttribute('data-webback')) { const b = webHist.pop(); if (b) webPage(b, false); return; }
+      if (t.dataset.webpage) webPage(t.dataset.webpage);
+    });
+    if (state.uiMode) setUiMode(state.uiMode, false); else chooser();
+  }
+  const webAboutHTML = () => W && W.pages ? `<p><b>ממשק האתר:</b> עותק של ${Object.keys(W.pages).length} עמודים מ-${esc(W.url)} בתוך התוסף (נאסף ${esc(W.built)}).
+      <button class="btn text" data-uimode="web">מעבר לממשק האתר</button> <button class="btn text" data-uimode="app">ממשק התוסף</button>
+      <button class="btn text" data-resetui>מסך בחירה בכניסה הבאה</button></p>` : '';
+  document.addEventListener('click', e => { if (e.target.closest('[data-resetui]')) { state.uiMode = ''; savePref('uiMode'); toast('בכניסה הבאה יוצג מסך הבחירה'); } });
+
   // טקסטים קבועים ב-index.html לפי התוסף (S.dom: בורר ← {text, html, title, placeholder})
   function applyDom() {
     if (S.title) document.title = S.title;
@@ -1428,6 +1493,7 @@
     if (payload && payload.theme) applyTheme(payload.theme);
     else { const r = await call('app.getTheme'); if (r.success) applyTheme(r.data); }
     await loadPrefs();
+    webInit();
     await loadOwnMaps();
     const rs = payload && payload.restore && payload.restore.state;
     if (rs && rs.tab) state.tab = rs.tab;

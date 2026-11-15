@@ -1,11 +1,11 @@
-/* רכיב משותף: המלצה על "אחת שאלתי" — גרסה 1.3.1
+/* רכיב משותף: המלצה על "אחת שאלתי" — גרסה 1.4.0
  * מקור יחיד: Hadabadra/Mikvaot shared/promo/ — כל תוסף מעתיק את שני הקבצים כמו שהם (ראו README.md).
  * אין לשנות את הקובץ בתוך תוסף; שינוי נעשה כאן, ומועתק לכל התוספים.
  * צבעים רק דרך אסימוני :root של אוצריא, מידות ב-em בלבד (achat-promo.css).
  */
 (function (root) {
   "use strict";
-  var VERSION = "1.3.1";
+  var VERSION = "1.4.0";
   var KEY = "achatPromo";                 /* מפתח ב-storage של התוסף */
   var WEEK = 7 * 24 * 3600 * 1000, DAY = 24 * 3600 * 1000;
   var DEF = {
@@ -24,6 +24,8 @@
     if (cfg.isInstalled) { try { return (inst = !!(await cfg.isInstalled())); } catch (e) { return (inst = false); } }
     var O = root.Otzaria, isIt = function (x) { return x && typeof x[Symbol.asyncIterator] === "function"; };
     if (!O || !O.call) return (inst = false);
+    /* 1.4.0: מותקן אבל הגשר כבוי — מזהים לפי התוספים "סייר קבצים" / "הגדרות מערכת" שבאוצריא (plugin.listInstalled, הרשאת בסיס) */
+    try { var L = await O.call("plugin.listInstalled"); var arr = L && (L.data || L); if (Array.isArray(arr) && arr.some(function (x) { return /סייר קבצים|הגדרות מערכת|אחת שאלתי|achat|otzaria-bridge|system-settings|file-explorer|chadbedera\.(fileexplorer|systemsettings)/i.test(String((x && (x.name + " " + x.pluginId)) || "")); })) return (inst = true); } catch (e) {}
     for (var p = 47917; p <= 47921; p++) {
       try {
         var it = O.call("network.fetchStream", { url: "http://127.0.0.1:" + p + "/health", method: "GET", headers: { "X-Otzaria-Bridge": "1" }, timeoutMs: 1200 });
