@@ -5,6 +5,6 @@
 # לא עורכים את קבצי הממשק בתוך kohanim/ — רק ב-gvulot-eruv/.
 set -e
 cd "$(dirname "$0")/.."
-UI="index.html app.css app.js bridge.js i18n.js map-core.js map-ui.js world-basemap.js streets-cities.js streets pdfjs shared"
+UI="index.html app.css app.js bridge.js i18n.js map-core.js map-ui.js world-basemap.js streets-cities.js streets pdfjs shared hb-final.js"
 for f in $UI; do rm -rf "kohanim/$f"; cp -r "gvulot-eruv/$f" "kohanim/$f"; done
 echo "הממשק הועתק מ-gvulot-eruv/ ל-kohanim/"
