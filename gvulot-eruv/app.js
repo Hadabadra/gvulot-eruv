@@ -363,7 +363,6 @@
       <button class="btn tonal" data-phone="${esc(D.source.phone)}">${ICON.phone} ${esc(T.sourcePhone)} ${esc(D.source.phone)}</button></div>`;
   }
 
-
   // ── תחום שבת, חוברות וספרייה ───────────────────────────────
   // חוברת עם חלקים (parts): בדף עיר נפתח רק החלק של אותה עיר
   const partOf = (d, c) => c && d.parts ? d.parts.find(p => p.cities.includes(c)) : null;
@@ -739,27 +738,66 @@
     if (e.target.closest('[data-booklet]')) openBooklet(V.doc, V.range, V.page);
   });
   // חוברת רציפה: כל העמודים (או החלק של העיר) זה תחת זה בגלילה, ציור עצל לפי הגלילה
+  // 3.0: חוברת נוחה כמו בצופה של ברכת המזון — גלילה רציפה או שני עמודים זה לצד זה (מימין לשמאל), זום, מעבר לעמוד ומקלדת
+  const BK = (() => { try { return Object.assign({ mode: 'scroll', zoom: 1 }, JSON.parse(localStorage.getItem('bkView') || '{}')); } catch (e) { return { mode: 'scroll', zoom: 1 }; } })();
   function openBooklet(d, range, at) {
+    if (typeof d === 'string') d = docById.get(d); if (!d) return;
     const R0 = range ? range.from : 1, R1 = range ? range.to : d.pages;
+    state.docPages[d.id] = at || state.docPages[d.id] || R0;
     let bk = $('#booklet');
     if (!bk) { bk = document.createElement('div'); bk.id = 'booklet'; bk.className = 'booklet'; document.body.appendChild(bk); }
-    bk.innerHTML = `<div class="bk-bar"><strong>${esc(d.title)}${range ? ' · ' + esc(range.title) : ''}</strong><span class="bk-pos"></span>
-      <button class="btn text" data-bk-close="1" aria-label="סגירה">✕ חזרה</button></div><div class="bk-pages">${Array.from({ length: R1 - R0 + 1 }, (_, i) => {
-        const p = i + R0, dm = d.dims[p - 1] || [1000, 1410];
-        return `<figure class="bk-page" data-p="${p}" style="aspect-ratio:${dm[0]}/${dm[1]}"><img alt="עמוד ${p}" src="${pageSrc(d, p, true)}"><figcaption>${p}</figcaption></figure>`; }).join('')}</div>`;
-    bk.hidden = false;
-    const pos = bk.querySelector('.bk-pos');
-    const io = new IntersectionObserver(es => es.forEach(en => {
-      if (!en.isIntersecting) return; const f = en.target, p = +f.dataset.p; pos.textContent = 'עמוד ' + p + ' / ' + R1;
-      if (f.dataset.done) return; f.dataset.done = 1;
-      renderPage(d, p, 1400).then(u => { f.querySelector('img').src = u; }).catch(() => { delete f.dataset.done; });
-    }), { root: bk.querySelector('.bk-pages'), rootMargin: '600px 0px' });
-    bk.querySelectorAll('.bk-page').forEach(f => io.observe(f));
-    bk.onclick = e => {
-      if (e.target.closest('[data-bk-close]')) { io.disconnect(); bk.hidden = true; bk.innerHTML = ''; return; }
-      const f = e.target.closest('.bk-page'); if (f) { io.disconnect(); bk.hidden = true; bk.innerHTML = ''; openDoc(d.id, +f.dataset.p); }
+    const fig = p => { const dm = d.dims[p - 1] || [1000, 1410]; return `<figure class="bk-page" data-p="${p}" style="aspect-ratio:${dm[0]}/${dm[1]}"><img alt="עמוד ${p}" src="${pageSrc(d, p, true)}"><figcaption>${p}</figcaption></figure>`; };
+    const rows = () => {
+      const ps = Array.from({ length: R1 - R0 + 1 }, (_, i) => i + R0);
+      if (BK.mode !== 'spread') return ps.map(p => `<div class="bk-row">${fig(p)}</div>`).join('');
+      const out = [[ps[0]]]; for (let i = 1; i < ps.length; i += 2) out.push(ps.slice(i, i + 2));   // עמוד השער לבד, אחר כך זוגות
+      return out.map(r => `<div class="bk-row spread">${r.map(fig).join('')}</div>`).join('');
     };
-    const t = bk.querySelector(`.bk-page[data-p="${at}"]`); if (t) requestAnimationFrame(() => t.scrollIntoView({ block: 'start' }));
+    bk.innerHTML = `<div class="bk-bar"><strong>${esc(d.title)}${range ? ' · ' + esc(range.title) : ''}</strong>
+      <div class="bk-tools" role="toolbar" aria-label="צפייה בחוברת">
+        <button class="btn text bk-mode${BK.mode === 'scroll' ? ' on' : ''}" data-bk-mode="scroll" title="גלילה רציפה">▤ גלילה</button>
+        <button class="btn text bk-mode${BK.mode === 'spread' ? ' on' : ''}" data-bk-mode="spread" title="שני עמודים זה לצד זה">▥ שני עמודים</button>
+        <span class="bk-sep"></span>
+        <button class="btn text" data-bk-nav="-1" title="הקודם (PageUp)">‹</button>
+        <label class="bk-goto">עמוד <input type="number" min="${R0}" max="${R1}" value="${state.docPages[d.id]}" aria-label="מעבר לעמוד"> / ${R1}</label>
+        <button class="btn text" data-bk-nav="1" title="הבא (PageDown)">›</button>
+        <span class="bk-sep"></span>
+        <button class="btn text" data-bk-zoom="-1" title="הקטנה (-)">−</button><span class="bk-z">${Math.round(BK.zoom * 100)}%</span><button class="btn text" data-bk-zoom="1" title="הגדלה (+)">+</button>
+      </div>
+      <button class="btn text" data-bk-close="1" aria-label="סגירה">✕ חזרה</button></div>
+      <div class="bk-pages ${BK.mode}" style="--bk-z:${BK.zoom}" tabindex="0">${rows()}</div>`;
+    bk.hidden = false;
+    const pages = bk.querySelector('.bk-pages'), inp = bk.querySelector('.bk-goto input');
+    const save = () => { try { localStorage.setItem('bkView', JSON.stringify(BK)); } catch (e) {} };
+    const io = new IntersectionObserver(es => es.forEach(en => {
+      if (!en.isIntersecting) return; const f = en.target, p = +f.dataset.p;
+      if (f.dataset.done) return; f.dataset.done = 1;
+      renderPage(d, p, Math.round(1400 * Math.max(1, BK.zoom))).then(u => { f.querySelector('img').src = u; }).catch(() => { delete f.dataset.done; });
+    }), { root: pages, rootMargin: '800px 0px' });
+    bk.querySelectorAll('.bk-page').forEach(f => io.observe(f));
+    const current = () => { const top = pages.getBoundingClientRect().top + 40; let best = R0; bk.querySelectorAll('.bk-page').forEach(f => { if (f.getBoundingClientRect().top <= top) best = +f.dataset.p; }); return best; };
+    const go = p => { p = Math.max(R0, Math.min(R1, p)); const t = bk.querySelector(`.bk-page[data-p="${p}"]`); if (t) t.closest('.bk-row').scrollIntoView({ block: 'start' }); inp.value = p; };
+    let scT; pages.addEventListener('scroll', () => { clearTimeout(scT); scT = setTimeout(() => { const p = current(); inp.value = p; state.docPages[d.id] = p; savePref('docPages'); }, 120); });
+    const close = () => { io.disconnect(); bk.hidden = true; bk.innerHTML = ''; document.removeEventListener('keydown', key); };
+    const step = k => go(current() + k * (BK.mode === 'spread' ? 2 : 1));
+    const key = e => {
+      if (bk.hidden || e.target === inp) return;
+      if (e.key === 'Escape') close();
+      else if (e.key === 'PageDown' || (e.key === 'ArrowLeft' && BK.mode === 'spread')) { e.preventDefault(); step(1); }
+      else if (e.key === 'PageUp' || (e.key === 'ArrowRight' && BK.mode === 'spread')) { e.preventDefault(); step(-1); }
+      else if (e.key === '+' || e.key === '=') zoom(1); else if (e.key === '-') zoom(-1);
+    };
+    document.addEventListener('keydown', key);
+    const zoom = k => { const p = current(); BK.zoom = Math.max(.5, Math.min(3, Math.round((BK.zoom + k * .25) * 100) / 100)); save(); pages.style.setProperty('--bk-z', BK.zoom); bk.querySelector('.bk-z').textContent = Math.round(BK.zoom * 100) + '%'; go(p); };
+    inp.addEventListener('change', () => go(+inp.value || R0));
+    bk.onclick = e => {
+      if (e.target.closest('[data-bk-close]')) return close();
+      const m = e.target.closest('[data-bk-mode]'); if (m) { const p = current(); BK.mode = m.dataset.bkMode; save(); close(); return openBooklet(d, range, p); }
+      const n = e.target.closest('[data-bk-nav]'); if (n) return step(+n.dataset.bkNav);
+      const z = e.target.closest('[data-bk-zoom]'); if (z) return zoom(+z.dataset.bkZoom);
+      const f = e.target.closest('.bk-page'); if (f) { close(); openDoc(d.id, +f.dataset.p); }
+    };
+    requestAnimationFrame(() => { go(state.docPages[d.id]); pages.focus(); });
   }
 
   stage.addEventListener('wheel', e => {
@@ -1155,11 +1193,12 @@
     return L && L.resp ? `<h2>לבירורים (לפי המפה)</h2><p>${esc(L.resp)}</p>` : `<p>האחראים המלאים של ${esc(m.city)} — בתוסף, בדף העיר.</p>`;
   };
   const CHANGELOG = S.changelog ? S.changelog : [
-    ['2.4.0', ["הפיתוח מושהה לעת עתה (עד ~מאי 2027): לא יצאו גרסאות חדשות; אפשר להמשיך לשלוח דיווחים ובקשות, ומי שרוצה להמשיך בפיתוח מוזמן ליצור קשר. חדש: חלון \"מה חדש\" אחרי עדכון, ו\"כפתורים באוצריא\" באודות — הסתרת כל כפתור בנפרד בלי לבטל הרשאה."]],
+    ['3.0.0', ["חוברות: צופה חוברת נוח — גלילה רציפה או שני עמודים זה לצד זה, זום, מעבר לעמוד ודפדוף במקלדת (PageUp/PageDown, חצים). לחיצה על עמוד פותחת אותו בהגדלה.", "מפה: נקודות שנופלות זו על זו מתאחדות לעיגול עם מספר (לחיצה מקרבת), ושטחים קטנים מצוירים בקו דק — בלי כתמים. קובץ מפות: גם שטחים וכל JSON עם קו רוחב ואורך.", "הפיתוח מושהה. מחכים למי שרוצה להמשיך בפיתוח: https://github.com/Hadabadra/gvulot-eruv", "חדש וחשוב: בוחרים אילו כפתורים יופיעו באוצריא — באודות יש כרטיס עם מתג גלולה לכל כפתור. אפשר לאשר את ההרשאות ולהשאיר רק חלק מהכפתורים.", "ממשק האתר זהה לאתר: העמודים מוצגים עם העיצוב המקורי של האתר (צבעים, גופנים, פריסה).", "מפות: טעינת קובץ מפות מכל סוג — MBTiles, PMTiles, sqlitedb, ZIP של אריחים, GeoJSON, KML/KMZ, GPX, CSV. מפת רקע מקובץ נשמרת לפתיחה הבאה; קבצים גדולים נקראים בחלקים. מפות Windows מוצפנות ואי אפשר להציג אותן."]],
+    ['2.4.0', ["חדש: חלון \"מה חדש\" אחרי עדכון, ו\"כפתורים באוצריא\" באודות — הסתרת כל כפתור בנפרד בלי לבטל הרשאה."]],
     ['2.3.0', ["ממשק האתר: בכניסה אפשר לבחור בין ממשק התוסף לבין עמודי האתר של מוקד העירוב (50 עמודים, עם התפריט והתמונות), בלי אינטרנט. הבחירה נשמרת, ואפשר להחליף בכל רגע בכפתור הגלובוס למעלה או באודות.", "החומר פעם אחת: מפות העירוב בעמודי האתר נפתחות במציג של התוסף (הגדלה, סיבוב, ייצוא)."]],
     ['2.2.0', ["תוסף חדש באותו ממשק: \"טהרת כהנים\" — כל החומר של התאחדות טהרת הכהנים, באישורם, בלי אינטרנט (מדריכים, מפות, אזורים אסורים על המפה, טיסות). בעמוד בתי החולים — כפתור לפתיחתו, ובתפריט השכבות במפה — \"אזורים אסורים לכהנים\".", "הממשק נכתב פעם אחת ומשותף לשני התוספים; כל גרסה יוצאת לשניהם יחד.", "תיקונים: לחיצה על קו במפה ממקדת עליו; שם המקור במציג ובייצוא."]],
     ['2.1.0', ["#16 טהרת כהנים: התאחדות טהרת הכהנים בעמוד בתי החולים — קו המידע, המדריך לכהנים, תיקיית המפות, ניווט וטיסות (קישורים כשיש אינטרנט). המפות עצמן ייכנסו לתוסף אחרי אישור הארגון.", "עירובין בערים נוספות לפי המועצות הדתיות: אשקלון, תל אביב–יפו, מבשרת ציון, אזור, נס ציונה וחריש (טלפונים, אחראים וקישור למפה הרשמית).", "ארגונים: \"ערבתם\" (עירובי תחומין ותחום שבת, עם שעות המענה), \"עירוב כהלכה\", ו\"אתרים שומרי שבת\" (#13).", "סמלי סרגל חדשים וברורים, עם תווית מתחת לכל סמל.", "\"המיקום שלי\" בלי הגשר \"אחת שאלתי\": לפי העיר שנבחרה בלוח השנה של אוצריא.", "אימות המקורות: מפות מוקד העירוב והאחראים נבדקו מחדש ללא שינוי; ספר חדש בספריית המוקד; עירובין בחו\"ל עודכנו."]],
-    ['2.0.0', ["גרסה יציבה (2.0.0). הפיתוח מושהה עד כמאי 2027 — הנושאים הפתוחים ב-gvulot-eruv-docs/STATUS.md.", "הכל בתוך התוסף: אין צורך באינטרנט מלבד ההורדה.", "חזון יחזקאל = היישוב אלומה, סמוך לקוממיות: מופיע בחיפוש ובכותרת העיר, ונקודה במפה (#15).", "מפת \"העירובים השכונתיים בכל העיר\" של ירושלים ברזולוציה גבוהה — חדה בהגדלה (#14).", "ברשימת הארגונים: \"ערבתם\" ומספר העירובין השכונתיים בבני ברק, לפי דיווח משתמש (#13). סמל \"תחום שבת וחוברות\" בסרגל הוחלף לסמל מסמך.", "דיווח קריסה 1.1.0: הצעה אחת בלבד בכל הפעלה, ומתג \"הצעת דיווח קריסה\" באודות.", "המלצה על \"אחת שאלתי\" 1.4.0 מהמקור המשותף: מזהה שהוא מותקן גם כשהגשר כבוי.", "אחרי שמירת חוברת כ-PDF — כפתור \"הדפסה\" שפותח את מסך ההדפסה של אוצריא (ui.printFile)."]],
+    ['2.0.0', ["גרסה יציבה (2.0.0). הנושאים הפתוחים ב-gvulot-eruv-docs/STATUS.md.", "הכל בתוך התוסף: אין צורך באינטרנט מלבד ההורדה.", "חזון יחזקאל = היישוב אלומה, סמוך לקוממיות: מופיע בחיפוש ובכותרת העיר, ונקודה במפה (#15).", "מפת \"העירובים השכונתיים בכל העיר\" של ירושלים ברזולוציה גבוהה — חדה בהגדלה (#14).", "ברשימת הארגונים: \"ערבתם\" ומספר העירובין השכונתיים בבני ברק, לפי דיווח משתמש (#13). סמל \"תחום שבת וחוברות\" בסרגל הוחלף לסמל מסמך.", "דיווח קריסה 1.1.0: הצעה אחת בלבד בכל הפעלה, ומתג \"הצעת דיווח קריסה\" באודות.", "המלצה על \"אחת שאלתי\" 1.4.0 מהמקור המשותף: מזהה שהוא מותקן גם כשהגשר כבוי.", "אחרי שמירת חוברת כ-PDF — כפתור \"הדפסה\" שפותח את מסך ההדפסה של אוצריא (ui.printFile)."]],
     ['1.9.0', ["קווי עירוב על המפה (פיילוט): קרית אתא — שכונת שביט, וחדרה — שכונות שלמה, קלרין ופאר. השכבה \"קווי עירוב (בקירוב — לפי מפת המוקד)\" משורטטת מתוך מפות המוקד, עם המפה המקורית והאחראי. קירוב בלבד — הקובע הוא המפה והאחראי.", "בדיקת כתובת: אחרי חיפוש כתובת במפה מוצג אם היא בתוך קו העירוב, על הגבול או מחוצה לו (בערים שיש להן קו).", "במציג המפה: כפתור \"קו העירוב בקירוב במפה\" ושורת \"לבירורים לפי המפה\" כשאין אחראים משויכים.", "עט לשרטוט ידני: סרגל קטן — קו או שטח, ביטול נקודה (Ctrl+Z), ניקוי, 5 צבעים ושמירה (Enter). נשמר כשכבה שנטענת לבד וכקובץ GeoJSON.", "אודות: רמות 2–4 בוצעו חלקית; קו שהמפה שלו התחלפה אצל המוקד יורד אוטומטית בעדכון השבועי.", "הדפסה: קישורים לחיצים לחנות התוספים ול-GitHub, והאחראים של המפה מודפסים יחד איתה.", "סמלים מונוכרום שתואמים לתוכן (מועדף, אימייל, קישור חיצוני, בית חולים, הוספת מפה, מקורות).", "כפתור \"חיפוש עירוב\" בתוך שדות החיפוש של אוצריא (מ-0.9.98.3), מופיע כשיש טקסט.", "תיקון: מפת \"מעלות דפנה והסביבה\" לא נפתחה במציג (#12). השכבה ששורטטה נטענת לבד (#11).", "החוברות \"דרך התחומין\" נדחסו מעט בלי שינוי באיכות. דורש אוצריא 0.9.98.3 ומעלה."]],
     ['1.8.0', ["מפה משותפת 3.0: מצבי תצוגה מפה · סביבה קרובה · רחובות · כדור, ו\"סגנון המפה\" בתפריט השכבות (צבעוני כמו עינים למקרא, ארצות בצבעים, חום-לבן).", "באודות: קישור לשרשור הדיווחים בפורום אוצריא.", "המלצה על \"אחת שאלתי\" 1.2.0."]],
     ['1.7.0', ["מפה משותפת 2.2 — לחיצה על רחוב בוחרת אותו (כמו בכיוון תפילה): שם, אורך, \"נקודת מוצא מכאן\" ו\"מסלול הליכה לכאן\".", "כפתור + בסרגל המפה: טעינת קובץ רחובות, שכבה מקובץ GeoJSON, ושרטוט קו או שטח על המפה (נשמר כשכבה וכקובץ).", "מפה צבעונית (ים כחול וכל ארץ בצבע משלה) — מתג בתפריט השכבות.", "\"המיקום שלי\" במפה דרך הגשר \"אחת שאלתי\", ואם אין גשר — מיקום המחשב.", "דיווח תקלות אוטומטי: כשמשהו נתקע, הודעה קטנה מציעה לשלוח דיווח קריסה דרך מערכת הדיווחים של אוצריא (באישור שלכם; בלי אינטרנט נשמר ונשלח אחר כך).", "המלצה על \"אחת שאלתי\" מהמקור המשותף (גרסה 1.1.0): בלי אינטרנט נשמר דף הסבר עם קישורים לחיצים.", "ההדרכה שיורדת כוללת גם את מפות העירוב של העיר שנבחרה.", "תיקון: חוברת תחומין שלמה שירדה כ-PDF או ZIP יצאה עם עברית משובשת (#9).", "פסגת זאב מרכז (ירושלים): קישורים לאתר העירוב ולתיקיית המפות שלו (#10).", "תיקון: שליחת תגובה מהתוסף נשלחה עם סוג דיווח לא תקין."]],
@@ -1205,7 +1244,7 @@
     if (r.success) { $('#fbText').value = ''; toast(r.data === 'queued' ? 'התגובה תישלח כשיהיה חיבור' : 'התגובה נשלחה, תודה!'); }
     else toast('השליחה זמינה בתוך אוצריא');
   }
-  const VERSION = pick('version', '2.4.0');
+  const VERSION = pick('version', '3.0.0');
 
   // ── אודות ───────────────────────────────────────────────────
   function openHalacha() {
@@ -1349,7 +1388,7 @@
     const t = e.target.closest('[data-open-map],[data-city],[data-phone],[data-fav],[data-url],[data-add-map],[data-del-map],[data-src],[data-doc],[data-view],[data-abroad],[data-hosp],[data-sec],[data-toggle-toolbar],[data-mapdev],[data-line]');
     if (!t) return;
     if (t.dataset.line) return openLine(t.dataset.line);
-    if (t.dataset.doc) { $('#infoScrim').hidden = true; openDoc(t.dataset.doc, 0, t.dataset.from ? { from: +t.dataset.from, to: +t.dataset.to, title: t.dataset.part } : null); }
+    if (t.dataset.doc) { $('#infoScrim').hidden = true; const rg = t.dataset.from ? { from: +t.dataset.from, to: +t.dataset.to, title: t.dataset.part } : null, dd = docById.get(t.dataset.doc); if (dd && dd.pages > 1) openBooklet(dd, rg, rg ? rg.from : 0); else openDoc(t.dataset.doc, 0, rg); }
     else if (t.dataset.sec) goSec(t.dataset.sec);
     else if (t.dataset.view) goView(t.dataset.view);
     else if (t.dataset.abroad) { state.abroadC = t.dataset.abroad; state.abq = ''; state.view = 'abroad'; state.q = ''; $('#q').value = ''; render(); }
@@ -1432,7 +1471,7 @@
         <div class="web-tools">${webHist.length ? `<button class="btn text" data-webback>חזרה</button>` : ''}
           <button class="btn tonal" data-uimode="app">${ICON.map} ממשק התוסף</button></div>
       </header>
-      <article class="web-body"><h1>${esc(P.t)}</h1>${P.h}</article>
+      <article class="web-body${W.siteStyle ? ' site-raw' : ''}"><h1>${esc(P.t)}</h1>${P.h}</article>
       <footer class="web-foot">עותק של האתר ${esc(W.url)} בתוך התוסף "${esc(T.name)}" (נאסף ${esc(W.built)}), בלי אינטרנט. מפות וחוברות נפתחות במציג של התוסף; קישורים חיצוניים — רק כשיש אינטרנט.
         <button class="btn text" data-url="${esc(P.u)}">העמוד באתר עצמו</button></footer>`;
     v.scrollTop = 0;
