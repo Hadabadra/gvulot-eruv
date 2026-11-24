@@ -252,14 +252,24 @@
   /* ── שכבות ──
      שכבה: { id, glyph, points: [{lat, lon, label, id}], lines: [{coords: [[lat, lon], ...], closed, label}] }
      glyph: תו קצר שמצויר על הנקודה (למשל "מ" למקווה, "ע" לעירוב). */
-  function toLayer(fc, id, glyph) {            // GeoJSON (Point / LineString / Polygon) -> שכבה
+  function toLayer(fc, id, glyph) {            // GeoJSON מכל סוג (גם Multi*, GeometryCollection, Feature בודד) -> שכבה
     const L = { id, glyph: glyph || '•', points: [], lines: [] };
-    for (const f of (fc && fc.features) || []) {
-      const g = f.geometry || {}, p = f.properties || {}, label = p.name || p.label || '';
-      if (g.type === 'Point') L.points.push({ lat: g.coordinates[1], lon: g.coordinates[0], label, id: p.id });
-      else if (g.type === 'LineString') L.lines.push({ coords: g.coordinates.map(c => [c[1], c[0]]), closed: false, label });
-      else if (g.type === 'Polygon') for (const ring of g.coordinates) L.lines.push({ coords: ring.map(c => [c[1], c[0]]), closed: true, label });
-    }
+    const ll = c => [c[1], c[0]];
+    const add = (g, p) => {
+      if (!g) return;
+      const label = p.name || p.Name || p.NAME || p.label || p.title || p['שם'] || p.description || '';
+      switch (g.type) {
+        case 'Point': L.points.push({ lat: g.coordinates[1], lon: g.coordinates[0], label, id: p.id }); break;
+        case 'MultiPoint': g.coordinates.forEach(c => L.points.push({ lat: c[1], lon: c[0], label })); break;
+        case 'LineString': L.lines.push({ coords: g.coordinates.map(ll), closed: false, label }); break;
+        case 'MultiLineString': g.coordinates.forEach(l => L.lines.push({ coords: l.map(ll), closed: false, label })); break;
+        case 'Polygon': g.coordinates.forEach(r => L.lines.push({ coords: r.map(ll), closed: true, label })); break;
+        case 'MultiPolygon': g.coordinates.forEach(pg => pg.forEach(r => L.lines.push({ coords: r.map(ll), closed: true, label }))); break;
+        case 'GeometryCollection': (g.geometries || []).forEach(x => add(x, p)); break;
+      }
+    };
+    const feats = !fc ? [] : fc.type === 'FeatureCollection' ? fc.features || [] : fc.type === 'Feature' ? [fc] : Array.isArray(fc) ? fc : [{ geometry: fc, properties: {} }];
+    for (const f of feats) add(f && (f.geometry || (f.type && f.coordinates ? f : null)), (f && f.properties) || {});
     return L;
   }
   function toGeoJSON(items, layer, pick) {     // רשומות עם lat/lon -> FeatureCollection של נקודות
@@ -376,11 +386,33 @@
         const cs = v.globe && ln.coords.length === 2 && !ln.closed ? greatCircle(ln.coords[0], ln.coords[1]) : ln.coords;
         let pen = false; const d = cs.map(c => { const p = project(v, c[0], c[1]); if (p[2] < 0) { pen = false; return ''; } const r = (pen ? 'L' : 'M') + f(p[0]) + ',' + f(p[1]); pen = true; return r; }).join('') + (ln.closed && !v.globe ? 'Z' : '');
         const solid = ln.style === 'route', col = ln.color || 'var(--color-primary)';   // 3.1: צבע לקו (עט, קווי עירוב) וקו רציף
-        if (ln.color && ln.halo !== false) lines += `<path d="${d}" fill="none" stroke="var(--color-surface, #fff)" stroke-opacity=".75" stroke-width="${ln.solid ? 6 : 5}" stroke-linejoin="round"/>`;
-        lines += `<path d="${d}" fill="${ln.closed ? col : 'none'}" fill-opacity="${ln.color ? .12 : .08}" stroke="${col}" stroke-width="${solid ? 5 : ln.solid ? 3.2 : 2.5}"${solid ? ' stroke-opacity=".85" stroke-linecap="round"' : ln.solid ? ' stroke-linecap="round"' : ' stroke-dasharray="7 4"'} stroke-linejoin="round"><title>${esc(ln.label || layer.id)}</title></path>`;
+        // 3.3: שטח סגור קטן במסך (למשל מאות שטחי "שטח A") — מילוי וקו דק, בלי הילה ומקווקו שהופכים לכתמים
+        let small = false;
+        if (ln.closed && !solid) { let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const c of cs) { const q = project(v, c[0], c[1]); if (q[0] < x0) x0 = q[0]; if (q[0] > x1) x1 = q[0]; if (q[1] < y0) y0 = q[1]; if (q[1] > y1) y1 = q[1]; } small = Math.max(x1 - x0, y1 - y0) < 60; }
+        if (ln.color && ln.halo !== false && !small) lines += `<path d="${d}" fill="none" stroke="var(--color-surface, #fff)" stroke-opacity=".75" stroke-width="${ln.solid ? 6 : 5}" stroke-linejoin="round"/>`;
+        lines += small
+          ? `<path d="${d}" fill="${col}" fill-opacity=".35" stroke="${col}" stroke-width="1" stroke-linejoin="round"><title>${esc(ln.label || layer.id)}</title></path>`
+          : `<path d="${d}" fill="${ln.closed ? col : 'none'}" fill-opacity="${ln.color ? .12 : .08}" stroke="${col}" stroke-width="${solid ? 5 : ln.solid ? 3.2 : 2.5}"${solid ? ' stroke-opacity=".85" stroke-linecap="round"' : ln.solid ? ' stroke-linecap="round"' : ' stroke-dasharray="7 4"'} stroke-linejoin="round"><title>${esc(ln.label || layer.id)}</title></path>`;
       }
-      for (const pt of layer.points || []) {
-        const p = project(v, pt.lat, pt.lon); if (!inView(p[0], p[1], 20)) continue;
+    }
+    // 3.3: נקודות שנופלות זו על זו במסך מתאחדות לעיגול עם מספר; לחיצה עליו מקרבת
+    const cells = new Map(), CS = 24, solo = [];
+    for (const layer of o.layers || []) for (const pt of layer.points || []) {
+      const p = project(v, pt.lat, pt.lon); if (!inView(p[0], p[1], 20)) continue;
+      if (o.hl != null && String(o.hl) === String(pt.id)) { solo.push([layer, pt, p]); continue; }
+      const k = Math.floor(p[0] / CS) + ':' + Math.floor(p[1] / CS);
+      if (!cells.has(k)) cells.set(k, []); cells.get(k).push([layer, pt, p]);
+    }
+    for (const arr of cells.values()) {
+      if (arr.length === 1 || o.cluster === false) { solo.push(...arr); continue; }
+      let x = 0, y = 0, la = 0, lo = 0; for (const [, pt, p] of arr) { x += p[0]; y += p[1]; la += pt.lat; lo += pt.lon; }
+      const n = arr.length; x /= n; y /= n;
+      const gl = [...new Set(arr.map(a => a[0].glyph || '•'))].slice(0, 2).join('');
+      pts += `<g data-cluster="${(la / n).toFixed(6)},${(lo / n).toFixed(6)}" style="cursor:zoom-in"><title>${n} נקודות — לחיצה מקרבת</title><circle cx="${f(x)}" cy="${f(y)}" r="${n > 9 ? 13 : 11}" fill="var(--color-primary)" fill-opacity=".9" stroke="var(--color-surface)" stroke-width="2"/>`
+        + `<text x="${f(x)}" y="${f(y + 4)}" text-anchor="middle" font-size="10" font-weight="700" fill="var(--color-on-primary, #fff)">${n}${gl.length < 3 ? '' : ''}</text></g>`;
+    }
+    for (const [layer, pt, p] of solo) {
+      {
         const hl = o.hl != null && String(o.hl) === String(pt.id);
         pts += `<g data-layer="${esc(layer.id)}" data-id="${esc(pt.id || '')}"><title>${esc(pt.label || layer.id)}</title>${hl ? `<circle cx="${f(p[0])}" cy="${f(p[1])}" r="15" fill="none" stroke="var(--color-primary)" stroke-width="3"/>` : ''}<circle cx="${f(p[0])}" cy="${f(p[1])}" r="9" fill="var(--color-primary)" stroke="var(--color-surface)" stroke-width="2"/>`
           + `<text x="${f(p[0])}" y="${f(p[1] + 4)}" text-anchor="middle" font-size="11" font-weight="700" fill="var(--color-on-primary, #fff)">${esc(layer.glyph || '•')}</text></g>`;
@@ -402,7 +434,7 @@
     // טקסט עברי מתיישר מימין: מעוגן ב-rtl ליד חץ הצפון, ומתפרש שמאלה (כמו בכיוון תפילה)
     const scale = o.chrome === false ? '' : `<text x="${W - 38}" y="18" direction="rtl" text-anchor="start" font-size="12" fill="var(--color-on-surface-variant, #5f6368)">${widthLabel(v.hw * 2)} לרוחב</text>`;
     const attr = o.chrome !== false && area && o.streets !== false ? `<text x="8" y="${H - 8}" direction="ltr" font-size="10" fill="var(--color-on-surface-variant, #5f6368)">© OpenStreetMap contributors${area.d ? ' · ' + esc(area.d) : ''}</text>` : '';
-    return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img">${base}${lines}${sel}${labels}${syn}${pts}${me}${north}${scale}${attr}</svg>`;
+    return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img">${base}${o.under || ''}${lines}${sel}${labels}${syn}${pts}${me}${north}${scale}${attr}</svg>`;
   }
 
   // ── מסלול הליכה על גרף הרחובות (בלי אינטרנט) ──
