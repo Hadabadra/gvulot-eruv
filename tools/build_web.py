@@ -142,8 +142,11 @@ def fix_decls(body):
             v = re.sub(r"url\(([^)]*)\)", css_img, v)
         imp = ""
         if v.lower().endswith("!important"): v, imp = v[:-10].strip(), " !important"
-        if "var(" in v and not COLOR_RE.search(v): out.append(f"{k}:{v}{imp}"); continue
-        lk = k.lower(); CNT[0] += 1; n = CNT[0]
+        lk = k.lower()
+        # בדיקת העיצוב בחנות: font-family חייב להיות var(--font-*) בלבד (גם var(--e-...),Sans-serif נדחה)
+        if "var(" in v and not COLOR_RE.search(v) and not (lk == "font-family" and not re.fullmatch(r"var\(--font-[\w-]+\)", v)):
+            out.append(f"{k}:{v}{imp}"); continue
+        CNT[0] += 1; n = CNT[0]
         if lk == "font-family": out.append(f"--font-site-{n}:{v};{k}:var(--font-site-{n}){imp}")
         elif COLOR_RE.search(v) or (NAMED.search(v) and re.search(r"color|background|border|outline|fill|stroke|shadow", lk)) or (lk in ("font-size", "border-radius") and "px" in v):
             out.append(f"--color-site-{n}:{v};{k}:var(--color-site-{n}){imp}")
